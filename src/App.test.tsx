@@ -99,6 +99,66 @@ describe('App shell', () => {
     expect(completeExercise).toBeEnabled()
   })
 
+  it('cycles skipped exercises after primary pass and re-enqueues when skipped again', async () => {
+    const user = userEvent.setup()
+
+    render(<App />)
+
+    await user.click(screen.getByRole('button', { name: /skip exercise/i }))
+    expect(screen.getByRole('heading', { name: /straight leg raise/i })).toBeInTheDocument()
+    expect(screen.getByText(/primary pass · 1 skipped queued/i)).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /skip exercise/i }))
+    expect(screen.getByRole('heading', { name: /wall sit \(shallow\)/i })).toBeInTheDocument()
+    expect(screen.getByText(/primary pass · 2 skipped queued/i)).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /skip exercise/i }))
+    expect(screen.getByRole('heading', { name: /quad set/i })).toBeInTheDocument()
+    expect(screen.getByText(/skipped cycle · 3 skipped queued/i)).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /skip exercise/i }))
+    expect(screen.getByRole('heading', { name: /straight leg raise/i })).toBeInTheDocument()
+    expect(screen.getByText(/skipped cycle · 3 skipped queued/i)).toBeInTheDocument()
+  })
+
+  it('marks session complete when last queued skipped exercise is completed', async () => {
+    const user = userEvent.setup()
+    const program = loadProgram()
+    const session = createSessionState(program, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-skip-complete',
+    })
+
+    const quadSetId = program.exercises[0].id
+    const quadSetProgress = session.exerciseProgress[quadSetId]
+    const queuedCompletionSession = {
+      ...session,
+      currentPhase: 'skip' as const,
+      primaryCursor: program.exercises.length - 1,
+      currentExerciseId: quadSetId,
+      skipQueue: [quadSetId],
+      updatedAt: '2026-02-10T00:00:10.000Z',
+      exerciseProgress: {
+        ...session.exerciseProgress,
+        [quadSetId]: {
+          ...quadSetProgress,
+          sets: quadSetProgress.sets.map((setProgress) => ({
+            ...setProgress,
+            completedReps: setProgress.targetReps,
+          })),
+        },
+      },
+    }
+    persistSession(queuedCompletionSession)
+
+    render(<App />)
+    await user.click(screen.getByRole('button', { name: /resume/i }))
+    await user.click(screen.getByRole('button', { name: /complete exercise/i }))
+
+    expect(screen.getByText(/session completed\./i)).toBeInTheDocument()
+    expect(readPersistedSession()).toBeNull()
+  })
+
   it('increments reps for hold exercises only after hold timer reaches target', async () => {
     const program = loadProgram()
     const session = createSessionState(program, {
