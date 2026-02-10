@@ -13,6 +13,7 @@ const testProgram: Program = {
       targetRepsPerSet: 2,
       holdSeconds: null,
       repRestMs: 30000,
+      setRestMs: 30000,
       restHintSeconds: 30,
       notes: null,
       optional: false,
@@ -26,6 +27,7 @@ const testProgram: Program = {
       targetRepsPerSet: 1,
       holdSeconds: null,
       repRestMs: 30000,
+      setRestMs: 30000,
       restHintSeconds: 30,
       notes: null,
       optional: false,
@@ -39,6 +41,7 @@ const testProgram: Program = {
       targetRepsPerSet: 1,
       holdSeconds: 5,
       repRestMs: 30000,
+      setRestMs: 30000,
       restHintSeconds: null,
       notes: null,
       optional: false,
@@ -217,6 +220,64 @@ describe('session reducer', () => {
     expect(afterRepRest.runtime.phase).toBe('hold')
     expect(afterRepRest.runtime.remainingMs).toBe(5000)
     expect(afterRepRest.runtime.repIndex).toBe(1)
+  })
+
+  it('enters set rest at set boundary and starts next set automatically', () => {
+    const setBoundaryProgram: Program = {
+      ...testProgram,
+      exercises: [
+        testProgram.exercises[0],
+        testProgram.exercises[1],
+        {
+          ...testProgram.exercises[2],
+          targetSets: 2,
+          targetRepsPerSet: 1,
+          repRestMs: 2000,
+          setRestMs: 4000,
+        },
+      ],
+    }
+    const initial = createSessionState(setBoundaryProgram, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-runtime-set-rest',
+    })
+    const holdExerciseState = {
+      ...initial,
+      primaryCursor: 2,
+      currentExerciseId: testProgram.exercises[2].id,
+      updatedAt: '2026-02-10T00:00:01.000Z',
+    }
+
+    const started = reduceSession(
+      holdExerciseState,
+      { type: 'start_routine', now: '2026-02-10T00:00:02.000Z' },
+      setBoundaryProgram,
+    )
+    const afterHold = reduceSession(
+      started,
+      { type: 'complete_runtime_countdown', now: '2026-02-10T00:00:03.000Z' },
+      setBoundaryProgram,
+    )
+    const afterRepRest = reduceSession(
+      afterHold,
+      { type: 'complete_runtime_countdown', now: '2026-02-10T00:00:04.000Z' },
+      setBoundaryProgram,
+    )
+    const afterSetRest = reduceSession(
+      afterRepRest,
+      { type: 'complete_runtime_countdown', now: '2026-02-10T00:00:05.000Z' },
+      setBoundaryProgram,
+    )
+
+    expect(afterHold.runtime.phase).toBe('repRest')
+    expect(afterHold.runtime.remainingMs).toBe(2000)
+    expect(afterRepRest.runtime.phase).toBe('setRest')
+    expect(afterRepRest.runtime.remainingMs).toBe(4000)
+    expect(afterSetRest.runtime.phase).toBe('hold')
+    expect(afterSetRest.runtime.setIndex).toBe(1)
+    expect(afterSetRest.runtime.repIndex).toBe(0)
+    expect(afterSetRest.runtime.remainingMs).toBe(5000)
+    expect(afterSetRest.exerciseProgress['exercise-3'].activeSetIndex).toBe(1)
   })
 
   it('increments reps up to the target for the active set', () => {

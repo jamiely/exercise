@@ -309,7 +309,9 @@ export const reduceSession = (
     case 'tick_runtime_countdown': {
       if (
         !isInProgress(state) ||
-        (state.runtime.phase !== 'hold' && state.runtime.phase !== 'repRest')
+        (state.runtime.phase !== 'hold' &&
+          state.runtime.phase !== 'repRest' &&
+          state.runtime.phase !== 'setRest')
       ) {
         return state
       }
@@ -351,11 +353,14 @@ export const reduceSession = (
 
         const nextCompletedReps = activeSet.completedReps + 1
         const isSetComplete = nextCompletedReps >= activeSet.targetReps
+        const hasNextSet = state.runtime.setIndex < currentProgress.sets.length - 1
         const nextSets = currentProgress.sets.map((setProgress, index) =>
           index === state.runtime.setIndex
             ? { ...setProgress, completedReps: nextCompletedReps }
             : setProgress,
         )
+        const nextPhase = isSetComplete && !hasNextSet ? 'complete' : 'repRest'
+        const nextRemainingMs = nextPhase === 'complete' ? 0 : runtimeExercise.repRestMs
 
         return {
           ...state,
@@ -369,16 +374,38 @@ export const reduceSession = (
           },
           runtime: {
             ...state.runtime,
-            phase: isSetComplete ? 'complete' : 'repRest',
+            phase: nextPhase,
             repIndex: nextCompletedReps,
-            remainingMs: isSetComplete ? 0 : runtimeExercise.repRestMs,
+            remainingMs: nextRemainingMs,
             previousPhase: null,
           },
         }
       }
 
-      if (state.runtime.phase !== 'repRest') {
+      if (state.runtime.phase !== 'repRest' && state.runtime.phase !== 'setRest') {
         return state
+      }
+
+      const holdSeconds = runtimeExercise.holdSeconds
+      const holdRemainingMs = holdSeconds !== null ? holdSeconds * 1000 : 0
+
+      if (state.runtime.phase === 'repRest') {
+        const isSetComplete = activeSet.completedReps >= activeSet.targetReps
+        const hasNextSet = state.runtime.setIndex < currentProgress.sets.length - 1
+        const nextPhase = isSetComplete && hasNextSet ? 'setRest' : 'hold'
+        const nextRemainingMs =
+          nextPhase === 'setRest' ? runtimeExercise.setRestMs : holdRemainingMs
+
+        return {
+          ...state,
+          updatedAt: getTimestamp(state, action.now),
+          runtime: {
+            ...state.runtime,
+            phase: nextPhase,
+            remainingMs: nextRemainingMs,
+            previousPhase: null,
+          },
+        }
       }
 
       const nextPhase = transitionRuntimePhase(state.runtime.phase, 'complete')
@@ -386,15 +413,30 @@ export const reduceSession = (
         return state
       }
 
-      const holdSeconds = runtimeExercise.holdSeconds
+      const nextSetIndex = state.runtime.setIndex + 1
+      const nextSet = currentProgress.sets[nextSetIndex]
+      if (!nextSet) {
+        return state
+      }
 
       return {
         ...state,
         updatedAt: getTimestamp(state, action.now),
+        exerciseProgress: {
+          ...state.exerciseProgress,
+          [state.currentExerciseId]: {
+            ...currentProgress,
+            activeSetIndex: nextSetIndex,
+            restTimerRunning: false,
+            restElapsedSeconds: 0,
+          },
+        },
         runtime: {
           ...state.runtime,
           phase: nextPhase,
-          remainingMs: holdSeconds !== null ? holdSeconds * 1000 : 0,
+          setIndex: nextSetIndex,
+          repIndex: 0,
+          remainingMs: holdRemainingMs,
           previousPhase: null,
         },
       }

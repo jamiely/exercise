@@ -78,6 +78,58 @@ describe('App shell', () => {
     expect(screen.getByText('1/5 reps')).toBeInTheDocument()
   })
 
+  it('counts down set rest runtime phase and auto-starts next set hold', async () => {
+    vi.useFakeTimers()
+    const program = loadProgram()
+    const session = createSessionState(program, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-runtime-set-rest',
+    })
+    const setRestSession = {
+      ...session,
+      primaryCursor: 1,
+      currentExerciseId: program.exercises[1].id,
+      updatedAt: '2026-02-10T00:00:02.000Z',
+      exerciseProgress: {
+        ...session.exerciseProgress,
+        [program.exercises[1].id]: {
+          ...session.exerciseProgress[program.exercises[1].id],
+          activeSetIndex: 0,
+          sets: [
+            {
+              ...session.exerciseProgress[program.exercises[1].id].sets[0],
+              completedReps: 10,
+            },
+            session.exerciseProgress[program.exercises[1].id].sets[1],
+          ],
+        },
+      },
+      runtime: {
+        phase: 'setRest' as const,
+        exerciseIndex: 1,
+        setIndex: 0,
+        repIndex: 10,
+        remainingMs: 1_000,
+        previousPhase: null,
+      },
+    }
+    persistSession(setRestSession)
+
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: /resume/i }))
+
+    expect(screen.getByText(/workflow phase: setrest/i)).toBeInTheDocument()
+    expect(screen.getByText(/phase timer: 1.0s/i)).toBeInTheDocument()
+
+    await act(async () => {
+      vi.advanceTimersByTime(1_000)
+    })
+
+    expect(screen.getByText(/workflow phase: hold/i)).toBeInTheDocument()
+    expect(screen.getByText(/phase timer: 3.0s/i)).toBeInTheDocument()
+    expect(screen.getByText('0/10 reps')).toBeInTheDocument()
+  })
+
   it('increments and undoes reps for active set', async () => {
     const user = userEvent.setup()
 
