@@ -29,6 +29,29 @@ h1 {
   color: #4b5563;
 }
 
+.resume-actions {
+  margin-top: 0.75rem;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.resume-actions button {
+  width: 100%;
+  min-height: 2.75rem;
+  border: 1px solid #111827;
+  border-radius: 0.75rem;
+  background: #111827;
+  color: #f9fafb;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.resume-actions .secondary-button {
+  border-color: #d1d5db;
+  background: #f9fafb;
+  color: #374151;
+}
+
 @media (max-width: 420px) {
   .app-shell {
     padding: 1rem;
