@@ -149,11 +149,9 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
 
   useEffect(() => {
     const remainingMs = runtimeRemainingMsRef.current
-    if (
-      sessionState.status !== 'in_progress' ||
-      sessionState.runtime.phase !== 'hold' ||
-      remainingMs <= 0
-    ) {
+    const isRuntimeCountdownPhase =
+      sessionState.runtime.phase === 'hold' || sessionState.runtime.phase === 'repRest'
+    if (sessionState.status !== 'in_progress' || !isRuntimeCountdownPhase || remainingMs <= 0) {
       return
     }
 

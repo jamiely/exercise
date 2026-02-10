@@ -7,6 +7,7 @@ export type Exercise = {
   targetSets: number
   targetRepsPerSet: number
   holdSeconds: number | null
+  repRestMs: number
   restHintSeconds: number | null
   notes: string | null
   optional: boolean
@@ -48,6 +49,18 @@ const asNullableNumber = (value: unknown, field: string): number | null => {
   }
 
   return value
+}
+
+const asDurationMsWithDefault = (value: unknown, field: string, fallbackMs: number): number => {
+  if (value === undefined || value === null) {
+    return fallbackMs
+  }
+
+  if (typeof value !== 'number' || Number.isNaN(value) || value <= 0) {
+    throw new ProgramLoadError(`${field} must be null, undefined, or a positive number`)
+  }
+
+  return Math.round(value)
 }
 
 const asNullableString = (value: unknown, field: string): string | null => {
@@ -117,6 +130,11 @@ export const parseProgram = (input: unknown): Program => {
         `exercises[${index}].targetRepsPerSet`,
       ),
       holdSeconds: asNullableNumber(exercise.holdSeconds, `exercises[${index}].holdSeconds`),
+      repRestMs: asDurationMsWithDefault(
+        exercise.repRestMs,
+        `exercises[${index}].repRestMs`,
+        30000,
+      ),
       restHintSeconds: asNullableNumber(
         exercise.restHintSeconds,
         `exercises[${index}].restHintSeconds`,

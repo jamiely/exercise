@@ -38,7 +38,15 @@ export const transitionRuntimePhase = (
   }
 
   if (event === 'complete') {
-    return phase === 'complete' ? null : 'complete'
+    if (phase === 'hold') {
+      return 'repRest'
+    }
+
+    if (phase === 'repRest' || phase === 'setRest' || phase === 'exerciseRest') {
+      return 'hold'
+    }
+
+    return null
   }
 
   return null

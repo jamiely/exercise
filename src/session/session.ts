@@ -106,6 +106,10 @@ const getCurrentExercise = (state: SessionState, program: Program): Exercise | n
   return program.exercises.find((exercise) => exercise.id === state.currentExerciseId) ?? null
 }
 
+const getRuntimeExercise = (state: SessionState, program: Program): Exercise | null => {
+  return program.exercises[state.runtime.exerciseIndex] ?? null
+}
+
 const getCurrentExerciseIndex = (state: SessionState, program: Program): number => {
   if (!state.currentExerciseId) {
     return 0
@@ -303,7 +307,10 @@ export const reduceSession = (
       }
     }
     case 'tick_runtime_countdown': {
-      if (!isInProgress(state) || state.runtime.phase !== 'hold') {
+      if (
+        !isInProgress(state) ||
+        (state.runtime.phase !== 'hold' && state.runtime.phase !== 'repRest')
+      ) {
         return state
       }
 
@@ -322,14 +329,64 @@ export const reduceSession = (
       }
     }
     case 'complete_runtime_countdown': {
-      if (!isInProgress(state) || state.runtime.phase !== 'hold') {
+      if (!isInProgress(state) || !state.currentExerciseId) {
+        return state
+      }
+
+      const runtimeExercise = getRuntimeExercise(state, program)
+      const currentProgress = getCurrentProgress(state)
+      if (!runtimeExercise || !currentProgress) {
+        return state
+      }
+
+      const activeSet = currentProgress.sets[state.runtime.setIndex]
+      if (!activeSet) {
+        return state
+      }
+
+      if (state.runtime.phase === 'hold') {
+        if (activeSet.completedReps >= activeSet.targetReps) {
+          return state
+        }
+
+        const nextCompletedReps = activeSet.completedReps + 1
+        const isSetComplete = nextCompletedReps >= activeSet.targetReps
+        const nextSets = currentProgress.sets.map((setProgress, index) =>
+          index === state.runtime.setIndex
+            ? { ...setProgress, completedReps: nextCompletedReps }
+            : setProgress,
+        )
+
+        return {
+          ...state,
+          updatedAt: getTimestamp(state, action.now),
+          exerciseProgress: {
+            ...state.exerciseProgress,
+            [state.currentExerciseId]: {
+              ...currentProgress,
+              sets: nextSets,
+            },
+          },
+          runtime: {
+            ...state.runtime,
+            phase: isSetComplete ? 'complete' : 'repRest',
+            repIndex: nextCompletedReps,
+            remainingMs: isSetComplete ? 0 : runtimeExercise.repRestMs,
+            previousPhase: null,
+          },
+        }
+      }
+
+      if (state.runtime.phase !== 'repRest') {
         return state
       }
 
       const nextPhase = transitionRuntimePhase(state.runtime.phase, 'complete')
-      if (!nextPhase) {
+      if (!nextPhase || nextPhase !== 'hold') {
         return state
       }
+
+      const holdSeconds = runtimeExercise.holdSeconds
 
       return {
         ...state,
@@ -337,7 +394,7 @@ export const reduceSession = (
         runtime: {
           ...state.runtime,
           phase: nextPhase,
-          remainingMs: 0,
+          remainingMs: holdSeconds !== null ? holdSeconds * 1000 : 0,
           previousPhase: null,
         },
       }

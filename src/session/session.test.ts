@@ -12,6 +12,7 @@ const testProgram: Program = {
       targetSets: 1,
       targetRepsPerSet: 2,
       holdSeconds: null,
+      repRestMs: 30000,
       restHintSeconds: 30,
       notes: null,
       optional: false,
@@ -24,6 +25,7 @@ const testProgram: Program = {
       targetSets: 1,
       targetRepsPerSet: 1,
       holdSeconds: null,
+      repRestMs: 30000,
       restHintSeconds: 30,
       notes: null,
       optional: false,
@@ -36,6 +38,7 @@ const testProgram: Program = {
       targetSets: 1,
       targetRepsPerSet: 1,
       holdSeconds: 5,
+      repRestMs: 30000,
       restHintSeconds: null,
       notes: null,
       optional: false,
@@ -132,7 +135,7 @@ describe('session reducer', () => {
     expect(ignoredWhenStarted).toEqual(started)
   })
 
-  it('ticks runtime hold countdown and completes at zero', () => {
+  it('ticks runtime hold countdown and marks runtime complete at set boundary', () => {
     const initial = createSessionState(testProgram, {
       now: '2026-02-10T00:00:00.000Z',
       sessionId: 'session-runtime-countdown',
@@ -164,7 +167,56 @@ describe('session reducer', () => {
     expect(started.runtime.remainingMs).toBe(5000)
     expect(ticked.runtime.remainingMs).toBe(4200)
     expect(completed.runtime.phase).toBe('complete')
+    expect(completed.runtime.repIndex).toBe(1)
     expect(completed.runtime.remainingMs).toBe(0)
+    expect(completed.exerciseProgress['exercise-3'].sets[0].completedReps).toBe(1)
+  })
+
+  it('completes rep rest by returning to hold for the next rep', () => {
+    const multiRepRuntimeProgram: Program = {
+      ...testProgram,
+      exercises: [
+        testProgram.exercises[0],
+        testProgram.exercises[1],
+        {
+          ...testProgram.exercises[2],
+          targetRepsPerSet: 2,
+          repRestMs: 2000,
+        },
+      ],
+    }
+    const initial = createSessionState(multiRepRuntimeProgram, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-runtime-rep-rest',
+    })
+    const holdExerciseState = {
+      ...initial,
+      primaryCursor: 2,
+      currentExerciseId: testProgram.exercises[2].id,
+      updatedAt: '2026-02-10T00:00:01.000Z',
+    }
+
+    const started = reduceSession(
+      holdExerciseState,
+      { type: 'start_routine', now: '2026-02-10T00:00:02.000Z' },
+      multiRepRuntimeProgram,
+    )
+    const afterHold = reduceSession(
+      started,
+      { type: 'complete_runtime_countdown', now: '2026-02-10T00:00:03.000Z' },
+      multiRepRuntimeProgram,
+    )
+    const afterRepRest = reduceSession(
+      afterHold,
+      { type: 'complete_runtime_countdown', now: '2026-02-10T00:00:04.000Z' },
+      multiRepRuntimeProgram,
+    )
+
+    expect(afterHold.runtime.phase).toBe('repRest')
+    expect(afterHold.runtime.remainingMs).toBe(2000)
+    expect(afterRepRest.runtime.phase).toBe('hold')
+    expect(afterRepRest.runtime.remainingMs).toBe(5000)
+    expect(afterRepRest.runtime.repIndex).toBe(1)
   })
 
   it('increments reps up to the target for the active set', () => {

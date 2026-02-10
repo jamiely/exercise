@@ -37,6 +37,22 @@ describe('parseProgram', () => {
 
     expect(program.programName).toBe('Knee Pain')
     expect(program.exercises.map((exercise) => exercise.id)).toEqual(['exercise-a', 'exercise-b'])
+    expect(program.exercises[0].repRestMs).toBe(30000)
+    expect(program.exercises[1].repRestMs).toBe(30000)
+  })
+
+  it('uses configured repRestMs when present', () => {
+    const program = parseProgram({
+      ...validProgram,
+      exercises: [
+        {
+          ...validProgram.exercises[0],
+          repRestMs: 15000,
+        },
+      ],
+    })
+
+    expect(program.exercises[0].repRestMs).toBe(15000)
   })
 
   it('throws when required fields are missing', () => {

@@ -36,7 +36,7 @@ describe('App shell', () => {
     expect(screen.getByRole('button', { name: /^start$/i })).toBeDisabled()
   })
 
-  it('counts down hold runtime phase in tenths and completes at zero', async () => {
+  it('counts down hold runtime phase in tenths and automatically enters rep rest', async () => {
     vi.useFakeTimers()
     const program = loadProgram()
     const session = createSessionState(program, {
@@ -73,8 +73,9 @@ describe('App shell', () => {
     await act(async () => {
       vi.advanceTimersByTime(700)
     })
-    expect(screen.getByText(/phase timer: 0.0s/i)).toBeInTheDocument()
-    expect(screen.getByText(/workflow phase: complete/i)).toBeInTheDocument()
+    expect(screen.getByText(/workflow phase: represt/i)).toBeInTheDocument()
+    expect(screen.getByText(/phase timer: 30.0s/i)).toBeInTheDocument()
+    expect(screen.getByText('1/5 reps')).toBeInTheDocument()
   })
 
   it('increments and undoes reps for active set', async () => {
