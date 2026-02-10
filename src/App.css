@@ -2,10 +2,10 @@
   max-width: 32rem;
   margin: 0 auto;
   min-height: 100dvh;
-  padding: 1.5rem;
+  padding: 1.25rem;
   display: grid;
-  align-content: center;
-  gap: 0.75rem;
+  align-content: start;
+  gap: 0.875rem;
 }
 
 .eyebrow {
@@ -19,8 +19,14 @@
 
 h1 {
   margin: 0;
-  font-size: 2rem;
+  font-size: 1.75rem;
   line-height: 1.1;
+}
+
+h2 {
+  margin: 0;
+  font-size: 1.375rem;
+  line-height: 1.2;
 }
 
 .subtitle {
@@ -44,12 +50,97 @@ h1 {
   color: #f9fafb;
   font-size: 1rem;
   font-weight: 600;
+  touch-action: manipulation;
 }
 
-.resume-actions .secondary-button {
+.secondary-button {
   border-color: #d1d5db;
   background: #f9fafb;
   color: #374151;
+}
+
+.tertiary-button {
+  border-color: #e5e7eb;
+  background: #fff;
+  color: #6b7280;
+}
+
+.session-meta {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.exercise-card {
+  border: 1px solid #d1d5db;
+  border-radius: 1rem;
+  padding: 1rem;
+  background: #fff;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.rep-display {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.set-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.set-pill {
+  border: 1px solid #d1d5db;
+  border-radius: 0.75rem;
+  padding: 0.625rem 0.75rem;
+  background: #f9fafb;
+  display: grid;
+  gap: 0.125rem;
+}
+
+.set-pill p {
+  margin: 0;
+}
+
+.set-pill.is-active {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+
+.set-pill.is-complete {
+  border-color: #16a34a;
+  background: #f0fdf4;
+}
+
+.primary-controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.session-actions {
+  display: grid;
+  gap: 0.625rem;
+}
+
+.primary-controls button,
+.session-actions button {
+  min-height: 2.875rem;
+  border: 1px solid #111827;
+  border-radius: 0.75rem;
+  background: #111827;
+  color: #f9fafb;
+  font-size: 1rem;
+  font-weight: 600;
+  touch-action: manipulation;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 @media (max-width: 420px) {
@@ -58,6 +149,10 @@ h1 {
   }
 
   h1 {
-    font-size: 1.75rem;
+    font-size: 1.625rem;
+  }
+
+  .set-grid {
+    grid-template-columns: 1fr;
   }
 }

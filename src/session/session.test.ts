@@ -85,6 +85,38 @@ describe('session reducer', () => {
     expect(capped.exerciseProgress['exercise-1'].sets[0].completedReps).toBe(2)
   })
 
+  it('decrements reps down to zero for the active set', () => {
+    const initial = createSessionState(testProgram, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-1b',
+    })
+
+    const withReps = reduceSession(
+      reduceSession(initial, { type: 'increment_rep', now: '2026-02-10T00:00:01.000Z' }, testProgram),
+      { type: 'increment_rep', now: '2026-02-10T00:00:02.000Z' },
+      testProgram,
+    )
+    const once = reduceSession(
+      withReps,
+      { type: 'decrement_rep', now: '2026-02-10T00:00:03.000Z' },
+      testProgram,
+    )
+    const twice = reduceSession(
+      once,
+      { type: 'decrement_rep', now: '2026-02-10T00:00:04.000Z' },
+      testProgram,
+    )
+    const capped = reduceSession(
+      twice,
+      { type: 'decrement_rep', now: '2026-02-10T00:00:05.000Z' },
+      testProgram,
+    )
+
+    expect(once.exerciseProgress['exercise-1'].sets[0].completedReps).toBe(1)
+    expect(twice.exerciseProgress['exercise-1'].sets[0].completedReps).toBe(0)
+    expect(capped.exerciseProgress['exercise-1'].sets[0].completedReps).toBe(0)
+  })
+
   it('advances to the next set when active set is complete', () => {
     const initial = createSessionState(filledSetProgram, {
       now: '2026-02-10T00:00:00.000Z',

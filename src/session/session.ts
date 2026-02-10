@@ -37,6 +37,7 @@ export type SessionState = {
 export type SessionAction =
   | { type: 'start_session'; program: Program; now: string; sessionId: string }
   | { type: 'increment_rep'; now?: string }
+  | { type: 'decrement_rep'; now?: string }
   | { type: 'complete_set'; now?: string }
   | { type: 'complete_exercise'; now?: string }
   | { type: 'skip_exercise'; now?: string }
@@ -210,6 +211,37 @@ export const reduceSession = (
       const nextSets = currentProgress.sets.map((setProgress, index) =>
         index === currentProgress.activeSetIndex
           ? { ...setProgress, completedReps: setProgress.completedReps + 1 }
+          : setProgress,
+      )
+
+      return withUpdatedExerciseProgress(
+        state,
+        state.currentExerciseId,
+        {
+          ...currentProgress,
+          sets: nextSets,
+        },
+        action.now,
+      )
+    }
+    case 'decrement_rep': {
+      if (!isInProgress(state) || !state.currentExerciseId) {
+        return state
+      }
+
+      const currentProgress = getCurrentProgress(state)
+      if (!currentProgress) {
+        return state
+      }
+
+      const currentSet = currentProgress.sets[currentProgress.activeSetIndex]
+      if (!currentSet || currentSet.completedReps <= 0) {
+        return state
+      }
+
+      const nextSets = currentProgress.sets.map((setProgress, index) =>
+        index === currentProgress.activeSetIndex
+          ? { ...setProgress, completedReps: setProgress.completedReps - 1 }
           : setProgress,
       )
 
