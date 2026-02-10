@@ -128,6 +128,117 @@ describe('App shell', () => {
     expect(screen.getByText(/phase timer: 0.5s/i)).toBeInTheDocument()
   })
 
+  it('auto-pauses runtime countdown when app becomes hidden', async () => {
+    vi.useFakeTimers()
+    const program = loadProgram()
+    const session = createSessionState(program, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-runtime-lifecycle-pause',
+    })
+    const holdSession = {
+      ...session,
+      primaryCursor: 2,
+      currentExerciseId: program.exercises[2].id,
+      updatedAt: '2026-02-10T00:00:02.000Z',
+      runtime: {
+        phase: 'hold' as const,
+        exerciseIndex: 2,
+        setIndex: 0,
+        repIndex: 0,
+        remainingMs: 1_000,
+        previousPhase: null,
+      },
+    }
+    persistSession(holdSession)
+
+    let hidden = false
+    Object.defineProperty(document, 'hidden', {
+      configurable: true,
+      get: () => hidden,
+    })
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      get: () => (hidden ? 'hidden' : 'visible'),
+    })
+
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: /^resume$/i }))
+
+    await act(async () => {
+      vi.advanceTimersByTime(300)
+    })
+    expect(screen.getByText(/phase timer: 0.7s/i)).toBeInTheDocument()
+
+    hidden = true
+    act(() => {
+      document.dispatchEvent(new Event('visibilitychange'))
+    })
+
+    expect(screen.getByText(/workflow phase: paused/i)).toBeInTheDocument()
+    expect(screen.getByText(/phase timer: 0.7s/i)).toBeInTheDocument()
+
+    await act(async () => {
+      vi.advanceTimersByTime(500)
+    })
+    expect(screen.getByText(/phase timer: 0.7s/i)).toBeInTheDocument()
+  })
+
+  it('requests wake lock in active runtime phases and releases on pause', async () => {
+    vi.useFakeTimers()
+    const request = vi.fn(async () => ({ release: vi.fn(async () => undefined) }))
+    Object.defineProperty(navigator, 'wakeLock', {
+      configurable: true,
+      value: { request },
+    })
+
+    const program = loadProgram()
+    const session = createSessionState(program, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-runtime-wake-lock',
+    })
+    const holdSession = {
+      ...session,
+      primaryCursor: 2,
+      currentExerciseId: program.exercises[2].id,
+      updatedAt: '2026-02-10T00:00:02.000Z',
+      runtime: {
+        phase: 'hold' as const,
+        exerciseIndex: 2,
+        setIndex: 0,
+        repIndex: 0,
+        remainingMs: 1_000,
+        previousPhase: null,
+      },
+    }
+    persistSession(holdSession)
+
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: /^resume$/i }))
+
+    await act(async () => {})
+    expect(request).toHaveBeenCalledWith('screen')
+
+    fireEvent.click(screen.getByRole('button', { name: /^pause$/i }))
+    expect(screen.getByText(/workflow phase: paused/i)).toBeInTheDocument()
+
+    const sentinel = await request.mock.results[0].value
+    expect(sentinel.release).toHaveBeenCalledTimes(1)
+  })
+
+  it('continues session when wake lock is unsupported with no warning UI', async () => {
+    vi.useFakeTimers()
+    Object.defineProperty(navigator, 'wakeLock', {
+      configurable: true,
+      value: undefined,
+    })
+
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: /^start$/i }))
+
+    expect(screen.getByText(/workflow phase: hold/i)).toBeInTheDocument()
+    expect(screen.queryByText(/wake lock/i)).not.toBeInTheDocument()
+  })
+
   it('counts down set rest runtime phase and auto-starts next set hold', async () => {
     vi.useFakeTimers()
     const program = loadProgram()

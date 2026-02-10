@@ -23,6 +23,18 @@ type LoadedProgramProps = {
   program: ReturnType<typeof loadProgram>
 }
 
+type WakeLockSentinelLike = {
+  release: () => Promise<void>
+}
+
+type WakeLockLike = {
+  request: (type: 'screen') => Promise<WakeLockSentinelLike>
+}
+
+type NavigatorWithWakeLock = Navigator & {
+  wakeLock?: WakeLockLike
+}
+
 type SessionBootState = {
   initialSession: SessionState
   pendingResume: SessionState | null
@@ -93,6 +105,8 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
     bootState.initialSession,
   )
   const runtimeRemainingMsRef = useRef(sessionState.runtime.remainingMs)
+  const wakeLockSentinelRef = useRef<WakeLockSentinelLike | null>(null)
+  const wakeLockRequestInFlightRef = useRef(false)
 
   useEffect(() => {
     runtimeRemainingMsRef.current = sessionState.runtime.remainingMs
@@ -101,6 +115,70 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
   useEffect(() => {
     persistSession(sessionState)
   }, [sessionState])
+
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      if (
+        !document.hidden ||
+        sessionState.status !== 'in_progress' ||
+        (sessionState.runtime.phase !== 'hold' &&
+          sessionState.runtime.phase !== 'repRest' &&
+          sessionState.runtime.phase !== 'setRest' &&
+          sessionState.runtime.phase !== 'exerciseRest')
+      ) {
+        return
+      }
+
+      dispatch({ type: 'pause_routine', now: new Date().toISOString() })
+    }
+
+    document.addEventListener('visibilitychange', onVisibilityChange)
+
+    return () => document.removeEventListener('visibilitychange', onVisibilityChange)
+  }, [sessionState.runtime.phase, sessionState.status])
+
+  useEffect(() => {
+    const isRuntimeCountdownPhase =
+      sessionState.status === 'in_progress' &&
+      (sessionState.runtime.phase === 'hold' ||
+        sessionState.runtime.phase === 'repRest' ||
+        sessionState.runtime.phase === 'setRest' ||
+        sessionState.runtime.phase === 'exerciseRest')
+    const navigatorWithWakeLock = navigator as NavigatorWithWakeLock
+    const wakeLock = navigatorWithWakeLock.wakeLock
+
+    if (!isRuntimeCountdownPhase) {
+      const sentinel = wakeLockSentinelRef.current
+      wakeLockSentinelRef.current = null
+      wakeLockRequestInFlightRef.current = false
+      void sentinel?.release().catch(() => undefined)
+      return
+    }
+
+    if (!wakeLock || wakeLockSentinelRef.current || wakeLockRequestInFlightRef.current) {
+      return
+    }
+
+    wakeLockRequestInFlightRef.current = true
+    void wakeLock
+      .request('screen')
+      .then((sentinel) => {
+        wakeLockSentinelRef.current = sentinel
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        wakeLockRequestInFlightRef.current = false
+      })
+  }, [sessionState.runtime.phase, sessionState.status])
+
+  useEffect(() => {
+    return () => {
+      wakeLockRequestInFlightRef.current = false
+      const sentinel = wakeLockSentinelRef.current
+      wakeLockSentinelRef.current = null
+      void sentinel?.release().catch(() => undefined)
+    }
+  }, [])
 
   const timerExercise =
     sessionState.currentExerciseId === null
