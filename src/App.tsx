@@ -460,11 +460,11 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
         <p className="eyebrow">Current Exercise</p>
         <h2>{currentExercise.name}</h2>
         <p className="subtitle">
-          Target: {currentExercise.targetSets} sets x {currentExercise.targetRepsPerSet} reps
+          {currentExercise.targetSets} sets x {currentExercise.targetRepsPerSet} reps
           {currentExercise.holdSeconds ? ` · ${currentExercise.holdSeconds}s hold` : ''}
         </p>
         <p className="subtitle">
-          Active set: {currentProgress.activeSetIndex + 1}/{currentProgress.sets.length}
+          Set {currentProgress.activeSetIndex + 1}/{currentProgress.sets.length}
         </p>
         <p className="rep-display" aria-live="polite">
           {activeSet.completedReps}/{activeSet.targetReps} reps

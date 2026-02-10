@@ -20,9 +20,12 @@ describe('App shell', () => {
 
     expect(screen.getByRole('heading', { name: /knee pain/i })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /quad set/i })).toBeInTheDocument()
-    expect(screen.getByText(/target: 2 sets x 12 reps/i)).toBeInTheDocument()
+    expect(screen.getByText(/2 sets x 12 reps/i)).toBeInTheDocument()
+    expect(screen.getByText(/set 1\/2/i)).toBeInTheDocument()
     expect(screen.getByText('0/12 reps')).toBeInTheDocument()
     expect(screen.getByText(/workflow phase: idle/i)).toBeInTheDocument()
+    expect(screen.queryByText(/target:/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/active set:/i)).not.toBeInTheDocument()
   })
 
   it('shows sound and vibration options enabled by default', () => {
