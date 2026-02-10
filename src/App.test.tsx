@@ -32,6 +32,20 @@ describe('App shell', () => {
     expect(screen.getByRole('checkbox', { name: /vibration cues/i })).toBeChecked()
   })
 
+  it('opens override modal from the bottom overrides button', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(screen.getByRole('button', { name: /^start$/i }))
+    await user.click(screen.getByRole('button', { name: /overrides/i }))
+
+    expect(screen.getByRole('dialog', { name: /override actions/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /skip rep/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /skip rest/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /end set/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /end exercise/i })).toBeInTheDocument()
+  })
+
   it('enters hold workflow phase when Start is pressed', async () => {
     const user = userEvent.setup()
     render(<App />)
@@ -403,6 +417,177 @@ describe('App shell', () => {
     expect(screen.getByText(/workflow phase: hold/i)).toBeInTheDocument()
     expect(screen.getByText(/phase timer: 40.0s/i)).toBeInTheDocument()
     expect(screen.getByText('0/5 reps')).toBeInTheDocument()
+  })
+
+  it('skips rep from override modal and transitions hold to rep rest', async () => {
+    const program = loadProgram()
+    const session = createSessionState(program, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-override-skip-rep',
+    })
+    const holdSession = {
+      ...session,
+      primaryCursor: 2,
+      currentExerciseId: program.exercises[2].id,
+      updatedAt: '2026-02-10T00:00:02.000Z',
+      runtime: {
+        phase: 'hold' as const,
+        exerciseIndex: 2,
+        setIndex: 0,
+        repIndex: 0,
+        remainingMs: 40_000,
+        previousPhase: null,
+      },
+    }
+    persistSession(holdSession)
+
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: /^resume$/i }))
+    fireEvent.click(screen.getByRole('button', { name: /overrides/i }))
+    fireEvent.click(screen.getByRole('button', { name: /skip rep/i }))
+
+    expect(screen.getByText(/workflow phase: represt/i)).toBeInTheDocument()
+    expect(screen.getByText(/phase timer: 30.0s/i)).toBeInTheDocument()
+    expect(screen.getByText('1/5 reps')).toBeInTheDocument()
+  })
+
+  it('skips rest from override modal and transitions rep rest to hold', () => {
+    const program = loadProgram()
+    const session = createSessionState(program, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-override-skip-rest',
+    })
+    const repRestSession = {
+      ...session,
+      primaryCursor: 2,
+      currentExerciseId: program.exercises[2].id,
+      updatedAt: '2026-02-10T00:00:02.000Z',
+      exerciseProgress: {
+        ...session.exerciseProgress,
+        [program.exercises[2].id]: {
+          ...session.exerciseProgress[program.exercises[2].id],
+          sets: [
+            {
+              ...session.exerciseProgress[program.exercises[2].id].sets[0],
+              completedReps: 1,
+            },
+          ],
+        },
+      },
+      runtime: {
+        phase: 'repRest' as const,
+        exerciseIndex: 2,
+        setIndex: 0,
+        repIndex: 1,
+        remainingMs: 25_000,
+        previousPhase: null,
+      },
+    }
+    persistSession(repRestSession)
+
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: /^resume$/i }))
+    fireEvent.click(screen.getByRole('button', { name: /overrides/i }))
+    fireEvent.click(screen.getByRole('button', { name: /skip rest/i }))
+
+    expect(screen.getByText(/workflow phase: hold/i)).toBeInTheDocument()
+    expect(screen.getByText(/phase timer: 40.0s/i)).toBeInTheDocument()
+    expect(screen.getByText('1/5 reps')).toBeInTheDocument()
+  })
+
+  it('ends set from override modal and transitions to set rest', () => {
+    const program = loadProgram()
+    const session = createSessionState(program, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-override-end-set',
+    })
+    const holdSession = {
+      ...session,
+      primaryCursor: 1,
+      currentExerciseId: program.exercises[1].id,
+      updatedAt: '2026-02-10T00:00:02.000Z',
+      exerciseProgress: {
+        ...session.exerciseProgress,
+        [program.exercises[1].id]: {
+          ...session.exerciseProgress[program.exercises[1].id],
+          activeSetIndex: 0,
+          sets: [
+            {
+              ...session.exerciseProgress[program.exercises[1].id].sets[0],
+              completedReps: 2,
+            },
+            session.exerciseProgress[program.exercises[1].id].sets[1],
+          ],
+        },
+      },
+      runtime: {
+        phase: 'hold' as const,
+        exerciseIndex: 1,
+        setIndex: 0,
+        repIndex: 2,
+        remainingMs: 3_000,
+        previousPhase: null,
+      },
+    }
+    persistSession(holdSession)
+
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: /^resume$/i }))
+    fireEvent.click(screen.getByRole('button', { name: /overrides/i }))
+    fireEvent.click(screen.getByRole('button', { name: /end set/i }))
+
+    expect(screen.getByText(/workflow phase: setrest/i)).toBeInTheDocument()
+    expect(screen.getByText(/phase timer: 30.0s/i)).toBeInTheDocument()
+    expect(screen.getByText('10/10 reps')).toBeInTheDocument()
+  })
+
+  it('ends exercise from override modal and transitions to exercise rest', () => {
+    const program = loadProgram()
+    const session = createSessionState(program, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-override-end-exercise',
+    })
+    const holdSession = {
+      ...session,
+      primaryCursor: 1,
+      currentExerciseId: program.exercises[1].id,
+      updatedAt: '2026-02-10T00:00:02.000Z',
+      exerciseProgress: {
+        ...session.exerciseProgress,
+        [program.exercises[1].id]: {
+          ...session.exerciseProgress[program.exercises[1].id],
+          activeSetIndex: 0,
+          sets: [
+            {
+              ...session.exerciseProgress[program.exercises[1].id].sets[0],
+              completedReps: 2,
+            },
+            {
+              ...session.exerciseProgress[program.exercises[1].id].sets[1],
+              completedReps: 1,
+            },
+          ],
+        },
+      },
+      runtime: {
+        phase: 'hold' as const,
+        exerciseIndex: 1,
+        setIndex: 0,
+        repIndex: 2,
+        remainingMs: 3_000,
+        previousPhase: null,
+      },
+    }
+    persistSession(holdSession)
+
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: /^resume$/i }))
+    fireEvent.click(screen.getByRole('button', { name: /overrides/i }))
+    fireEvent.click(screen.getByRole('button', { name: /end exercise/i }))
+
+    expect(screen.getByText(/workflow phase: exerciserest/i)).toBeInTheDocument()
+    expect(screen.getByText(/phase timer: 30.0s/i)).toBeInTheDocument()
+    expect(screen.getByText('10/10 reps')).toBeInTheDocument()
   })
 
   it('increments and undoes reps for active set', async () => {

@@ -60,6 +60,10 @@ export type SessionAction =
   | { type: 'start_routine'; now?: string }
   | { type: 'pause_routine'; now?: string }
   | { type: 'resume_routine'; now?: string }
+  | { type: 'override_skip_rep'; now?: string }
+  | { type: 'override_skip_rest'; now?: string }
+  | { type: 'override_end_set'; now?: string }
+  | { type: 'override_end_exercise'; now?: string }
   | { type: 'set_sound_enabled'; now?: string; enabled: boolean }
   | { type: 'set_vibration_enabled'; now?: string; enabled: boolean }
   | { type: 'tick_runtime_countdown'; now?: string; remainingMs: number }
@@ -373,6 +377,161 @@ export const reduceSession = (
         runtime: {
           ...state.runtime,
           phase: nextPhase,
+          previousPhase: null,
+        },
+      }
+    }
+    case 'override_skip_rep': {
+      if (!isInProgress(state) || state.runtime.phase !== 'hold') {
+        return state
+      }
+
+      return reduceSession(state, { type: 'complete_runtime_countdown', now: action.now }, program)
+    }
+    case 'override_skip_rest': {
+      if (
+        !isInProgress(state) ||
+        (state.runtime.phase !== 'repRest' &&
+          state.runtime.phase !== 'setRest' &&
+          state.runtime.phase !== 'exerciseRest')
+      ) {
+        return state
+      }
+
+      return reduceSession(state, { type: 'complete_runtime_countdown', now: action.now }, program)
+    }
+    case 'override_end_set': {
+      if (!isInProgress(state) || !state.currentExerciseId) {
+        return state
+      }
+
+      const runtimeExercise = getRuntimeExercise(state, program)
+      const currentProgress = getCurrentProgress(state)
+      if (!runtimeExercise || !currentProgress) {
+        return state
+      }
+
+      const activeSet = currentProgress.sets[state.runtime.setIndex]
+      if (!activeSet) {
+        return state
+      }
+
+      const nextSets = currentProgress.sets.map((setProgress, index) =>
+        index === state.runtime.setIndex
+          ? { ...setProgress, completedReps: setProgress.targetReps }
+          : setProgress,
+      )
+      const hasNextSet = state.runtime.setIndex < currentProgress.sets.length - 1
+      const hasNextExercise = state.runtime.exerciseIndex < program.exercises.length - 1
+
+      if (!hasNextSet && !hasNextExercise) {
+        const progressedState = withUpdatedExerciseProgress(
+          state,
+          state.currentExerciseId,
+          {
+            ...currentProgress,
+            sets: nextSets,
+            completed: true,
+            restTimerRunning: false,
+            restElapsedSeconds: 0,
+            holdTimerRunning: false,
+            holdElapsedSeconds: 0,
+          },
+          action.now,
+        )
+
+        return withTerminalStatus(progressedState, 'completed', action.now)
+      }
+
+      const nextPhase = hasNextSet ? 'setRest' : 'exerciseRest'
+      const nextRemainingMs = hasNextSet
+        ? runtimeExercise.setRestMs
+        : runtimeExercise.exerciseRestMs
+
+      return {
+        ...state,
+        updatedAt: getTimestamp(state, action.now),
+        exerciseProgress: {
+          ...state.exerciseProgress,
+          [state.currentExerciseId]: {
+            ...currentProgress,
+            sets: nextSets,
+            restTimerRunning: false,
+            restElapsedSeconds: 0,
+            holdTimerRunning: false,
+            holdElapsedSeconds: 0,
+          },
+        },
+        runtime: {
+          ...state.runtime,
+          phase: nextPhase,
+          repIndex: activeSet.targetReps,
+          remainingMs: nextRemainingMs,
+          previousPhase: null,
+        },
+      }
+    }
+    case 'override_end_exercise': {
+      if (!isInProgress(state) || !state.currentExerciseId) {
+        return state
+      }
+
+      const runtimeExercise = getRuntimeExercise(state, program)
+      const currentProgress = getCurrentProgress(state)
+      if (!runtimeExercise || !currentProgress) {
+        return state
+      }
+
+      const completedSets = currentProgress.sets.map((setProgress) => ({
+        ...setProgress,
+        completedReps: setProgress.targetReps,
+      }))
+      const hasNextExercise = state.runtime.exerciseIndex < program.exercises.length - 1
+
+      if (!hasNextExercise) {
+        const progressedState = withUpdatedExerciseProgress(
+          state,
+          state.currentExerciseId,
+          {
+            ...currentProgress,
+            sets: completedSets,
+            completed: true,
+            restTimerRunning: false,
+            restElapsedSeconds: 0,
+            holdTimerRunning: false,
+            holdElapsedSeconds: 0,
+          },
+          action.now,
+        )
+
+        return withTerminalStatus(progressedState, 'completed', action.now)
+      }
+
+      const lastSetIndex = completedSets.length - 1
+      const lastSet = completedSets[lastSetIndex]
+
+      return {
+        ...state,
+        updatedAt: getTimestamp(state, action.now),
+        exerciseProgress: {
+          ...state.exerciseProgress,
+          [state.currentExerciseId]: {
+            ...currentProgress,
+            sets: completedSets,
+            activeSetIndex: lastSetIndex,
+            completed: true,
+            restTimerRunning: false,
+            restElapsedSeconds: 0,
+            holdTimerRunning: false,
+            holdElapsedSeconds: 0,
+          },
+        },
+        runtime: {
+          ...state.runtime,
+          phase: 'exerciseRest',
+          setIndex: lastSetIndex,
+          repIndex: lastSet.targetReps,
+          remainingMs: runtimeExercise.exerciseRestMs,
           previousPhase: null,
         },
       }

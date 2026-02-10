@@ -101,6 +101,7 @@ const getSessionSummary = (sessionState: SessionState, totalExercises: number) =
 const LoadedProgramView = ({ program }: LoadedProgramProps) => {
   const bootState = useMemo(() => buildSessionBootState(program), [program])
   const [pendingResume, setPendingResume] = useState<SessionState | null>(bootState.pendingResume)
+  const [isOverrideMenuOpen, setIsOverrideMenuOpen] = useState(false)
   const [sessionState, dispatch] = useReducer(
     (state: SessionState, action: SessionAction) => reduceSession(state, action, program),
     bootState.initialSession,
@@ -368,6 +369,11 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
     dispatch(action)
   }
 
+  const dispatchOverride = (actionType: Extract<SessionAction['type'], `override_${string}`>) => {
+    dispatchAction({ type: actionType, now: new Date().toISOString() })
+    setIsOverrideMenuOpen(false)
+  }
+
   const dispatchTimed = (actionType: SessionAction['type']) => {
     const now = new Date().toISOString()
 
@@ -393,6 +399,14 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
         break
     }
   }
+
+  const canOpenOverrideMenu =
+    sessionState.runtime.phase !== 'idle' && sessionState.runtime.phase !== 'complete'
+  const canSkipRep = sessionState.runtime.phase === 'hold'
+  const canSkipRest =
+    sessionState.runtime.phase === 'repRest' ||
+    sessionState.runtime.phase === 'setRest' ||
+    sessionState.runtime.phase === 'exerciseRest'
 
   return (
     <main className="app-shell">
@@ -620,6 +634,58 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
           End Session Early
         </button>
       </section>
+      <section className="override-actions" aria-label="Override actions launcher">
+        <button
+          type="button"
+          className="tertiary-button override-launcher-button"
+          onClick={() => setIsOverrideMenuOpen(true)}
+          disabled={!canOpenOverrideMenu}
+        >
+          Overrides
+        </button>
+      </section>
+      {isOverrideMenuOpen ? (
+        <div className="override-modal-backdrop">
+          <section
+            className="override-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Override actions"
+          >
+            <h2>Overrides</h2>
+            <p className="subtitle">Apply one quick transition.</p>
+            <div className="override-modal-actions">
+              <button
+                type="button"
+                onClick={() => dispatchOverride('override_skip_rep')}
+                disabled={!canSkipRep}
+              >
+                Skip Rep
+              </button>
+              <button
+                type="button"
+                onClick={() => dispatchOverride('override_skip_rest')}
+                disabled={!canSkipRest}
+              >
+                Skip Rest
+              </button>
+              <button type="button" onClick={() => dispatchOverride('override_end_set')}>
+                End Set
+              </button>
+              <button type="button" onClick={() => dispatchOverride('override_end_exercise')}>
+                End Exercise
+              </button>
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => setIsOverrideMenuOpen(false)}
+              >
+                Close
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </main>
   )
 }
