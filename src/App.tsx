@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useReducer, useState } from 'react'
+import { useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import './App.css'
 import { ProgramLoadError, loadProgram } from './program/program'
+import { createCountdownController, formatCountdownTenths } from './session/countdown'
 import type { SessionAction, SessionState } from './session/session'
 import { createSessionState, reduceSession } from './session/session'
 import { persistSession, readPersistedSession } from './session/persistence'
@@ -91,6 +92,11 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
     (state: SessionState, action: SessionAction) => reduceSession(state, action, program),
     bootState.initialSession,
   )
+  const runtimeRemainingMsRef = useRef(sessionState.runtime.remainingMs)
+
+  useEffect(() => {
+    runtimeRemainingMsRef.current = sessionState.runtime.remainingMs
+  }, [sessionState.runtime.remainingMs])
 
   useEffect(() => {
     persistSession(sessionState)
@@ -140,6 +146,45 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
 
     return () => window.clearInterval(intervalId)
   }, [sessionState.status, timerExercise, timerProgress])
+
+  useEffect(() => {
+    const remainingMs = runtimeRemainingMsRef.current
+    if (
+      sessionState.status !== 'in_progress' ||
+      sessionState.runtime.phase !== 'hold' ||
+      remainingMs <= 0
+    ) {
+      return
+    }
+
+    const runtimeExercise = program.exercises[sessionState.runtime.exerciseIndex] ?? null
+    if (!runtimeExercise || runtimeExercise.holdSeconds === null) {
+      return
+    }
+
+    const countdown = createCountdownController({
+      tickMs: 100,
+      onTick: (remainingMs) => {
+        dispatch({
+          type: 'tick_runtime_countdown',
+          now: new Date().toISOString(),
+          remainingMs,
+        })
+      },
+      onComplete: () => {
+        dispatch({ type: 'complete_runtime_countdown', now: new Date().toISOString() })
+      },
+    })
+
+    countdown.start(remainingMs)
+
+    return () => countdown.stop()
+  }, [
+    program.exercises,
+    sessionState.runtime.exerciseIndex,
+    sessionState.runtime.phase,
+    sessionState.status,
+  ])
 
   if (pendingResume) {
     return (
@@ -256,7 +301,7 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
         </p>
         <p className="subtitle">Workflow phase: {sessionState.runtime.phase}</p>
         <p className="subtitle">
-          Phase timer: {(sessionState.runtime.remainingMs / 1000).toFixed(1)}s
+          Phase timer: {formatCountdownTenths(sessionState.runtime.remainingMs)}s
         </p>
       </section>
 

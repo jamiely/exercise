@@ -36,6 +36,47 @@ describe('App shell', () => {
     expect(screen.getByRole('button', { name: /^start$/i })).toBeDisabled()
   })
 
+  it('counts down hold runtime phase in tenths and completes at zero', async () => {
+    vi.useFakeTimers()
+    const program = loadProgram()
+    const session = createSessionState(program, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-runtime-hold',
+    })
+    const holdSession = {
+      ...session,
+      primaryCursor: 2,
+      currentExerciseId: program.exercises[2].id,
+      updatedAt: '2026-02-10T00:00:02.000Z',
+      runtime: {
+        phase: 'hold' as const,
+        exerciseIndex: 2,
+        setIndex: 0,
+        repIndex: 0,
+        remainingMs: 1_000,
+        previousPhase: null,
+      },
+    }
+    persistSession(holdSession)
+
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: /resume/i }))
+
+    expect(screen.getByText(/workflow phase: hold/i)).toBeInTheDocument()
+    expect(screen.getByText(/phase timer: 1.0s/i)).toBeInTheDocument()
+
+    await act(async () => {
+      vi.advanceTimersByTime(300)
+    })
+    expect(screen.getByText(/phase timer: 0.7s/i)).toBeInTheDocument()
+
+    await act(async () => {
+      vi.advanceTimersByTime(700)
+    })
+    expect(screen.getByText(/phase timer: 0.0s/i)).toBeInTheDocument()
+    expect(screen.getByText(/workflow phase: complete/i)).toBeInTheDocument()
+  })
+
   it('increments and undoes reps for active set', async () => {
     const user = userEvent.setup()
 
@@ -201,6 +242,13 @@ describe('App shell', () => {
   })
 
   it('increments reps for hold exercises only after hold timer reaches target', async () => {
+    const intervalCallbacks: Array<() => void> = []
+    const setIntervalSpy = vi
+      .spyOn(window, 'setInterval')
+      .mockImplementation((handler: TimerHandler) => {
+        intervalCallbacks.push(handler as () => void)
+        return intervalCallbacks.length
+      })
     const program = loadProgram()
     const session = createSessionState(program, {
       now: '2026-02-10T00:00:00.000Z',
@@ -220,10 +268,11 @@ describe('App shell', () => {
     expect(screen.getByRole('heading', { name: /wall sit \(shallow\)/i })).toBeInTheDocument()
     expect(screen.getByText('Hold timer: 0/40s')).toBeInTheDocument()
 
-    vi.useFakeTimers()
     fireEvent.click(screen.getByRole('button', { name: /start hold/i }))
+    expect(intervalCallbacks.length).toBeGreaterThan(0)
     await act(async () => {
-      vi.advanceTimersByTime(2000)
+      intervalCallbacks.at(-1)?.()
+      intervalCallbacks.at(-1)?.()
     })
     expect(screen.getByText('Hold timer: 2/40s')).toBeInTheDocument()
 
@@ -231,7 +280,9 @@ describe('App shell', () => {
     expect(completeHoldButton).toBeDisabled()
 
     await act(async () => {
-      vi.advanceTimersByTime(38000)
+      for (let tick = 0; tick < 38; tick += 1) {
+        intervalCallbacks.at(-1)?.()
+      }
     })
     expect(screen.getByText('Hold timer: 40/40s')).toBeInTheDocument()
     expect(completeHoldButton).toBeEnabled()
@@ -239,9 +290,17 @@ describe('App shell', () => {
     fireEvent.click(completeHoldButton)
     expect(screen.getByText('1/5 reps')).toBeInTheDocument()
     expect(screen.getByText('Hold timer: 0/40s')).toBeInTheDocument()
+    setIntervalSpy.mockRestore()
   })
 
   it('supports pausing and resetting hold timer without incrementing reps', async () => {
+    const intervalCallbacks: Array<() => void> = []
+    const setIntervalSpy = vi
+      .spyOn(window, 'setInterval')
+      .mockImplementation((handler: TimerHandler) => {
+        intervalCallbacks.push(handler as () => void)
+        return intervalCallbacks.length
+      })
     const program = loadProgram()
     const session = createSessionState(program, {
       now: '2026-02-10T00:00:00.000Z',
@@ -258,7 +317,6 @@ describe('App shell', () => {
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: /resume/i }))
 
-    vi.useFakeTimers()
     const holdToggle = screen.getByRole('button', { name: /start hold/i })
     expect(holdToggle).toHaveAttribute('aria-pressed', 'false')
     fireEvent.click(holdToggle)
@@ -267,7 +325,9 @@ describe('App shell', () => {
       'true',
     )
     await act(async () => {
-      vi.advanceTimersByTime(3000)
+      intervalCallbacks.at(-1)?.()
+      intervalCallbacks.at(-1)?.()
+      intervalCallbacks.at(-1)?.()
     })
     expect(screen.getByText('Hold timer: 3/40s')).toBeInTheDocument()
 
@@ -276,14 +336,13 @@ describe('App shell', () => {
       'aria-pressed',
       'false',
     )
-    await act(async () => {
-      vi.advanceTimersByTime(2000)
-    })
+    await act(async () => {})
     expect(screen.getByText('Hold timer: 3/40s')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: /reset hold/i }))
     expect(screen.getByText('Hold timer: 0/40s')).toBeInTheDocument()
     expect(screen.getByText('0/5 reps')).toBeInTheDocument()
+    setIntervalSpy.mockRestore()
   })
 
   it('continues rest timer from resumed in-progress session state', async () => {

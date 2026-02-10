@@ -132,6 +132,41 @@ describe('session reducer', () => {
     expect(ignoredWhenStarted).toEqual(started)
   })
 
+  it('ticks runtime hold countdown and completes at zero', () => {
+    const initial = createSessionState(testProgram, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-runtime-countdown',
+    })
+    const holdExerciseState = {
+      ...initial,
+      primaryCursor: 2,
+      currentExerciseId: testProgram.exercises[2].id,
+      updatedAt: '2026-02-10T00:00:01.000Z',
+    }
+
+    const started = reduceSession(
+      holdExerciseState,
+      { type: 'start_routine', now: '2026-02-10T00:00:02.000Z' },
+      testProgram,
+    )
+    const ticked = reduceSession(
+      started,
+      { type: 'tick_runtime_countdown', now: '2026-02-10T00:00:03.000Z', remainingMs: 4200 },
+      testProgram,
+    )
+    const completed = reduceSession(
+      ticked,
+      { type: 'complete_runtime_countdown', now: '2026-02-10T00:00:04.000Z' },
+      testProgram,
+    )
+
+    expect(started.runtime.phase).toBe('hold')
+    expect(started.runtime.remainingMs).toBe(5000)
+    expect(ticked.runtime.remainingMs).toBe(4200)
+    expect(completed.runtime.phase).toBe('complete')
+    expect(completed.runtime.remainingMs).toBe(0)
+  })
+
   it('increments reps up to the target for the active set', () => {
     const initial = createSessionState(testProgram, {
       now: '2026-02-10T00:00:00.000Z',

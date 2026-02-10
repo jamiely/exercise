@@ -52,6 +52,8 @@ export type SessionRuntimeState = {
 export type SessionAction =
   | { type: 'start_session'; program: Program; now: string; sessionId: string }
   | { type: 'start_routine'; now?: string }
+  | { type: 'tick_runtime_countdown'; now?: string; remainingMs: number }
+  | { type: 'complete_runtime_countdown'; now?: string }
   | { type: 'increment_rep'; now?: string }
   | { type: 'decrement_rep'; now?: string }
   | { type: 'complete_set'; now?: string }
@@ -296,6 +298,46 @@ export const reduceSession = (
           setIndex,
           repIndex,
           remainingMs: holdSeconds !== null ? holdSeconds * 1000 : 0,
+          previousPhase: null,
+        },
+      }
+    }
+    case 'tick_runtime_countdown': {
+      if (!isInProgress(state) || state.runtime.phase !== 'hold') {
+        return state
+      }
+
+      const remainingMs = Math.max(0, Math.round(action.remainingMs))
+      if (remainingMs === state.runtime.remainingMs) {
+        return state
+      }
+
+      return {
+        ...state,
+        updatedAt: getTimestamp(state, action.now),
+        runtime: {
+          ...state.runtime,
+          remainingMs,
+        },
+      }
+    }
+    case 'complete_runtime_countdown': {
+      if (!isInProgress(state) || state.runtime.phase !== 'hold') {
+        return state
+      }
+
+      const nextPhase = transitionRuntimePhase(state.runtime.phase, 'complete')
+      if (!nextPhase) {
+        return state
+      }
+
+      return {
+        ...state,
+        updatedAt: getTimestamp(state, action.now),
+        runtime: {
+          ...state.runtime,
+          phase: nextPhase,
+          remainingMs: 0,
           previousPhase: null,
         },
       }
