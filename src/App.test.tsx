@@ -1,5 +1,6 @@
-import { render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { vi } from 'vitest'
 import App from './App'
 import { loadProgram } from './program/program'
 import { persistSession, readPersistedSession } from './session/persistence'
@@ -8,6 +9,10 @@ import { createSessionState } from './session/session'
 describe('App shell', () => {
   beforeEach(() => {
     window.localStorage.clear()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it('renders the active exercise session screen from loaded program', () => {
@@ -36,16 +41,15 @@ describe('App shell', () => {
     expect(undoButton).toBeDisabled()
   })
 
-  it('advances active-set highlight after completing a set', async () => {
-    const user = userEvent.setup()
-
+  it('shows rest timer between sets and advances after start-next-set', async () => {
+    vi.useFakeTimers()
     render(<App />)
 
     const completeSetButton = screen.getByRole('button', { name: /complete set/i })
     expect(completeSetButton).toBeDisabled()
 
     for (let rep = 0; rep < 12; rep += 1) {
-      await user.click(screen.getByRole('button', { name: /\+1 rep/i }))
+      fireEvent.click(screen.getByRole('button', { name: /\+1 rep/i }))
     }
 
     expect(completeSetButton).toBeEnabled()
@@ -55,7 +59,17 @@ describe('App shell', () => {
     expect(setOneCard).toHaveClass('is-active')
     expect(setTwoCard).not.toHaveClass('is-active')
 
-    await user.click(completeSetButton)
+    fireEvent.click(completeSetButton)
+
+    expect(screen.getByText('12/12 reps')).toBeInTheDocument()
+    expect(screen.getByText('Rest timer: 0s')).toBeInTheDocument()
+
+    await act(async () => {
+      vi.advanceTimersByTime(3000)
+    })
+    expect(screen.getByText('Rest timer: 3s')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /start next set/i }))
 
     expect(screen.getByText('0/12 reps')).toBeInTheDocument()
     expect(setOneCard).toHaveClass('is-complete')
@@ -76,12 +90,54 @@ describe('App shell', () => {
 
     expect(completeExercise).toBeDisabled()
     await user.click(screen.getByRole('button', { name: /complete set/i }))
+    await user.click(screen.getByRole('button', { name: /start next set/i }))
 
     for (let rep = 0; rep < 12; rep += 1) {
       await user.click(screen.getByRole('button', { name: /\+1 rep/i }))
     }
 
     expect(completeExercise).toBeEnabled()
+  })
+
+  it('increments reps for hold exercises only after hold timer reaches target', async () => {
+    const program = loadProgram()
+    const session = createSessionState(program, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-hold-ui',
+    })
+    const secondExerciseSession = {
+      ...session,
+      primaryCursor: 1,
+      currentExerciseId: program.exercises[2].id,
+      updatedAt: '2026-02-10T00:00:05.000Z',
+    }
+    persistSession(secondExerciseSession)
+
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: /resume/i }))
+
+    expect(screen.getByRole('heading', { name: /wall sit \(shallow\)/i })).toBeInTheDocument()
+    expect(screen.getByText('Hold timer: 0/40s')).toBeInTheDocument()
+
+    vi.useFakeTimers()
+    fireEvent.click(screen.getByRole('button', { name: /start hold/i }))
+    await act(async () => {
+      vi.advanceTimersByTime(2000)
+    })
+    expect(screen.getByText('Hold timer: 2/40s')).toBeInTheDocument()
+
+    const completeHoldButton = screen.getByRole('button', { name: /complete hold rep/i })
+    expect(completeHoldButton).toBeDisabled()
+
+    await act(async () => {
+      vi.advanceTimersByTime(38000)
+    })
+    expect(screen.getByText('Hold timer: 40/40s')).toBeInTheDocument()
+    expect(completeHoldButton).toBeEnabled()
+
+    fireEvent.click(completeHoldButton)
+    expect(screen.getByText('1/5 reps')).toBeInTheDocument()
+    expect(screen.getByText('Hold timer: 0/40s')).toBeInTheDocument()
   })
 
   it('shows a resume prompt when an in-progress session exists', () => {

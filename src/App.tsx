@@ -54,6 +54,50 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
     persistSession(sessionState)
   }, [sessionState])
 
+  const timerExercise =
+    sessionState.currentExerciseId === null
+      ? null
+      : program.exercises.find((exercise) => exercise.id === sessionState.currentExerciseId) ?? null
+  const timerProgress =
+    sessionState.currentExerciseId === null
+      ? null
+      : sessionState.exerciseProgress[sessionState.currentExerciseId] ?? null
+
+  useEffect(() => {
+    if (
+      sessionState.status !== 'in_progress' ||
+      !timerProgress ||
+      !timerExercise ||
+      !timerProgress.restTimerRunning
+    ) {
+      return
+    }
+
+    const intervalId = window.setInterval(() => {
+      dispatch({ type: 'tick_rest_timer', now: new Date().toISOString() })
+    }, 1000)
+
+    return () => window.clearInterval(intervalId)
+  }, [sessionState.status, timerExercise, timerProgress])
+
+  useEffect(() => {
+    if (
+      sessionState.status !== 'in_progress' ||
+      !timerProgress ||
+      !timerExercise ||
+      timerExercise.holdSeconds === null ||
+      !timerProgress.holdTimerRunning
+    ) {
+      return
+    }
+
+    const intervalId = window.setInterval(() => {
+      dispatch({ type: 'tick_hold_timer', now: new Date().toISOString() })
+    }, 1000)
+
+    return () => window.clearInterval(intervalId)
+  }, [sessionState.status, timerExercise, timerProgress])
+
   if (pendingResume) {
     return (
       <main className="app-shell">
@@ -101,6 +145,11 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
   const allSetsComplete = currentProgress.sets.every(
     (setProgress) => setProgress.completedReps >= setProgress.targetReps,
   )
+  const isHoldExercise = currentExercise.holdSeconds !== null
+  const canCompleteHoldRep =
+    isHoldExercise &&
+    currentExercise.holdSeconds !== null &&
+    currentProgress.holdElapsedSeconds >= currentExercise.holdSeconds
   const hasNextSet = currentProgress.activeSetIndex < currentProgress.sets.length - 1
   const exerciseIndex = Math.max(
     0,
@@ -123,6 +172,11 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
       case 'skip_exercise':
       case 'end_session_early':
       case 'finish_session':
+      case 'start_next_set':
+      case 'start_hold_timer':
+      case 'stop_hold_timer':
+      case 'reset_hold_timer':
+      case 'complete_hold_rep':
         dispatchAction({ type: actionType, now })
         break
       default:
@@ -156,6 +210,54 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
         <p className="rep-display" aria-live="polite">
           {activeSet.completedReps}/{activeSet.targetReps} reps
         </p>
+        {currentProgress.restTimerRunning ? (
+          <div className="timer-card" aria-live="polite">
+            <p className="eyebrow">Rest</p>
+            <p className="timer-text">Rest timer: {currentProgress.restElapsedSeconds}s</p>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => dispatchTimed('start_next_set')}
+            >
+              Start Next Set
+            </button>
+          </div>
+        ) : null}
+        {isHoldExercise && currentExercise.holdSeconds !== null ? (
+          <div className="timer-card" aria-live="polite">
+            <p className="eyebrow">Hold</p>
+            <p className="timer-text">
+              Hold timer: {currentProgress.holdElapsedSeconds}/{currentExercise.holdSeconds}s
+            </p>
+            <div className="timer-controls">
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() =>
+                  dispatchTimed(currentProgress.holdTimerRunning ? 'stop_hold_timer' : 'start_hold_timer')
+                }
+                disabled={currentProgress.restTimerRunning || isActiveSetComplete}
+              >
+                {currentProgress.holdTimerRunning ? 'Pause Hold' : 'Start Hold'}
+              </button>
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => dispatchTimed('reset_hold_timer')}
+                disabled={currentProgress.holdElapsedSeconds === 0 && !currentProgress.holdTimerRunning}
+              >
+                Reset Hold
+              </button>
+              <button
+                type="button"
+                onClick={() => dispatchTimed('complete_hold_rep')}
+                disabled={!canCompleteHoldRep}
+              >
+                Complete Hold Rep
+              </button>
+            </div>
+          </div>
+        ) : null}
       </article>
 
       <section className="set-grid" aria-label="Set tracker">
@@ -179,17 +281,34 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
       </section>
 
       <section className="primary-controls" aria-label="Rep controls">
-        <button type="button" onClick={() => dispatchTimed('increment_rep')}>
-          +1 Rep
-        </button>
-        <button
-          type="button"
-          className="secondary-button"
-          onClick={() => dispatchTimed('decrement_rep')}
-          disabled={activeSet.completedReps === 0}
-        >
-          Undo Rep
-        </button>
+        {isHoldExercise ? (
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={() => dispatchTimed('decrement_rep')}
+            disabled={activeSet.completedReps === 0 || currentProgress.restTimerRunning}
+          >
+            Undo Rep
+          </button>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={() => dispatchTimed('increment_rep')}
+              disabled={currentProgress.restTimerRunning}
+            >
+              +1 Rep
+            </button>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => dispatchTimed('decrement_rep')}
+              disabled={activeSet.completedReps === 0 || currentProgress.restTimerRunning}
+            >
+              Undo Rep
+            </button>
+          </>
+        )}
       </section>
 
       <section className="session-actions" aria-label="Exercise actions">
@@ -197,7 +316,7 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
           type="button"
           className="secondary-button"
           onClick={() => dispatchTimed('complete_set')}
-          disabled={!isActiveSetComplete || !hasNextSet}
+          disabled={!isActiveSetComplete || !hasNextSet || currentProgress.restTimerRunning}
         >
           Complete Set
         </button>

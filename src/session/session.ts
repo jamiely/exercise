@@ -39,6 +39,13 @@ export type SessionAction =
   | { type: 'increment_rep'; now?: string }
   | { type: 'decrement_rep'; now?: string }
   | { type: 'complete_set'; now?: string }
+  | { type: 'start_next_set'; now?: string }
+  | { type: 'tick_rest_timer'; now?: string; seconds?: number }
+  | { type: 'start_hold_timer'; now?: string }
+  | { type: 'stop_hold_timer'; now?: string }
+  | { type: 'reset_hold_timer'; now?: string }
+  | { type: 'tick_hold_timer'; now?: string; seconds?: number }
+  | { type: 'complete_hold_rep'; now?: string }
   | { type: 'complete_exercise'; now?: string }
   | { type: 'skip_exercise'; now?: string }
   | { type: 'end_session_early'; now?: string }
@@ -71,6 +78,14 @@ const getCurrentProgress = (state: SessionState): ExerciseProgress | null => {
   }
 
   return state.exerciseProgress[state.currentExerciseId] ?? null
+}
+
+const getCurrentExercise = (state: SessionState, program: Program): Exercise | null => {
+  if (!state.currentExerciseId) {
+    return null
+  }
+
+  return program.exercises.find((exercise) => exercise.id === state.currentExerciseId) ?? null
 }
 
 const withUpdatedExerciseProgress = (
@@ -198,8 +213,17 @@ export const reduceSession = (
         return state
       }
 
+      const currentExercise = getCurrentExercise(state, program)
+      if (!currentExercise) {
+        return state
+      }
+
       const currentProgress = getCurrentProgress(state)
-      if (!currentProgress) {
+      if (!currentProgress || currentProgress.restTimerRunning || currentProgress.holdTimerRunning) {
+        return state
+      }
+
+      if (currentExercise.holdSeconds !== null) {
         return state
       }
 
@@ -271,6 +295,34 @@ export const reduceSession = (
       }
 
       const hasNextSet = currentProgress.activeSetIndex < currentProgress.sets.length - 1
+      if (!hasNextSet || currentProgress.restTimerRunning) {
+        return state
+      }
+
+      return withUpdatedExerciseProgress(
+        state,
+        state.currentExerciseId,
+        {
+          ...currentProgress,
+          restTimerRunning: true,
+          restElapsedSeconds: 0,
+          holdTimerRunning: false,
+          holdElapsedSeconds: 0,
+        },
+        action.now,
+      )
+    }
+    case 'start_next_set': {
+      if (!isInProgress(state) || !state.currentExerciseId) {
+        return state
+      }
+
+      const currentProgress = getCurrentProgress(state)
+      if (!currentProgress || !currentProgress.restTimerRunning) {
+        return state
+      }
+
+      const hasNextSet = currentProgress.activeSetIndex < currentProgress.sets.length - 1
       if (!hasNextSet) {
         return state
       }
@@ -281,8 +333,179 @@ export const reduceSession = (
         {
           ...currentProgress,
           activeSetIndex: currentProgress.activeSetIndex + 1,
-          restTimerRunning: true,
+          restTimerRunning: false,
           restElapsedSeconds: 0,
+        },
+        action.now,
+      )
+    }
+    case 'tick_rest_timer': {
+      if (!isInProgress(state) || !state.currentExerciseId) {
+        return state
+      }
+
+      const currentProgress = getCurrentProgress(state)
+      if (!currentProgress || !currentProgress.restTimerRunning) {
+        return state
+      }
+
+      const seconds = Number.isInteger(action.seconds) && (action.seconds ?? 0) > 0 ? action.seconds! : 1
+
+      return withUpdatedExerciseProgress(
+        state,
+        state.currentExerciseId,
+        {
+          ...currentProgress,
+          restElapsedSeconds: currentProgress.restElapsedSeconds + seconds,
+        },
+        action.now,
+      )
+    }
+    case 'start_hold_timer': {
+      if (!isInProgress(state) || !state.currentExerciseId) {
+        return state
+      }
+
+      const currentExercise = getCurrentExercise(state, program)
+      if (!currentExercise || currentExercise.holdSeconds === null) {
+        return state
+      }
+
+      const currentProgress = getCurrentProgress(state)
+      if (!currentProgress || currentProgress.restTimerRunning) {
+        return state
+      }
+
+      const activeSet = currentProgress.sets[currentProgress.activeSetIndex]
+      if (!activeSet || activeSet.completedReps >= activeSet.targetReps) {
+        return state
+      }
+
+      return withUpdatedExerciseProgress(
+        state,
+        state.currentExerciseId,
+        {
+          ...currentProgress,
+          holdTimerRunning: true,
+        },
+        action.now,
+      )
+    }
+    case 'stop_hold_timer': {
+      if (!isInProgress(state) || !state.currentExerciseId) {
+        return state
+      }
+
+      const currentProgress = getCurrentProgress(state)
+      if (!currentProgress || !currentProgress.holdTimerRunning) {
+        return state
+      }
+
+      return withUpdatedExerciseProgress(
+        state,
+        state.currentExerciseId,
+        {
+          ...currentProgress,
+          holdTimerRunning: false,
+        },
+        action.now,
+      )
+    }
+    case 'reset_hold_timer': {
+      if (!isInProgress(state) || !state.currentExerciseId) {
+        return state
+      }
+
+      const currentExercise = getCurrentExercise(state, program)
+      if (!currentExercise || currentExercise.holdSeconds === null) {
+        return state
+      }
+
+      const currentProgress = getCurrentProgress(state)
+      if (!currentProgress) {
+        return state
+      }
+
+      return withUpdatedExerciseProgress(
+        state,
+        state.currentExerciseId,
+        {
+          ...currentProgress,
+          holdTimerRunning: false,
+          holdElapsedSeconds: 0,
+        },
+        action.now,
+      )
+    }
+    case 'tick_hold_timer': {
+      if (!isInProgress(state) || !state.currentExerciseId) {
+        return state
+      }
+
+      const currentExercise = getCurrentExercise(state, program)
+      if (!currentExercise || currentExercise.holdSeconds === null) {
+        return state
+      }
+
+      const currentProgress = getCurrentProgress(state)
+      if (!currentProgress || !currentProgress.holdTimerRunning) {
+        return state
+      }
+
+      const seconds = Number.isInteger(action.seconds) && (action.seconds ?? 0) > 0 ? action.seconds! : 1
+      const nextElapsed = Math.min(
+        currentExercise.holdSeconds,
+        currentProgress.holdElapsedSeconds + seconds,
+      )
+
+      return withUpdatedExerciseProgress(
+        state,
+        state.currentExerciseId,
+        {
+          ...currentProgress,
+          holdElapsedSeconds: nextElapsed,
+        },
+        action.now,
+      )
+    }
+    case 'complete_hold_rep': {
+      if (!isInProgress(state) || !state.currentExerciseId) {
+        return state
+      }
+
+      const currentExercise = getCurrentExercise(state, program)
+      if (!currentExercise || currentExercise.holdSeconds === null) {
+        return state
+      }
+
+      const currentProgress = getCurrentProgress(state)
+      if (!currentProgress || currentProgress.restTimerRunning) {
+        return state
+      }
+
+      const activeSet = currentProgress.sets[currentProgress.activeSetIndex]
+      if (
+        !activeSet ||
+        activeSet.completedReps >= activeSet.targetReps ||
+        currentProgress.holdElapsedSeconds < currentExercise.holdSeconds
+      ) {
+        return state
+      }
+
+      const nextSets = currentProgress.sets.map((setProgress, index) =>
+        index === currentProgress.activeSetIndex
+          ? { ...setProgress, completedReps: setProgress.completedReps + 1 }
+          : setProgress,
+      )
+
+      return withUpdatedExerciseProgress(
+        state,
+        state.currentExerciseId,
+        {
+          ...currentProgress,
+          sets: nextSets,
+          holdTimerRunning: false,
+          holdElapsedSeconds: 0,
         },
         action.now,
       )
@@ -339,6 +562,10 @@ export const reduceSession = (
         {
           ...currentProgress,
           skippedCount: currentProgress.skippedCount + 1,
+          restTimerRunning: false,
+          restElapsedSeconds: 0,
+          holdTimerRunning: false,
+          holdElapsedSeconds: 0,
         },
         action.now,
       )
