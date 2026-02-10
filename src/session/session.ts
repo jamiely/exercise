@@ -311,7 +311,8 @@ export const reduceSession = (
         !isInProgress(state) ||
         (state.runtime.phase !== 'hold' &&
           state.runtime.phase !== 'repRest' &&
-          state.runtime.phase !== 'setRest')
+          state.runtime.phase !== 'setRest' &&
+          state.runtime.phase !== 'exerciseRest')
       ) {
         return state
       }
@@ -352,15 +353,11 @@ export const reduceSession = (
         }
 
         const nextCompletedReps = activeSet.completedReps + 1
-        const isSetComplete = nextCompletedReps >= activeSet.targetReps
-        const hasNextSet = state.runtime.setIndex < currentProgress.sets.length - 1
         const nextSets = currentProgress.sets.map((setProgress, index) =>
           index === state.runtime.setIndex
             ? { ...setProgress, completedReps: nextCompletedReps }
             : setProgress,
         )
-        const nextPhase = isSetComplete && !hasNextSet ? 'complete' : 'repRest'
-        const nextRemainingMs = nextPhase === 'complete' ? 0 : runtimeExercise.repRestMs
 
         return {
           ...state,
@@ -374,15 +371,19 @@ export const reduceSession = (
           },
           runtime: {
             ...state.runtime,
-            phase: nextPhase,
+            phase: 'repRest',
             repIndex: nextCompletedReps,
-            remainingMs: nextRemainingMs,
+            remainingMs: runtimeExercise.repRestMs,
             previousPhase: null,
           },
         }
       }
 
-      if (state.runtime.phase !== 'repRest' && state.runtime.phase !== 'setRest') {
+      if (
+        state.runtime.phase !== 'repRest' &&
+        state.runtime.phase !== 'setRest' &&
+        state.runtime.phase !== 'exerciseRest'
+      ) {
         return state
       }
 
@@ -392,9 +393,33 @@ export const reduceSession = (
       if (state.runtime.phase === 'repRest') {
         const isSetComplete = activeSet.completedReps >= activeSet.targetReps
         const hasNextSet = state.runtime.setIndex < currentProgress.sets.length - 1
-        const nextPhase = isSetComplete && hasNextSet ? 'setRest' : 'hold'
+        const hasNextExercise = state.runtime.exerciseIndex < program.exercises.length - 1
+
+        if (isSetComplete && !hasNextSet && !hasNextExercise) {
+          const progressedState = withUpdatedExerciseProgress(
+            state,
+            state.currentExerciseId,
+            {
+              ...currentProgress,
+              completed: true,
+              restTimerRunning: false,
+              restElapsedSeconds: 0,
+              holdTimerRunning: false,
+              holdElapsedSeconds: 0,
+            },
+            action.now,
+          )
+
+          return withTerminalStatus(progressedState, 'completed', action.now)
+        }
+
+        const nextPhase = !isSetComplete ? 'hold' : hasNextSet ? 'setRest' : 'exerciseRest'
         const nextRemainingMs =
-          nextPhase === 'setRest' ? runtimeExercise.setRestMs : holdRemainingMs
+          nextPhase === 'hold'
+            ? holdRemainingMs
+            : nextPhase === 'setRest'
+              ? runtimeExercise.setRestMs
+              : runtimeExercise.exerciseRestMs
 
         return {
           ...state,
@@ -403,6 +428,49 @@ export const reduceSession = (
             ...state.runtime,
             phase: nextPhase,
             remainingMs: nextRemainingMs,
+            previousPhase: null,
+          },
+        }
+      }
+
+      if (state.runtime.phase === 'exerciseRest') {
+        const progressedState = withUpdatedExerciseProgress(
+          state,
+          state.currentExerciseId,
+          {
+            ...currentProgress,
+            completed: true,
+            restTimerRunning: false,
+            restElapsedSeconds: 0,
+            holdTimerRunning: false,
+            holdElapsedSeconds: 0,
+          },
+          action.now,
+        )
+        const advancedState =
+          progressedState.currentPhase === 'primary'
+            ? advanceAfterPrimary(progressedState, program, action.now)
+            : advanceAfterSkip(progressedState, action.now)
+
+        if (!isInProgress(advancedState) || !advancedState.currentExerciseId) {
+          return advancedState
+        }
+
+        const nextExerciseIndex = getCurrentExerciseIndex(advancedState, program)
+        const nextExercise = program.exercises[nextExerciseIndex]
+        if (!nextExercise) {
+          return advancedState
+        }
+
+        return {
+          ...advancedState,
+          runtime: {
+            ...advancedState.runtime,
+            phase: 'hold',
+            exerciseIndex: nextExerciseIndex,
+            setIndex: 0,
+            repIndex: 0,
+            remainingMs: nextExercise.holdSeconds !== null ? nextExercise.holdSeconds * 1000 : 0,
             previousPhase: null,
           },
         }

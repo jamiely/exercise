@@ -152,13 +152,18 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
     const isRuntimeCountdownPhase =
       sessionState.runtime.phase === 'hold' ||
       sessionState.runtime.phase === 'repRest' ||
-      sessionState.runtime.phase === 'setRest'
+      sessionState.runtime.phase === 'setRest' ||
+      sessionState.runtime.phase === 'exerciseRest'
     if (sessionState.status !== 'in_progress' || !isRuntimeCountdownPhase || remainingMs <= 0) {
       return
     }
 
     const runtimeExercise = program.exercises[sessionState.runtime.exerciseIndex] ?? null
-    if (!runtimeExercise || runtimeExercise.holdSeconds === null) {
+    if (!runtimeExercise) {
+      return
+    }
+
+    if (sessionState.runtime.phase === 'hold' && runtimeExercise.holdSeconds === null) {
       return
     }
 

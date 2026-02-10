@@ -14,6 +14,7 @@ const testProgram: Program = {
       holdSeconds: null,
       repRestMs: 30000,
       setRestMs: 30000,
+      exerciseRestMs: 30000,
       restHintSeconds: 30,
       notes: null,
       optional: false,
@@ -28,6 +29,7 @@ const testProgram: Program = {
       holdSeconds: null,
       repRestMs: 30000,
       setRestMs: 30000,
+      exerciseRestMs: 30000,
       restHintSeconds: 30,
       notes: null,
       optional: false,
@@ -42,6 +44,7 @@ const testProgram: Program = {
       holdSeconds: 5,
       repRestMs: 30000,
       setRestMs: 30000,
+      exerciseRestMs: 30000,
       restHintSeconds: null,
       notes: null,
       optional: false,
@@ -138,7 +141,7 @@ describe('session reducer', () => {
     expect(ignoredWhenStarted).toEqual(started)
   })
 
-  it('ticks runtime hold countdown and marks runtime complete at set boundary', () => {
+  it('marks final exercise complete after rep rest resolves at routine boundary', () => {
     const initial = createSessionState(testProgram, {
       now: '2026-02-10T00:00:00.000Z',
       sessionId: 'session-runtime-countdown',
@@ -165,14 +168,88 @@ describe('session reducer', () => {
       { type: 'complete_runtime_countdown', now: '2026-02-10T00:00:04.000Z' },
       testProgram,
     )
+    const finalized = reduceSession(
+      completed,
+      { type: 'complete_runtime_countdown', now: '2026-02-10T00:00:05.000Z' },
+      testProgram,
+    )
 
     expect(started.runtime.phase).toBe('hold')
     expect(started.runtime.remainingMs).toBe(5000)
     expect(ticked.runtime.remainingMs).toBe(4200)
-    expect(completed.runtime.phase).toBe('complete')
+    expect(completed.runtime.phase).toBe('repRest')
+    expect(completed.runtime.remainingMs).toBe(30000)
     expect(completed.runtime.repIndex).toBe(1)
-    expect(completed.runtime.remainingMs).toBe(0)
     expect(completed.exerciseProgress['exercise-3'].sets[0].completedReps).toBe(1)
+    expect(finalized.status).toBe('completed')
+    expect(finalized.runtime.phase).toBe('complete')
+    expect(finalized.currentExerciseId).toBeNull()
+    expect(finalized.exerciseProgress['exercise-3'].completed).toBe(true)
+  })
+
+  it('enters exercise rest at exercise boundary and starts next exercise hold', () => {
+    const exerciseBoundaryProgram: Program = {
+      ...testProgram,
+      exercises: [
+        {
+          ...testProgram.exercises[0],
+          holdSeconds: 4,
+          targetSets: 1,
+          targetRepsPerSet: 1,
+          repRestMs: 2000,
+          setRestMs: 4000,
+          exerciseRestMs: 6000,
+        },
+        {
+          ...testProgram.exercises[1],
+          holdSeconds: 5,
+          targetSets: 1,
+          targetRepsPerSet: 1,
+          repRestMs: 1000,
+          setRestMs: 1000,
+          exerciseRestMs: 1000,
+        },
+      ],
+    }
+    const initial = createSessionState(exerciseBoundaryProgram, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-runtime-exercise-rest',
+    })
+
+    const started = reduceSession(
+      initial,
+      { type: 'start_routine', now: '2026-02-10T00:00:01.000Z' },
+      exerciseBoundaryProgram,
+    )
+    const afterHold = reduceSession(
+      started,
+      { type: 'complete_runtime_countdown', now: '2026-02-10T00:00:02.000Z' },
+      exerciseBoundaryProgram,
+    )
+    const afterRepRest = reduceSession(
+      afterHold,
+      { type: 'complete_runtime_countdown', now: '2026-02-10T00:00:03.000Z' },
+      exerciseBoundaryProgram,
+    )
+    const afterExerciseRest = reduceSession(
+      afterRepRest,
+      { type: 'complete_runtime_countdown', now: '2026-02-10T00:00:04.000Z' },
+      exerciseBoundaryProgram,
+    )
+
+    expect(afterHold.runtime.phase).toBe('repRest')
+    expect(afterHold.runtime.remainingMs).toBe(2000)
+    expect(afterRepRest.runtime.phase).toBe('exerciseRest')
+    expect(afterRepRest.runtime.remainingMs).toBe(6000)
+    expect(afterExerciseRest.runtime.phase).toBe('hold')
+    expect(afterExerciseRest.runtime.exerciseIndex).toBe(1)
+    expect(afterExerciseRest.runtime.setIndex).toBe(0)
+    expect(afterExerciseRest.runtime.repIndex).toBe(0)
+    expect(afterExerciseRest.runtime.remainingMs).toBe(5000)
+    expect(afterExerciseRest.currentExerciseId).toBe(exerciseBoundaryProgram.exercises[1].id)
+    expect(
+      afterExerciseRest.exerciseProgress[exerciseBoundaryProgram.exercises[0].id].completed,
+    ).toBe(true)
   })
 
   it('completes rep rest by returning to hold for the next rep', () => {
@@ -234,6 +311,7 @@ describe('session reducer', () => {
           targetRepsPerSet: 1,
           repRestMs: 2000,
           setRestMs: 4000,
+          exerciseRestMs: 6000,
         },
       ],
     }

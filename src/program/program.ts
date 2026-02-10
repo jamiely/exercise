@@ -8,6 +8,8 @@ export type Exercise = {
   targetRepsPerSet: number
   holdSeconds: number | null
   repRestMs: number
+  setRestMs: number
+  exerciseRestMs: number
   restHintSeconds: number | null
   notes: string | null
   optional: boolean
@@ -133,6 +135,16 @@ export const parseProgram = (input: unknown): Program => {
       repRestMs: asDurationMsWithDefault(
         exercise.repRestMs,
         `exercises[${index}].repRestMs`,
+        30000,
+      ),
+      setRestMs: asDurationMsWithDefault(
+        exercise.setRestMs,
+        `exercises[${index}].setRestMs`,
+        30000,
+      ),
+      exerciseRestMs: asDurationMsWithDefault(
+        exercise.exerciseRestMs,
+        `exercises[${index}].exerciseRestMs`,
         30000,
       ),
       restHintSeconds: asNullableNumber(

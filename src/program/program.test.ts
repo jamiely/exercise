@@ -39,6 +39,10 @@ describe('parseProgram', () => {
     expect(program.exercises.map((exercise) => exercise.id)).toEqual(['exercise-a', 'exercise-b'])
     expect(program.exercises[0].repRestMs).toBe(30000)
     expect(program.exercises[1].repRestMs).toBe(30000)
+    expect(program.exercises[0].setRestMs).toBe(30000)
+    expect(program.exercises[1].setRestMs).toBe(30000)
+    expect(program.exercises[0].exerciseRestMs).toBe(30000)
+    expect(program.exercises[1].exerciseRestMs).toBe(30000)
   })
 
   it('uses configured repRestMs when present', () => {
@@ -53,6 +57,40 @@ describe('parseProgram', () => {
     })
 
     expect(program.exercises[0].repRestMs).toBe(15000)
+  })
+
+  it('uses configured setRestMs independently from repRestMs', () => {
+    const program = parseProgram({
+      ...validProgram,
+      exercises: [
+        {
+          ...validProgram.exercises[0],
+          repRestMs: 18000,
+          setRestMs: 7000,
+        },
+      ],
+    })
+
+    expect(program.exercises[0].repRestMs).toBe(18000)
+    expect(program.exercises[0].setRestMs).toBe(7000)
+  })
+
+  it('uses configured exerciseRestMs independently from rep/set rest', () => {
+    const program = parseProgram({
+      ...validProgram,
+      exercises: [
+        {
+          ...validProgram.exercises[0],
+          repRestMs: 18000,
+          setRestMs: 7000,
+          exerciseRestMs: 11000,
+        },
+      ],
+    })
+
+    expect(program.exercises[0].repRestMs).toBe(18000)
+    expect(program.exercises[0].setRestMs).toBe(7000)
+    expect(program.exercises[0].exerciseRestMs).toBe(11000)
   })
 
   it('throws when required fields are missing', () => {

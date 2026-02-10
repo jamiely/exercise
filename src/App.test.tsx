@@ -130,6 +130,59 @@ describe('App shell', () => {
     expect(screen.getByText('0/10 reps')).toBeInTheDocument()
   })
 
+  it('counts down exercise rest runtime phase and auto-starts next exercise hold', async () => {
+    vi.useFakeTimers()
+    const program = loadProgram()
+    const session = createSessionState(program, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-runtime-exercise-rest',
+    })
+    const exerciseRestSession = {
+      ...session,
+      primaryCursor: 1,
+      currentExerciseId: program.exercises[1].id,
+      updatedAt: '2026-02-10T00:00:02.000Z',
+      exerciseProgress: {
+        ...session.exerciseProgress,
+        [program.exercises[1].id]: {
+          ...session.exerciseProgress[program.exercises[1].id],
+          activeSetIndex: 1,
+          sets: session.exerciseProgress[program.exercises[1].id].sets.map((setProgress) => ({
+            ...setProgress,
+            completedReps: setProgress.targetReps,
+          })),
+        },
+      },
+      runtime: {
+        phase: 'exerciseRest' as const,
+        exerciseIndex: 1,
+        setIndex: 1,
+        repIndex: 10,
+        remainingMs: 1_000,
+        previousPhase: null,
+      },
+    }
+    persistSession(exerciseRestSession)
+
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: /resume/i }))
+
+    expect(screen.getByText(/workflow phase: exerciserest/i)).toBeInTheDocument()
+    expect(screen.getByText(/phase timer: 1.0s/i)).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: new RegExp(program.exercises[1].name, 'i') }),
+    ).toBeInTheDocument()
+
+    await act(async () => {
+      vi.advanceTimersByTime(1_000)
+    })
+
+    expect(screen.getByRole('heading', { name: /wall sit \(shallow\)/i })).toBeInTheDocument()
+    expect(screen.getByText(/workflow phase: hold/i)).toBeInTheDocument()
+    expect(screen.getByText(/phase timer: 40.0s/i)).toBeInTheDocument()
+    expect(screen.getByText('0/5 reps')).toBeInTheDocument()
+  })
+
   it('increments and undoes reps for active set', async () => {
     const user = userEvent.setup()
 
