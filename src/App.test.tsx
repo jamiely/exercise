@@ -247,13 +247,17 @@ describe('App shell', () => {
     fireEvent.click(screen.getByRole('button', { name: /resume/i }))
 
     vi.useFakeTimers()
-    fireEvent.click(screen.getByRole('button', { name: /start hold/i }))
+    const holdToggle = screen.getByRole('button', { name: /start hold/i })
+    expect(holdToggle).toHaveAttribute('aria-pressed', 'false')
+    fireEvent.click(holdToggle)
+    expect(screen.getByRole('button', { name: /pause hold/i })).toHaveAttribute('aria-pressed', 'true')
     await act(async () => {
       vi.advanceTimersByTime(3000)
     })
     expect(screen.getByText('Hold timer: 3/40s')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: /pause hold/i }))
+    expect(screen.getByRole('button', { name: /start hold/i })).toHaveAttribute('aria-pressed', 'false')
     await act(async () => {
       vi.advanceTimersByTime(2000)
     })

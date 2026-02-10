@@ -289,6 +289,7 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
                 onClick={() =>
                   dispatchTimed(currentProgress.holdTimerRunning ? 'stop_hold_timer' : 'start_hold_timer')
                 }
+                aria-pressed={currentProgress.holdTimerRunning}
                 disabled={currentProgress.restTimerRunning || isActiveSetComplete}
               >
                 {currentProgress.holdTimerRunning ? 'Pause Hold' : 'Start Hold'}

@@ -68,7 +68,7 @@ h2 {
 .end-session-button {
   margin-top: 0.25rem;
   font-weight: 500;
-  color: #9ca3af;
+  color: #6b7280;
 }
 
 .session-meta {
@@ -187,6 +187,11 @@ h2 {
 button:disabled {
   cursor: not-allowed;
   opacity: 0.5;
+}
+
+button:focus-visible {
+  outline: 3px solid #1d4ed8;
+  outline-offset: 2px;
 }
 
 @media (max-width: 420px) {
