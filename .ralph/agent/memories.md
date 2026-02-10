@@ -2,6 +2,46 @@
 
 ## Patterns
 
+### mem-1770763840-debd
+> Step 10 acceptance uses Playwright clock emulation with seeded persisted session state to validate one-tap Start automatic completion paths quickly, while regression assertions enforce removal of target/active-set labels.
+<!-- tags: testing, playwright, session, ui | created: 2026-02-10 -->
+
+### mem-1770763492-2dd9
+> Hands-free Step 9 adds an unobtrusive bottom Overrides modal wired to reducer-level runtime override actions (skip rep/rest, end set/exercise) with integration tests asserting phase transitions.
+<!-- tags: session, ui, state-machine, testing | created: 2026-02-10 -->
+
+### mem-1770763231-ef5a
+> Hands-free Step 8 stores cue preferences in SessionState.options (soundEnabled/vibrationEnabled default true), persists them with session envelope, and gates phase-transition cue emission in App via runtime phase-change effect.
+<!-- tags: session, options, audio, vibration, react | created: 2026-02-10 -->
+
+### mem-1770763019-4ad4
+> Lifecycle suspend is handled in App via visibilitychange: when document.hidden during active runtime phases (hold|repRest|setRest|exerciseRest), dispatch pause_routine; wake lock is requested for active runtime and silently ignored/released on pause/complete.
+<!-- tags: session, lifecycle, wake-lock, react | created: 2026-02-10 -->
+
+### mem-1770762877-fe73
+> Runtime pause/resume uses SessionState.runtime.previousPhase: pause transitions active runtime phases to paused without mutating remainingMs, resume restores prior phase and countdown continues from preserved tenths.
+<!-- tags: session, timers, state-machine, react, testing | created: 2026-02-10 -->
+
+### mem-1770762432-7484
+> Hands-free Step 4 runtime progression should evaluate set boundary on repRest completion (not hold completion), then run setRest countdown and auto-enter next-set hold via runtime timer effect including setRest phase.
+<!-- tags: session, timers, state-machine, react, testing | created: 2026-02-10 -->
+
+### mem-1770762125-9e11
+> Hands-free Step 3 adds runtime rep loop semantics: hold completion auto-increments rep and enters repRest for configured repRestMs (default 30000), and repRest completion returns to hold until set boundary.
+<!-- tags: session, timers, state-machine | created: 2026-02-10 -->
+
+### mem-1770761884-2e5b
+> Hands-free Step 2 runs runtime hold countdown through a dedicated 100ms monotonic controller and reducer actions tick_runtime_countdown/complete_runtime_countdown, keeping legacy manual hold timer behavior intact.
+<!-- tags: session, timers, state-machine | created: 2026-02-10 -->
+
+### mem-1770761535-a844
+> Hands-free Step 1 introduced a dedicated runtime phase machine and SessionState.runtime skeleton; start_routine now performs idle-to-hold transition while preserving existing manual rep/set controls for later incremental steps.
+<!-- tags: session, architecture, state-machine | created: 2026-02-10 -->
+
+### mem-1770761338-f16e
+> Hands-free Step 0 baseline: add Prettier config/scripts (, ) and normalize repository formatting before lint/test/e2e gates.
+<!-- tags: tooling, prettier, testing | created: 2026-02-10 -->
+
 ### mem-1770693619-2f27
 > Hold timer run/pause controls should expose aria-pressed and be asserted in App tests to preserve toggle semantics for assistive tech.
 <!-- tags: accessibility, testing, react | created: 2026-02-10 -->
@@ -37,6 +77,62 @@
 ## Decisions
 
 ## Fixes
+
+### mem-1770763777-ccf2
+> failure: cmd=corepack pnpm build && corepack pnpm test:e2e tests/e2e/mobile-flows.spec.ts, exit=1, error=Playwright strict locator conflict on getByText('Set 2') after UI subtitle now includes 'Set 2/2', next=use exact set-grid locator (e.g., getByLabel('Set tracker').getByText('Set 2', { exact: true }))
+<!-- tags: testing, playwright, error-handling | created: 2026-02-10 -->
+
+### mem-1770763741-80ce
+> failure: cmd=rg -n 'Target:|Active set:' src/App.tsx && sed -n '460,520p' src/App.tsx, exit=1, error=rg returned no matches causing chained command to stop before sed, next=run sed independently when using rg as guard
+<!-- tags: tooling, error-handling, rg | created: 2026-02-10 -->
+
+### mem-1770763728-e54b
+> failure: cmd=corepack pnpm test:e2e tests/e2e/mobile-flows.spec.ts, exit=1, error=label assertion matched heading text and seeded session resumed into active runtime not idle, next=scope label checks to exercise subtitle and seed runtime.phase idle with previousPhase null then assert Start enabled before tapping
+<!-- tags: testing, playwright, error-handling | created: 2026-02-10 -->
+
+### mem-1770763666-cd9c
+> failure: cmd=rg -n 'clock|fastForward|install\(' node_modules/@playwright/test -g '*.d.ts', exit=1, error=no matches in package-level d.ts, next=inspect package entrypoints and follow type re-exports to locate Page.clock typing
+<!-- tags: tooling, error-handling, rg | created: 2026-02-10 -->
+
+### mem-1770763660-eb73
+> failure: cmd=rg -n 'clock\.install|fastForward\(|interface Clock|clock:' node_modules/@playwright/test node_modules/playwright-core -g '*.d.ts', exit=2, error=node_modules/playwright-core path missing, next=list node_modules/@playwright/test contents and search there only
+<!-- tags: tooling, error-handling, rg | created: 2026-02-10 -->
+
+### mem-1770763651-1016
+> failure: cmd=rg -n 'clock\.install|class Clock|interface Clock|fastForward\(' node_modules/@playwright/test node_modules/playwright -g '*.d.ts', exit=2, error=node_modules/playwright path missing, next=search only installed package paths (node_modules/@playwright/test and nested dependencies)
+<!-- tags: tooling, error-handling, rg | created: 2026-02-10 -->
+
+### mem-1770763553-523e
+> failure: cmd=sed -n '1,260p' src/program/data.ts, exit=1, error=No such file or directory, next=discover real program source with rg --files src/program and read src/program/program.ts
+<!-- tags: tooling, error-handling | created: 2026-02-10 -->
+
+### mem-1770762697-3c39
+> failure: cmd=corepack pnpm test, exit=1, error=App exercise-rest runtime test used unescaped regex from dynamic heading with parentheses and missed match, next=use escaped literal regex for heading assertion in App test
+<!-- tags: testing, vitest, error-handling, react | created: 2026-02-10 -->
+
+### mem-1770762691-15f4
+> failure: cmd=corepack pnpm test, exit=1, error='App exercise-rest runtime test used unescaped regex from dynamic heading with parentheses and missed match', next=use escaped literal regex  for heading assertion
+<!-- tags: testing, vitest, error-handling, react | created: 2026-02-10 -->
+
+### mem-1770762242-a702
+> failure: cmd=sed -n '1,220p' .ralph/agent/scratchpad.md, exit=1, error=No such file or directory, next=create the scratchpad file before reading/appending
+<!-- tags: tooling, error-handling | created: 2026-02-10 -->
+
+### mem-1770762098-ea4a
+> failure: cmd=corepack pnpm format + corepack pnpm prettier:check in parallel, exit=1, error=prettier check can read stale file state while format is still writing, next=run format and prettier:check sequentially
+<!-- tags: tooling, prettier, error-handling | created: 2026-02-10 -->
+
+### mem-1770762087-4597
+> failure: cmd=corepack pnpm test src/program/program.test.ts src/session/phase-machine.test.ts src/session/session.test.ts src/App.test.tsx, exit=1, error=App runtime hold countdown test expected phase timer 0.0s but runtime now transitions directly to repRest at completion, next=assert repRest phase/timer and rep increment instead of intermediate 0.0 UI
+<!-- tags: testing, vitest, error-handling, react, timers | created: 2026-02-10 -->
+
+### mem-1770761887-5a34
+> App hold-control tests are stable by mocking window.setInterval and invoking captured callbacks directly instead of relying on fake timer advancement across interval effects.
+<!-- tags: testing, vitest, react, timers | created: 2026-02-10 -->
+
+### mem-1770761351-4b4a
+> failure: cmd=ralph tools memory add with unescaped backticks in quoted content, exit=0 with shell warnings 'command not found', error=backticks evaluated by zsh before CLI parse, next=avoid backticks or use single-quoted payload for memory text
+<!-- tags: tooling, error-handling, shell | created: 2026-02-10 -->
 
 ### mem-1770693324-0662
 > failure: cmd=mkdir -p test-results && corepack pnpm lint && corepack pnpm test && corepack pnpm build && corepack pnpm test:e2e, exit=1, error='App rest-resume test timed out under fake timers with userEvent', next=use fireEvent for resume click in fake-timer rest continuity test
