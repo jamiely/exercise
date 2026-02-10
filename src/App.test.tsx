@@ -229,6 +229,83 @@ describe('App shell', () => {
     expect(screen.getByText('Hold timer: 0/40s')).toBeInTheDocument()
   })
 
+  it('supports pausing and resetting hold timer without incrementing reps', async () => {
+    const program = loadProgram()
+    const session = createSessionState(program, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-hold-controls',
+    })
+    const holdExerciseSession = {
+      ...session,
+      primaryCursor: 2,
+      currentExerciseId: program.exercises[2].id,
+      updatedAt: '2026-02-10T00:00:05.000Z',
+    }
+    persistSession(holdExerciseSession)
+
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: /resume/i }))
+
+    vi.useFakeTimers()
+    fireEvent.click(screen.getByRole('button', { name: /start hold/i }))
+    await act(async () => {
+      vi.advanceTimersByTime(3000)
+    })
+    expect(screen.getByText('Hold timer: 3/40s')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /pause hold/i }))
+    await act(async () => {
+      vi.advanceTimersByTime(2000)
+    })
+    expect(screen.getByText('Hold timer: 3/40s')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /reset hold/i }))
+    expect(screen.getByText('Hold timer: 0/40s')).toBeInTheDocument()
+    expect(screen.getByText('0/5 reps')).toBeInTheDocument()
+  })
+
+  it('continues rest timer from resumed in-progress session state', async () => {
+    vi.useFakeTimers()
+    const program = loadProgram()
+    const session = createSessionState(program, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-resume-rest',
+    })
+    const activeExerciseId = program.exercises[0].id
+    const restResumeSession = {
+      ...session,
+      currentExerciseId: activeExerciseId,
+      updatedAt: '2026-02-10T00:00:05.000Z',
+      exerciseProgress: {
+        ...session.exerciseProgress,
+        [activeExerciseId]: {
+          ...session.exerciseProgress[activeExerciseId],
+          activeSetIndex: 0,
+          sets: session.exerciseProgress[activeExerciseId].sets.map((setProgress, index) =>
+            index === 0
+              ? {
+                  ...setProgress,
+                  completedReps: setProgress.targetReps,
+                }
+              : setProgress,
+          ),
+          restTimerRunning: true,
+          restElapsedSeconds: 4,
+        },
+      },
+    }
+    persistSession(restResumeSession)
+
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: /resume/i }))
+
+    expect(screen.getByText('Rest timer: 4s')).toBeInTheDocument()
+    await act(async () => {
+      vi.advanceTimersByTime(2000)
+    })
+    expect(screen.getByText('Rest timer: 6s')).toBeInTheDocument()
+  })
+
   it('shows a resume prompt when an in-progress session exists', () => {
     const program = loadProgram()
     const session = createSessionState(program, {

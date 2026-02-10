@@ -58,6 +58,34 @@ const filledSetProgram: Program = {
 }
 
 describe('session reducer', () => {
+  it('can restart a session via start_session action', () => {
+    const original = createSessionState(testProgram, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-original',
+    })
+    const advanced = reduceSession(
+      reduceSession(original, { type: 'increment_rep', now: '2026-02-10T00:00:01.000Z' }, testProgram),
+      { type: 'skip_exercise', now: '2026-02-10T00:00:02.000Z' },
+      testProgram,
+    )
+
+    const restarted = reduceSession(
+      advanced,
+      {
+        type: 'start_session',
+        program: testProgram,
+        now: '2026-02-10T00:00:03.000Z',
+        sessionId: 'session-restarted',
+      },
+      testProgram,
+    )
+
+    expect(restarted.sessionId).toBe('session-restarted')
+    expect(restarted.currentExerciseId).toBe('exercise-1')
+    expect(restarted.skipQueue).toEqual([])
+    expect(restarted.exerciseProgress['exercise-1'].sets[0].completedReps).toBe(0)
+  })
+
   it('creates an in-progress session with first exercise selected', () => {
     const state = createSessionState(testProgram, {
       now: '2026-02-10T00:00:00.000Z',
@@ -201,6 +229,46 @@ describe('session reducer', () => {
     expect(completed.exerciseProgress['exercise-3'].holdElapsedSeconds).toBe(0)
   })
 
+  it('does not increment reps while rest or hold timers are running', () => {
+    let restState = createSessionState(filledSetProgram, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-rest-guard',
+    })
+
+    restState = reduceSession(
+      restState,
+      { type: 'increment_rep', now: '2026-02-10T00:00:01.000Z' },
+      filledSetProgram,
+    )
+    restState = reduceSession(
+      restState,
+      { type: 'complete_set', now: '2026-02-10T00:00:02.000Z' },
+      filledSetProgram,
+    )
+
+    const restBlocked = reduceSession(
+      restState,
+      { type: 'increment_rep', now: '2026-02-10T00:00:03.000Z' },
+      filledSetProgram,
+    )
+    expect(restBlocked.exerciseProgress['exercise-1'].sets[0].completedReps).toBe(1)
+
+    let holdState = createSessionState(testProgram, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-hold-guard',
+    })
+    holdState = reduceSession(holdState, { type: 'skip_exercise', now: '2026-02-10T00:00:01.000Z' }, testProgram)
+    holdState = reduceSession(holdState, { type: 'skip_exercise', now: '2026-02-10T00:00:02.000Z' }, testProgram)
+    holdState = reduceSession(holdState, { type: 'start_hold_timer', now: '2026-02-10T00:00:03.000Z' }, testProgram)
+
+    const holdBlocked = reduceSession(
+      holdState,
+      { type: 'increment_rep', now: '2026-02-10T00:00:04.000Z' },
+      testProgram,
+    )
+    expect(holdBlocked.exerciseProgress['exercise-3'].sets[0].completedReps).toBe(0)
+  })
+
   it('follows ordered progression through primary pass and marks completion', () => {
     let state = createSessionState(testProgram, {
       now: '2026-02-10T00:00:00.000Z',
@@ -277,6 +345,41 @@ describe('session reducer', () => {
     state = reduceSession(state, { type: 'skip_exercise', now: '2026-02-10T00:00:04.000Z' }, testProgram)
     expect(state.skipQueue).toEqual(['exercise-2', 'exercise-3', 'exercise-1'])
     expect(state.currentExerciseId).toBe('exercise-2')
+  })
+
+  it('does not duplicate skip queue entries during primary pass', () => {
+    let state = createSessionState(testProgram, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-no-dup-queue',
+    })
+
+    state = reduceSession(state, { type: 'skip_exercise', now: '2026-02-10T00:00:01.000Z' }, testProgram)
+    state = reduceSession(state, { type: 'skip_exercise', now: '2026-02-10T00:00:02.000Z' }, testProgram)
+    state = reduceSession(state, { type: 'start_hold_timer', now: '2026-02-10T00:00:03.000Z' }, testProgram)
+    state = reduceSession(state, { type: 'tick_hold_timer', now: '2026-02-10T00:00:04.000Z', seconds: 5 }, testProgram)
+    state = reduceSession(state, { type: 'complete_hold_rep', now: '2026-02-10T00:00:05.000Z' }, testProgram)
+    state = reduceSession(state, { type: 'complete_exercise', now: '2026-02-10T00:00:06.000Z' }, testProgram)
+
+    expect(state.currentPhase).toBe('skip')
+    expect(state.skipQueue).toEqual(['exercise-1', 'exercise-2'])
+  })
+
+  it('supports explicit finish_session from in-progress state', () => {
+    const initial = createSessionState(testProgram, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-finish',
+    })
+
+    const finished = reduceSession(
+      initial,
+      { type: 'finish_session', now: '2026-02-10T00:00:05.000Z' },
+      testProgram,
+    )
+
+    expect(finished.status).toBe('completed')
+    expect(finished.endedEarly).toBe(false)
+    expect(finished.currentExerciseId).toBeNull()
+    expect(finished.endedAt).toBe('2026-02-10T00:00:05.000Z')
   })
 
   it('supports ending early from an active session', () => {

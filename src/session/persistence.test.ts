@@ -1,4 +1,5 @@
 import { loadProgram } from '../program/program'
+import { vi } from 'vitest'
 import {
   SESSION_STORAGE_KEY,
   SESSION_STORAGE_VERSION,
@@ -66,6 +67,15 @@ describe('session persistence', () => {
     expect(window.localStorage.getItem(SESSION_STORAGE_KEY)).toBeNull()
   })
 
+  it('clears payloads that are JSON but not valid envelope records', () => {
+    window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(['not-an-envelope']))
+
+    const persisted = readPersistedSession()
+
+    expect(persisted).toBeNull()
+    expect(window.localStorage.getItem(SESSION_STORAGE_KEY)).toBeNull()
+  })
+
   it('does not keep terminal sessions persisted', () => {
     const session = createSessionState(program, {
       now: '2026-02-10T00:00:00.000Z',
@@ -83,5 +93,31 @@ describe('session persistence', () => {
 
     expect(readPersistedSession()).toBeNull()
     expect(window.localStorage.getItem(SESSION_STORAGE_KEY)).toBeNull()
+  })
+
+  it('swallows storage write failures to keep app interactive', () => {
+    const session = createSessionState(program, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-write-failure',
+    })
+    const setItemSpy = vi
+      .spyOn(window.localStorage.__proto__, 'setItem')
+      .mockImplementation(() => {
+        throw new Error('quota exceeded')
+      })
+
+    expect(() => persistSession(session)).not.toThrow()
+    setItemSpy.mockRestore()
+  })
+
+  it('swallows storage remove failures to keep app interactive', () => {
+    const removeItemSpy = vi
+      .spyOn(window.localStorage.__proto__, 'removeItem')
+      .mockImplementation(() => {
+        throw new Error('storage blocked')
+      })
+
+    expect(() => clearPersistedSession()).not.toThrow()
+    removeItemSpy.mockRestore()
   })
 })
