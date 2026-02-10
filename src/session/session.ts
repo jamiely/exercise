@@ -110,6 +110,17 @@ const withTerminalStatus = (
   now?: string,
 ): SessionState => {
   const timestamp = getTimestamp(state, now)
+  const exerciseProgress = Object.fromEntries(
+    Object.entries(state.exerciseProgress).map(([exerciseId, progress]) => [
+      exerciseId,
+      {
+        ...progress,
+        holdTimerRunning: false,
+        restTimerRunning: false,
+      },
+    ]),
+  ) as Record<string, ExerciseProgress>
+
   return {
     ...state,
     status,
@@ -117,6 +128,7 @@ const withTerminalStatus = (
     endedAt: timestamp,
     endedEarly: status === 'ended_early',
     currentExerciseId: null,
+    exerciseProgress,
   }
 }
 

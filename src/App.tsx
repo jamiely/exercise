@@ -42,6 +42,44 @@ const buildSessionBootState = (program: ReturnType<typeof loadProgram>): Session
   }
 }
 
+const formatDurationSnapshot = (startedAt: string, endedAt: string | null, updatedAt: string): string => {
+  const startedMs = Date.parse(startedAt)
+  const endedMs = Date.parse(endedAt ?? updatedAt)
+
+  if (Number.isNaN(startedMs) || Number.isNaN(endedMs) || endedMs < startedMs) {
+    return 'Unknown'
+  }
+
+  const durationSeconds = Math.floor((endedMs - startedMs) / 1000)
+  const minutes = Math.floor(durationSeconds / 60)
+  const seconds = durationSeconds % 60
+
+  if (minutes === 0) {
+    return `${seconds}s`
+  }
+
+  return `${minutes}m ${seconds}s`
+}
+
+const getSessionSummary = (sessionState: SessionState, totalExercises: number) => {
+  const exerciseProgress = Object.values(sessionState.exerciseProgress)
+  const completedExercises = exerciseProgress.filter((progress) => progress.completed).length
+  const unresolvedSkipped = exerciseProgress.filter(
+    (progress) => progress.skippedCount > 0 && !progress.completed,
+  ).length
+
+  return {
+    completedExercises,
+    unresolvedSkipped,
+    totalExercises,
+    durationSnapshot: formatDurationSnapshot(
+      sessionState.startedAt,
+      sessionState.endedAt,
+      sessionState.updatedAt,
+    ),
+  }
+}
+
 const LoadedProgramView = ({ program }: LoadedProgramProps) => {
   const bootState = useMemo(() => buildSessionBootState(program), [program])
   const [pendingResume, setPendingResume] = useState<SessionState | null>(bootState.pendingResume)
@@ -125,13 +163,28 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
   }
 
   if (sessionState.status !== 'in_progress' || !sessionState.currentExerciseId) {
+    const summary = getSessionSummary(sessionState, program.exercises.length)
     return (
       <main className="app-shell">
         <p className="eyebrow">Exercise Session</p>
-        <h1>{program.programName}</h1>
-        <p className="subtitle">
-          {sessionState.status === 'completed' ? 'Session completed.' : 'Session ended early.'}
-        </p>
+        <h1>{sessionState.status === 'completed' ? 'Session completed' : 'Session ended early'}</h1>
+        <p className="subtitle">{program.programName}</p>
+        <section className="summary-card" aria-label="Session summary">
+          <p className="summary-row">
+            <span>Completed exercises</span>
+            <strong>
+              {summary.completedExercises}/{summary.totalExercises}
+            </strong>
+          </p>
+          <p className="summary-row">
+            <span>Skipped unresolved</span>
+            <strong>{summary.unresolvedSkipped}</strong>
+          </p>
+          <p className="summary-row">
+            <span>Duration snapshot</span>
+            <strong>{summary.durationSnapshot}</strong>
+          </p>
+        </section>
       </main>
     )
   }
@@ -325,6 +378,13 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
         </button>
         <button type="button" className="tertiary-button" onClick={() => dispatchTimed('skip_exercise')}>
           Skip Exercise
+        </button>
+        <button
+          type="button"
+          className="tertiary-button end-session-button"
+          onClick={() => dispatchTimed('end_session_early')}
+        >
+          End Session Early
         </button>
       </section>
     </main>

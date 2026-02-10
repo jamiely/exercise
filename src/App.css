@@ -65,6 +65,12 @@ h2 {
   color: #6b7280;
 }
 
+.end-session-button {
+  margin-top: 0.25rem;
+  font-weight: 500;
+  color: #9ca3af;
+}
+
 .session-meta {
   display: grid;
   gap: 0.25rem;
@@ -146,6 +152,24 @@ h2 {
 .session-actions {
   display: grid;
   gap: 0.625rem;
+}
+
+.summary-card {
+  margin-top: 0.5rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 1rem;
+  background: #f9fafb;
+  padding: 0.875rem;
+  display: grid;
+  gap: 0.625rem;
+}
+
+.summary-row {
+  margin: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  color: #374151;
 }
 
 .primary-controls button,

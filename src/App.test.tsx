@@ -99,6 +99,15 @@ describe('App shell', () => {
     expect(completeExercise).toBeEnabled()
   })
 
+  it('shows a de-emphasized end-session-early control on the active session screen', () => {
+    render(<App />)
+
+    const endEarlyButton = screen.getByRole('button', { name: /end session early/i })
+    expect(endEarlyButton).toBeInTheDocument()
+    expect(endEarlyButton).toHaveClass('tertiary-button')
+    expect(endEarlyButton).toHaveClass('end-session-button')
+  })
+
   it('cycles skipped exercises after primary pass and re-enqueues when skipped again', async () => {
     const user = userEvent.setup()
 
@@ -155,7 +164,27 @@ describe('App shell', () => {
     await user.click(screen.getByRole('button', { name: /resume/i }))
     await user.click(screen.getByRole('button', { name: /complete exercise/i }))
 
-    expect(screen.getByText(/session completed\./i)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /session completed/i })).toBeInTheDocument()
+    expect(screen.getByText(/completed exercises/i)).toBeInTheDocument()
+    expect(screen.getByText('1/3')).toBeInTheDocument()
+    expect(screen.getByText(/skipped unresolved/i)).toBeInTheDocument()
+    expect(screen.getByText('0')).toBeInTheDocument()
+    expect(readPersistedSession()).toBeNull()
+  })
+
+  it('ends early and shows an ended-early summary with unresolved skipped count', async () => {
+    const user = userEvent.setup()
+
+    render(<App />)
+    await user.click(screen.getByRole('button', { name: /skip exercise/i }))
+    await user.click(screen.getByRole('button', { name: /end session early/i }))
+
+    expect(screen.getByRole('heading', { name: /session ended early/i })).toBeInTheDocument()
+    expect(screen.getByText(/completed exercises/i)).toBeInTheDocument()
+    expect(screen.getByText('0/3')).toBeInTheDocument()
+    expect(screen.getByText(/skipped unresolved/i)).toBeInTheDocument()
+    expect(screen.getByText('1')).toBeInTheDocument()
+    expect(screen.getByText(/duration snapshot/i)).toBeInTheDocument()
     expect(readPersistedSession()).toBeNull()
   })
 

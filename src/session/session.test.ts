@@ -295,4 +295,26 @@ describe('session reducer', () => {
     expect(ended.currentExerciseId).toBeNull()
     expect(ended.endedAt).toBe('2026-02-10T00:00:05.000Z')
   })
+
+  it('stops all running timers on terminal transitions', () => {
+    let state = createSessionState(testProgram, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-7',
+    })
+
+    state = reduceSession(state, { type: 'skip_exercise', now: '2026-02-10T00:00:01.000Z' }, testProgram)
+    state = reduceSession(state, { type: 'skip_exercise', now: '2026-02-10T00:00:02.000Z' }, testProgram)
+    state = reduceSession(state, { type: 'start_hold_timer', now: '2026-02-10T00:00:03.000Z' }, testProgram)
+    expect(state.exerciseProgress['exercise-3'].holdTimerRunning).toBe(true)
+
+    const ended = reduceSession(
+      state,
+      { type: 'end_session_early', now: '2026-02-10T00:00:04.000Z' },
+      testProgram,
+    )
+
+    expect(ended.status).toBe('ended_early')
+    expect(ended.exerciseProgress['exercise-3'].holdTimerRunning).toBe(false)
+    expect(ended.exerciseProgress['exercise-1'].restTimerRunning).toBe(false)
+  })
 })
