@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "programName": "Knee Pain",
+  "exercises": [
+    {
+      "id": "quad-set",
+      "name": "Quad Set",
+      "order": 1,
+      "targetSets": 2,
+      "targetRepsPerSet": 12,
+      "holdSeconds": null,
+      "restHintSeconds": 30,
+      "notes": "Squeeze thigh and keep knee straight.",
+      "optional": false,
+      "availableOnOrAfter": null
+    },
+    {
+      "id": "straight-leg-raise",
+      "name": "Straight Leg Raise",
+      "order": 2,
+      "targetSets": 2,
+      "targetRepsPerSet": 10,
+      "holdSeconds": 3,
+      "restHintSeconds": 45,
+      "notes": "Keep core tight.",
+      "optional": false,
+      "availableOnOrAfter": null
+    },
+    {
+      "id": "wall-sit-shallow",
+      "name": "Wall Sit (Shallow)",
+      "order": 3,
+      "targetSets": 1,
+      "targetRepsPerSet": 5,
+      "holdSeconds": 40,
+      "restHintSeconds": null,
+      "notes": "Twice daily.",
+      "optional": false,
+      "availableOnOrAfter": null
+    }
+  ]
+}
