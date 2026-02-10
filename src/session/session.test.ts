@@ -141,6 +141,47 @@ describe('session reducer', () => {
     expect(ignoredWhenStarted).toEqual(started)
   })
 
+  it('pauses and resumes runtime countdown without changing remaining time', () => {
+    const initial = createSessionState(testProgram, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-runtime-pause-resume',
+    })
+    const holdExerciseState = {
+      ...initial,
+      primaryCursor: 2,
+      currentExerciseId: testProgram.exercises[2].id,
+      updatedAt: '2026-02-10T00:00:01.000Z',
+    }
+
+    const started = reduceSession(
+      holdExerciseState,
+      { type: 'start_routine', now: '2026-02-10T00:00:02.000Z' },
+      testProgram,
+    )
+    const ticked = reduceSession(
+      started,
+      { type: 'tick_runtime_countdown', now: '2026-02-10T00:00:03.000Z', remainingMs: 4200 },
+      testProgram,
+    )
+    const paused = reduceSession(
+      ticked,
+      { type: 'pause_routine', now: '2026-02-10T00:00:04.000Z' },
+      testProgram,
+    )
+    const resumed = reduceSession(
+      paused,
+      { type: 'resume_routine', now: '2026-02-10T00:00:05.000Z' },
+      testProgram,
+    )
+
+    expect(paused.runtime.phase).toBe('paused')
+    expect(paused.runtime.previousPhase).toBe('hold')
+    expect(paused.runtime.remainingMs).toBe(4200)
+    expect(resumed.runtime.phase).toBe('hold')
+    expect(resumed.runtime.previousPhase).toBeNull()
+    expect(resumed.runtime.remainingMs).toBe(4200)
+  })
+
   it('marks final exercise complete after rep rest resolves at routine boundary', () => {
     const initial = createSessionState(testProgram, {
       now: '2026-02-10T00:00:00.000Z',

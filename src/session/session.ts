@@ -52,6 +52,8 @@ export type SessionRuntimeState = {
 export type SessionAction =
   | { type: 'start_session'; program: Program; now: string; sessionId: string }
   | { type: 'start_routine'; now?: string }
+  | { type: 'pause_routine'; now?: string }
+  | { type: 'resume_routine'; now?: string }
   | { type: 'tick_runtime_countdown'; now?: string; remainingMs: number }
   | { type: 'complete_runtime_countdown'; now?: string }
   | { type: 'increment_rep'; now?: string }
@@ -302,6 +304,61 @@ export const reduceSession = (
           setIndex,
           repIndex,
           remainingMs: holdSeconds !== null ? holdSeconds * 1000 : 0,
+          previousPhase: null,
+        },
+      }
+    }
+    case 'pause_routine': {
+      if (!isInProgress(state)) {
+        return state
+      }
+
+      const activePhase =
+        state.runtime.phase === 'hold' ||
+        state.runtime.phase === 'repRest' ||
+        state.runtime.phase === 'setRest' ||
+        state.runtime.phase === 'exerciseRest'
+          ? state.runtime.phase
+          : null
+      if (!activePhase) {
+        return state
+      }
+
+      const nextPhase = transitionRuntimePhase(state.runtime.phase, 'pause')
+      if (!nextPhase) {
+        return state
+      }
+
+      return {
+        ...state,
+        updatedAt: getTimestamp(state, action.now),
+        runtime: {
+          ...state.runtime,
+          phase: nextPhase,
+          previousPhase: activePhase,
+        },
+      }
+    }
+    case 'resume_routine': {
+      if (!isInProgress(state) || state.runtime.phase !== 'paused') {
+        return state
+      }
+
+      const nextPhase = transitionRuntimePhase(
+        state.runtime.phase,
+        'resume',
+        state.runtime.previousPhase,
+      )
+      if (!nextPhase) {
+        return state
+      }
+
+      return {
+        ...state,
+        updatedAt: getTimestamp(state, action.now),
+        runtime: {
+          ...state.runtime,
+          phase: nextPhase,
           previousPhase: null,
         },
       }

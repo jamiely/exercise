@@ -281,6 +281,8 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
       case 'end_session_early':
       case 'finish_session':
       case 'start_routine':
+      case 'pause_routine':
+      case 'resume_routine':
       case 'start_next_set':
       case 'start_hold_timer':
       case 'stop_hold_timer':
@@ -436,6 +438,27 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
           disabled={sessionState.runtime.phase !== 'idle'}
         >
           Start
+        </button>
+        <button
+          type="button"
+          className="secondary-button"
+          onClick={() => dispatchTimed('pause_routine')}
+          disabled={
+            sessionState.runtime.phase !== 'hold' &&
+            sessionState.runtime.phase !== 'repRest' &&
+            sessionState.runtime.phase !== 'setRest' &&
+            sessionState.runtime.phase !== 'exerciseRest'
+          }
+        >
+          Pause
+        </button>
+        <button
+          type="button"
+          className="secondary-button"
+          onClick={() => dispatchTimed('resume_routine')}
+          disabled={sessionState.runtime.phase !== 'paused'}
+        >
+          Resume
         </button>
         <button
           type="button"

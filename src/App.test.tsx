@@ -78,6 +78,56 @@ describe('App shell', () => {
     expect(screen.getByText('1/5 reps')).toBeInTheDocument()
   })
 
+  it('pauses and resumes runtime countdown with exact remaining tenths preserved', async () => {
+    vi.useFakeTimers()
+    const program = loadProgram()
+    const session = createSessionState(program, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-runtime-pause-resume',
+    })
+    const holdSession = {
+      ...session,
+      primaryCursor: 2,
+      currentExerciseId: program.exercises[2].id,
+      updatedAt: '2026-02-10T00:00:02.000Z',
+      runtime: {
+        phase: 'hold' as const,
+        exerciseIndex: 2,
+        setIndex: 0,
+        repIndex: 0,
+        remainingMs: 1_000,
+        previousPhase: null,
+      },
+    }
+    persistSession(holdSession)
+
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: /^resume$/i }))
+
+    await act(async () => {
+      vi.advanceTimersByTime(300)
+    })
+    expect(screen.getByText(/phase timer: 0.7s/i)).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /^pause$/i }))
+    expect(screen.getByText(/workflow phase: paused/i)).toBeInTheDocument()
+    expect(screen.getByText(/phase timer: 0.7s/i)).toBeInTheDocument()
+
+    await act(async () => {
+      vi.advanceTimersByTime(500)
+    })
+    expect(screen.getByText(/phase timer: 0.7s/i)).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /^resume$/i }))
+    expect(screen.getByText(/workflow phase: hold/i)).toBeInTheDocument()
+    expect(screen.getByText(/phase timer: 0.7s/i)).toBeInTheDocument()
+
+    await act(async () => {
+      vi.advanceTimersByTime(200)
+    })
+    expect(screen.getByText(/phase timer: 0.5s/i)).toBeInTheDocument()
+  })
+
   it('counts down set rest runtime phase and auto-starts next set hold', async () => {
     vi.useFakeTimers()
     const program = loadProgram()
