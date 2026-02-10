@@ -1,5 +1,8 @@
+import { useReducer } from 'react'
 import './App.css'
 import { ProgramLoadError, loadProgram } from './program/program'
+import type { SessionAction, SessionState } from './session/session'
+import { createSessionState, reduceSession } from './session/session'
 
 type LoadResult =
   | { ok: true; program: ReturnType<typeof loadProgram> }
@@ -12,6 +15,34 @@ const readProgram = (): LoadResult => {
     const detail = error instanceof ProgramLoadError ? error.message : 'Unknown validation error'
     return { ok: false, message: detail }
   }
+}
+
+type LoadedProgramProps = {
+  program: ReturnType<typeof loadProgram>
+}
+
+const LoadedProgramView = ({ program }: LoadedProgramProps) => {
+  const [sessionState] = useReducer(
+    (state: SessionState, action: SessionAction) => reduceSession(state, action, program),
+    program,
+    createSessionState,
+  )
+
+  const firstExercise = sessionState.currentExerciseId
+    ? program.exercises.find((exercise) => exercise.id === sessionState.currentExerciseId) ??
+      program.exercises[0]
+    : program.exercises[0]
+
+  return (
+    <main className="app-shell">
+      <p className="eyebrow">Exercise Session</p>
+      <h1>{program.programName}</h1>
+      <p className="subtitle">First exercise: {firstExercise.name}</p>
+      <p className="subtitle">
+        Targets: {firstExercise.targetSets} sets x {firstExercise.targetRepsPerSet} reps
+      </p>
+    </main>
+  )
 }
 
 function App() {
@@ -27,18 +58,7 @@ function App() {
     )
   }
 
-  const firstExercise = loadResult.program.exercises[0]
-
-  return (
-    <main className="app-shell">
-      <p className="eyebrow">Exercise Session</p>
-      <h1>{loadResult.program.programName}</h1>
-      <p className="subtitle">First exercise: {firstExercise.name}</p>
-      <p className="subtitle">
-        Targets: {firstExercise.targetSets} sets x {firstExercise.targetRepsPerSet} reps
-      </p>
-    </main>
-  )
+  return <LoadedProgramView program={loadResult.program} />
 }
 
 export default App
