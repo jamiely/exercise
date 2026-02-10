@@ -250,14 +250,20 @@ describe('App shell', () => {
     const holdToggle = screen.getByRole('button', { name: /start hold/i })
     expect(holdToggle).toHaveAttribute('aria-pressed', 'false')
     fireEvent.click(holdToggle)
-    expect(screen.getByRole('button', { name: /pause hold/i })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: /pause hold/i })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
     await act(async () => {
       vi.advanceTimersByTime(3000)
     })
     expect(screen.getByText('Hold timer: 3/40s')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: /pause hold/i }))
-    expect(screen.getByRole('button', { name: /start hold/i })).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.getByRole('button', { name: /start hold/i })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    )
     await act(async () => {
       vi.advanceTimersByTime(2000)
     })
@@ -344,7 +350,9 @@ describe('App shell', () => {
     await user.click(screen.getByRole('button', { name: /resume/i }))
 
     expect(screen.getByRole('heading', { name: /knee pain/i })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: new RegExp(program.exercises[1].name, 'i') })).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: new RegExp(program.exercises[1].name, 'i') }),
+    ).toBeInTheDocument()
   })
 
   it('starts a new session and replaces stale in-progress state', async () => {
@@ -366,7 +374,9 @@ describe('App shell', () => {
     await user.click(screen.getByRole('button', { name: /start new/i }))
 
     expect(screen.getByRole('heading', { name: /knee pain/i })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: new RegExp(program.exercises[0].name, 'i') })).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: new RegExp(program.exercises[0].name, 'i') }),
+    ).toBeInTheDocument()
 
     const persisted = readPersistedSession()
     expect(persisted?.currentExerciseId).toBe(program.exercises[0].id)

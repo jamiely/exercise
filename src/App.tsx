@@ -42,7 +42,11 @@ const buildSessionBootState = (program: ReturnType<typeof loadProgram>): Session
   }
 }
 
-const formatDurationSnapshot = (startedAt: string, endedAt: string | null, updatedAt: string): string => {
+const formatDurationSnapshot = (
+  startedAt: string,
+  endedAt: string | null,
+  updatedAt: string,
+): string => {
   const startedMs = Date.parse(startedAt)
   const endedMs = Date.parse(endedAt ?? updatedAt)
 
@@ -95,11 +99,12 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
   const timerExercise =
     sessionState.currentExerciseId === null
       ? null
-      : program.exercises.find((exercise) => exercise.id === sessionState.currentExerciseId) ?? null
+      : (program.exercises.find((exercise) => exercise.id === sessionState.currentExerciseId) ??
+        null)
   const timerProgress =
     sessionState.currentExerciseId === null
       ? null
-      : sessionState.exerciseProgress[sessionState.currentExerciseId] ?? null
+      : (sessionState.exerciseProgress[sessionState.currentExerciseId] ?? null)
 
   useEffect(() => {
     if (
@@ -287,7 +292,9 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
                 type="button"
                 className="secondary-button"
                 onClick={() =>
-                  dispatchTimed(currentProgress.holdTimerRunning ? 'stop_hold_timer' : 'start_hold_timer')
+                  dispatchTimed(
+                    currentProgress.holdTimerRunning ? 'stop_hold_timer' : 'start_hold_timer',
+                  )
                 }
                 aria-pressed={currentProgress.holdTimerRunning}
                 disabled={currentProgress.restTimerRunning || isActiveSetComplete}
@@ -298,7 +305,9 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
                 type="button"
                 className="secondary-button"
                 onClick={() => dispatchTimed('reset_hold_timer')}
-                disabled={currentProgress.holdElapsedSeconds === 0 && !currentProgress.holdTimerRunning}
+                disabled={
+                  currentProgress.holdElapsedSeconds === 0 && !currentProgress.holdTimerRunning
+                }
               >
                 Reset Hold
               </button>
@@ -374,10 +383,18 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
         >
           Complete Set
         </button>
-        <button type="button" onClick={() => dispatchTimed('complete_exercise')} disabled={!allSetsComplete}>
+        <button
+          type="button"
+          onClick={() => dispatchTimed('complete_exercise')}
+          disabled={!allSetsComplete}
+        >
           Complete Exercise
         </button>
-        <button type="button" className="tertiary-button" onClick={() => dispatchTimed('skip_exercise')}>
+        <button
+          type="button"
+          className="tertiary-button"
+          onClick={() => dispatchTimed('skip_exercise')}
+        >
           Skip Exercise
         </button>
         <button

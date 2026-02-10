@@ -1,15 +1,18 @@
 # Mobile UX Flow Research
 
 ## Objective
+
 Define a mobile-first session UI optimized for quick in-session logging with minimal friction.
 
 ## Key Findings
+
 - Single-screen "active exercise" focus reduces cognitive load.
 - Large tap targets are required for rep increments and set completion.
 - Timers should be persistent and visible without navigation.
 - Early-end action should be accessible but visually secondary (text button in overflow/footnote area).
 
 ## Proposed Screen Structure
+
 - Header: session status (`Exercise 2/8`, phase, skipped count)
 - Main card:
   - exercise name
@@ -33,18 +36,21 @@ Define a mobile-first session UI optimized for quick in-session logging with min
   - tertiary/de-emphasized: `End Session Early`
 
 ## Interaction Behavior
+
 - Rep display format: `{completed}/{target} reps`
 - Completing target reps for a set marks set complete and enters rest mode (except final set)
 - For hold exercises, each successful hold completion increments rep count by 1
 - On skip, user moves immediately to next item and exercise is queued for later
 
 ## Accessibility and Mobile Constraints
+
 - Minimum touch target: 44x44 px
 - Preserve visible controls above fold on ~390x844 viewport
 - High contrast for active set and timer status
 - Avoid hidden gestures for core actions
 
 ## Mermaid: Screen Flow
+
 ```mermaid
 flowchart TD
   A[Session Start] --> B[Active Exercise Screen]
@@ -70,5 +76,6 @@ flowchart TD
 ```
 
 ## Sources
+
 - Local requirement record: `specs/exercise-tracker/requirements.md`
 - Source exercise plan extracted from: `/Users/jamiely/Downloads/Knee pain.epub`

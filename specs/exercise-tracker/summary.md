@@ -1,6 +1,7 @@
 # Planning Summary
 
 ## Artifacts Created
+
 - `specs/exercise-tracker/rough-idea.md`
 - `specs/exercise-tracker/requirements.md`
 - `specs/exercise-tracker/research/session-state-model.md`
@@ -12,7 +13,9 @@
 - `specs/exercise-tracker/summary.md`
 
 ## Brief Overview
+
 The planning package defines a mobile-first React exercise-session tracker that:
+
 - Loads ordered exercise prescriptions from JSON.
 - Tracks reps/sets/hold completion and between-set rest timing.
 - Supports skipping and automatic revisit of skipped exercises.
@@ -21,6 +24,7 @@ The planning package defines a mobile-first React exercise-session tracker that:
 - Defines both Vitest and Playwright testing strategy for functional confidence.
 
 ## Suggested Next Steps
+
 1. Use the implementation plan in `specs/exercise-tracker/plan.md` to build incrementally.
 2. Keep acceptance criteria in `specs/exercise-tracker/design.md` as implementation gate checks.
 3. Implement unit/integration tests (Vitest) alongside each step.

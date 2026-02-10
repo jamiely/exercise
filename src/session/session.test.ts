@@ -64,7 +64,11 @@ describe('session reducer', () => {
       sessionId: 'session-original',
     })
     const advanced = reduceSession(
-      reduceSession(original, { type: 'increment_rep', now: '2026-02-10T00:00:01.000Z' }, testProgram),
+      reduceSession(
+        original,
+        { type: 'increment_rep', now: '2026-02-10T00:00:01.000Z' },
+        testProgram,
+      ),
       { type: 'skip_exercise', now: '2026-02-10T00:00:02.000Z' },
       testProgram,
     )
@@ -104,9 +108,21 @@ describe('session reducer', () => {
       sessionId: 'session-1',
     })
 
-    const once = reduceSession(initial, { type: 'increment_rep', now: '2026-02-10T00:00:01.000Z' }, testProgram)
-    const twice = reduceSession(once, { type: 'increment_rep', now: '2026-02-10T00:00:02.000Z' }, testProgram)
-    const capped = reduceSession(twice, { type: 'increment_rep', now: '2026-02-10T00:00:03.000Z' }, testProgram)
+    const once = reduceSession(
+      initial,
+      { type: 'increment_rep', now: '2026-02-10T00:00:01.000Z' },
+      testProgram,
+    )
+    const twice = reduceSession(
+      once,
+      { type: 'increment_rep', now: '2026-02-10T00:00:02.000Z' },
+      testProgram,
+    )
+    const capped = reduceSession(
+      twice,
+      { type: 'increment_rep', now: '2026-02-10T00:00:03.000Z' },
+      testProgram,
+    )
 
     expect(once.exerciseProgress['exercise-1'].sets[0].completedReps).toBe(1)
     expect(twice.exerciseProgress['exercise-1'].sets[0].completedReps).toBe(2)
@@ -120,7 +136,11 @@ describe('session reducer', () => {
     })
 
     const withReps = reduceSession(
-      reduceSession(initial, { type: 'increment_rep', now: '2026-02-10T00:00:01.000Z' }, testProgram),
+      reduceSession(
+        initial,
+        { type: 'increment_rep', now: '2026-02-10T00:00:01.000Z' },
+        testProgram,
+      ),
       { type: 'increment_rep', now: '2026-02-10T00:00:02.000Z' },
       testProgram,
     )
@@ -185,8 +205,16 @@ describe('session reducer', () => {
       sessionId: 'session-hold',
     })
 
-    state = reduceSession(state, { type: 'skip_exercise', now: '2026-02-10T00:00:01.000Z' }, testProgram)
-    state = reduceSession(state, { type: 'skip_exercise', now: '2026-02-10T00:00:02.000Z' }, testProgram)
+    state = reduceSession(
+      state,
+      { type: 'skip_exercise', now: '2026-02-10T00:00:01.000Z' },
+      testProgram,
+    )
+    state = reduceSession(
+      state,
+      { type: 'skip_exercise', now: '2026-02-10T00:00:02.000Z' },
+      testProgram,
+    )
     expect(state.currentExerciseId).toBe('exercise-3')
 
     const started = reduceSession(
@@ -257,9 +285,21 @@ describe('session reducer', () => {
       now: '2026-02-10T00:00:00.000Z',
       sessionId: 'session-hold-guard',
     })
-    holdState = reduceSession(holdState, { type: 'skip_exercise', now: '2026-02-10T00:00:01.000Z' }, testProgram)
-    holdState = reduceSession(holdState, { type: 'skip_exercise', now: '2026-02-10T00:00:02.000Z' }, testProgram)
-    holdState = reduceSession(holdState, { type: 'start_hold_timer', now: '2026-02-10T00:00:03.000Z' }, testProgram)
+    holdState = reduceSession(
+      holdState,
+      { type: 'skip_exercise', now: '2026-02-10T00:00:01.000Z' },
+      testProgram,
+    )
+    holdState = reduceSession(
+      holdState,
+      { type: 'skip_exercise', now: '2026-02-10T00:00:02.000Z' },
+      testProgram,
+    )
+    holdState = reduceSession(
+      holdState,
+      { type: 'start_hold_timer', now: '2026-02-10T00:00:03.000Z' },
+      testProgram,
+    )
 
     const holdBlocked = reduceSession(
       holdState,
@@ -275,21 +315,57 @@ describe('session reducer', () => {
       sessionId: 'session-3',
     })
 
-    state = reduceSession(state, { type: 'increment_rep', now: '2026-02-10T00:00:01.000Z' }, testProgram)
-    state = reduceSession(state, { type: 'increment_rep', now: '2026-02-10T00:00:02.000Z' }, testProgram)
-    state = reduceSession(state, { type: 'complete_exercise', now: '2026-02-10T00:00:03.000Z' }, testProgram)
+    state = reduceSession(
+      state,
+      { type: 'increment_rep', now: '2026-02-10T00:00:01.000Z' },
+      testProgram,
+    )
+    state = reduceSession(
+      state,
+      { type: 'increment_rep', now: '2026-02-10T00:00:02.000Z' },
+      testProgram,
+    )
+    state = reduceSession(
+      state,
+      { type: 'complete_exercise', now: '2026-02-10T00:00:03.000Z' },
+      testProgram,
+    )
     expect(state.currentExerciseId).toBe('exercise-2')
     expect(state.primaryCursor).toBe(1)
     expect(state.currentPhase).toBe('primary')
 
-    state = reduceSession(state, { type: 'increment_rep', now: '2026-02-10T00:00:04.000Z' }, testProgram)
-    state = reduceSession(state, { type: 'complete_exercise', now: '2026-02-10T00:00:05.000Z' }, testProgram)
+    state = reduceSession(
+      state,
+      { type: 'increment_rep', now: '2026-02-10T00:00:04.000Z' },
+      testProgram,
+    )
+    state = reduceSession(
+      state,
+      { type: 'complete_exercise', now: '2026-02-10T00:00:05.000Z' },
+      testProgram,
+    )
     expect(state.currentExerciseId).toBe('exercise-3')
 
-    state = reduceSession(state, { type: 'start_hold_timer', now: '2026-02-10T00:00:06.000Z' }, testProgram)
-    state = reduceSession(state, { type: 'tick_hold_timer', now: '2026-02-10T00:00:07.000Z', seconds: 5 }, testProgram)
-    state = reduceSession(state, { type: 'complete_hold_rep', now: '2026-02-10T00:00:08.000Z' }, testProgram)
-    state = reduceSession(state, { type: 'complete_exercise', now: '2026-02-10T00:00:09.000Z' }, testProgram)
+    state = reduceSession(
+      state,
+      { type: 'start_hold_timer', now: '2026-02-10T00:00:06.000Z' },
+      testProgram,
+    )
+    state = reduceSession(
+      state,
+      { type: 'tick_hold_timer', now: '2026-02-10T00:00:07.000Z', seconds: 5 },
+      testProgram,
+    )
+    state = reduceSession(
+      state,
+      { type: 'complete_hold_rep', now: '2026-02-10T00:00:08.000Z' },
+      testProgram,
+    )
+    state = reduceSession(
+      state,
+      { type: 'complete_exercise', now: '2026-02-10T00:00:09.000Z' },
+      testProgram,
+    )
 
     expect(state.status).toBe('completed')
     expect(state.currentExerciseId).toBeNull()
@@ -302,28 +378,72 @@ describe('session reducer', () => {
       sessionId: 'session-4',
     })
 
-    state = reduceSession(state, { type: 'skip_exercise', now: '2026-02-10T00:00:01.000Z' }, testProgram)
+    state = reduceSession(
+      state,
+      { type: 'skip_exercise', now: '2026-02-10T00:00:01.000Z' },
+      testProgram,
+    )
     expect(state.skipQueue).toEqual(['exercise-1'])
     expect(state.currentExerciseId).toBe('exercise-2')
 
-    state = reduceSession(state, { type: 'skip_exercise', now: '2026-02-10T00:00:02.000Z' }, testProgram)
+    state = reduceSession(
+      state,
+      { type: 'skip_exercise', now: '2026-02-10T00:00:02.000Z' },
+      testProgram,
+    )
     expect(state.skipQueue).toEqual(['exercise-1', 'exercise-2'])
     expect(state.currentExerciseId).toBe('exercise-3')
 
-    state = reduceSession(state, { type: 'start_hold_timer', now: '2026-02-10T00:00:03.000Z' }, testProgram)
-    state = reduceSession(state, { type: 'tick_hold_timer', now: '2026-02-10T00:00:04.000Z', seconds: 5 }, testProgram)
-    state = reduceSession(state, { type: 'complete_hold_rep', now: '2026-02-10T00:00:05.000Z' }, testProgram)
-    state = reduceSession(state, { type: 'complete_exercise', now: '2026-02-10T00:00:06.000Z' }, testProgram)
+    state = reduceSession(
+      state,
+      { type: 'start_hold_timer', now: '2026-02-10T00:00:03.000Z' },
+      testProgram,
+    )
+    state = reduceSession(
+      state,
+      { type: 'tick_hold_timer', now: '2026-02-10T00:00:04.000Z', seconds: 5 },
+      testProgram,
+    )
+    state = reduceSession(
+      state,
+      { type: 'complete_hold_rep', now: '2026-02-10T00:00:05.000Z' },
+      testProgram,
+    )
+    state = reduceSession(
+      state,
+      { type: 'complete_exercise', now: '2026-02-10T00:00:06.000Z' },
+      testProgram,
+    )
     expect(state.currentPhase).toBe('skip')
     expect(state.currentExerciseId).toBe('exercise-1')
 
-    state = reduceSession(state, { type: 'increment_rep', now: '2026-02-10T00:00:07.000Z' }, testProgram)
-    state = reduceSession(state, { type: 'increment_rep', now: '2026-02-10T00:00:08.000Z' }, testProgram)
-    state = reduceSession(state, { type: 'complete_exercise', now: '2026-02-10T00:00:09.000Z' }, testProgram)
+    state = reduceSession(
+      state,
+      { type: 'increment_rep', now: '2026-02-10T00:00:07.000Z' },
+      testProgram,
+    )
+    state = reduceSession(
+      state,
+      { type: 'increment_rep', now: '2026-02-10T00:00:08.000Z' },
+      testProgram,
+    )
+    state = reduceSession(
+      state,
+      { type: 'complete_exercise', now: '2026-02-10T00:00:09.000Z' },
+      testProgram,
+    )
     expect(state.currentExerciseId).toBe('exercise-2')
 
-    state = reduceSession(state, { type: 'increment_rep', now: '2026-02-10T00:00:10.000Z' }, testProgram)
-    state = reduceSession(state, { type: 'complete_exercise', now: '2026-02-10T00:00:11.000Z' }, testProgram)
+    state = reduceSession(
+      state,
+      { type: 'increment_rep', now: '2026-02-10T00:00:10.000Z' },
+      testProgram,
+    )
+    state = reduceSession(
+      state,
+      { type: 'complete_exercise', now: '2026-02-10T00:00:11.000Z' },
+      testProgram,
+    )
     expect(state.status).toBe('completed')
     expect(state.skipQueue).toEqual([])
   })
@@ -334,15 +454,31 @@ describe('session reducer', () => {
       sessionId: 'session-5',
     })
 
-    state = reduceSession(state, { type: 'skip_exercise', now: '2026-02-10T00:00:01.000Z' }, testProgram)
-    state = reduceSession(state, { type: 'skip_exercise', now: '2026-02-10T00:00:02.000Z' }, testProgram)
-    state = reduceSession(state, { type: 'skip_exercise', now: '2026-02-10T00:00:03.000Z' }, testProgram)
+    state = reduceSession(
+      state,
+      { type: 'skip_exercise', now: '2026-02-10T00:00:01.000Z' },
+      testProgram,
+    )
+    state = reduceSession(
+      state,
+      { type: 'skip_exercise', now: '2026-02-10T00:00:02.000Z' },
+      testProgram,
+    )
+    state = reduceSession(
+      state,
+      { type: 'skip_exercise', now: '2026-02-10T00:00:03.000Z' },
+      testProgram,
+    )
 
     expect(state.currentPhase).toBe('skip')
     expect(state.skipQueue).toEqual(['exercise-1', 'exercise-2', 'exercise-3'])
     expect(state.currentExerciseId).toBe('exercise-1')
 
-    state = reduceSession(state, { type: 'skip_exercise', now: '2026-02-10T00:00:04.000Z' }, testProgram)
+    state = reduceSession(
+      state,
+      { type: 'skip_exercise', now: '2026-02-10T00:00:04.000Z' },
+      testProgram,
+    )
     expect(state.skipQueue).toEqual(['exercise-2', 'exercise-3', 'exercise-1'])
     expect(state.currentExerciseId).toBe('exercise-2')
   })
@@ -353,12 +489,36 @@ describe('session reducer', () => {
       sessionId: 'session-no-dup-queue',
     })
 
-    state = reduceSession(state, { type: 'skip_exercise', now: '2026-02-10T00:00:01.000Z' }, testProgram)
-    state = reduceSession(state, { type: 'skip_exercise', now: '2026-02-10T00:00:02.000Z' }, testProgram)
-    state = reduceSession(state, { type: 'start_hold_timer', now: '2026-02-10T00:00:03.000Z' }, testProgram)
-    state = reduceSession(state, { type: 'tick_hold_timer', now: '2026-02-10T00:00:04.000Z', seconds: 5 }, testProgram)
-    state = reduceSession(state, { type: 'complete_hold_rep', now: '2026-02-10T00:00:05.000Z' }, testProgram)
-    state = reduceSession(state, { type: 'complete_exercise', now: '2026-02-10T00:00:06.000Z' }, testProgram)
+    state = reduceSession(
+      state,
+      { type: 'skip_exercise', now: '2026-02-10T00:00:01.000Z' },
+      testProgram,
+    )
+    state = reduceSession(
+      state,
+      { type: 'skip_exercise', now: '2026-02-10T00:00:02.000Z' },
+      testProgram,
+    )
+    state = reduceSession(
+      state,
+      { type: 'start_hold_timer', now: '2026-02-10T00:00:03.000Z' },
+      testProgram,
+    )
+    state = reduceSession(
+      state,
+      { type: 'tick_hold_timer', now: '2026-02-10T00:00:04.000Z', seconds: 5 },
+      testProgram,
+    )
+    state = reduceSession(
+      state,
+      { type: 'complete_hold_rep', now: '2026-02-10T00:00:05.000Z' },
+      testProgram,
+    )
+    state = reduceSession(
+      state,
+      { type: 'complete_exercise', now: '2026-02-10T00:00:06.000Z' },
+      testProgram,
+    )
 
     expect(state.currentPhase).toBe('skip')
     expect(state.skipQueue).toEqual(['exercise-1', 'exercise-2'])
@@ -405,9 +565,21 @@ describe('session reducer', () => {
       sessionId: 'session-7',
     })
 
-    state = reduceSession(state, { type: 'skip_exercise', now: '2026-02-10T00:00:01.000Z' }, testProgram)
-    state = reduceSession(state, { type: 'skip_exercise', now: '2026-02-10T00:00:02.000Z' }, testProgram)
-    state = reduceSession(state, { type: 'start_hold_timer', now: '2026-02-10T00:00:03.000Z' }, testProgram)
+    state = reduceSession(
+      state,
+      { type: 'skip_exercise', now: '2026-02-10T00:00:01.000Z' },
+      testProgram,
+    )
+    state = reduceSession(
+      state,
+      { type: 'skip_exercise', now: '2026-02-10T00:00:02.000Z' },
+      testProgram,
+    )
+    state = reduceSession(
+      state,
+      { type: 'start_hold_timer', now: '2026-02-10T00:00:03.000Z' },
+      testProgram,
+    )
     expect(state.exerciseProgress['exercise-3'].holdTimerRunning).toBe(true)
 
     const ended = reduceSession(

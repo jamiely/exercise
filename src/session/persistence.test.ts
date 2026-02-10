@@ -100,11 +100,9 @@ describe('session persistence', () => {
       now: '2026-02-10T00:00:00.000Z',
       sessionId: 'session-write-failure',
     })
-    const setItemSpy = vi
-      .spyOn(window.localStorage.__proto__, 'setItem')
-      .mockImplementation(() => {
-        throw new Error('quota exceeded')
-      })
+    const setItemSpy = vi.spyOn(window.localStorage.__proto__, 'setItem').mockImplementation(() => {
+      throw new Error('quota exceeded')
+    })
 
     expect(() => persistSession(session)).not.toThrow()
     setItemSpy.mockRestore()

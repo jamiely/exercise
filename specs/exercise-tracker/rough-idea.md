@@ -3,6 +3,7 @@
 Create a React exercise tracker using `pnpm`, `Vite`, and `Vitest`.
 
 Requirements:
+
 - Mobile-optimized layout.
 - Focus on tracking within an exercise session.
 - Allow skipping an exercise.

@@ -1,15 +1,18 @@
 # Data Schema Research
 
 ## Objective
+
 Define JSON exercise schema and localStorage persistence schema for robust session tracking.
 
 ## Key Findings
+
 - Exercise prescriptions should be immutable source data loaded from JSON.
 - Session progress should be separate mutable runtime data in localStorage.
 - Schema should support rep-based and hold-based exercises in one model.
 - Hold completion should count as rep completion.
 
 ## Proposed Exercise JSON Schema
+
 ```json
 {
   "version": 1,
@@ -32,6 +35,7 @@ Define JSON exercise schema and localStorage persistence schema for robust sessi
 ```
 
 ## Proposed Session Persistence Schema (localStorage)
+
 ```json
 {
   "sessionId": "2026-02-10T20:45:00.000Z",
@@ -48,9 +52,7 @@ Define JSON exercise schema and localStorage persistence schema for robust sessi
     "wall-sits-shallow": {
       "completed": false,
       "skippedCount": 0,
-      "sets": [
-        { "setNumber": 1, "completedReps": 3, "targetReps": 5 }
-      ],
+      "sets": [{ "setNumber": 1, "completedReps": 3, "targetReps": 5 }],
       "activeSetIndex": 0,
       "holdTimerRunning": false,
       "holdElapsedSeconds": 0,
@@ -63,6 +65,7 @@ Define JSON exercise schema and localStorage persistence schema for robust sessi
 ```
 
 ## Data Validation Rules
+
 - `targetSets` >= 1
 - `targetRepsPerSet` >= 1
 - `holdSeconds` is null or > 0
@@ -71,6 +74,7 @@ Define JSON exercise schema and localStorage persistence schema for robust sessi
 - `availableOnOrAfter` null or ISO date
 
 ## Mermaid: Data Relationship
+
 ```mermaid
 erDiagram
   PROGRAM ||--o{ EXERCISE : contains
@@ -122,5 +126,6 @@ erDiagram
 ```
 
 ## Sources
+
 - Local requirement record: `specs/exercise-tracker/requirements.md`
 - Source exercise plan extracted from: `/Users/jamiely/Downloads/Knee pain.epub`

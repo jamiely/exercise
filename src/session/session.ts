@@ -231,7 +231,11 @@ export const reduceSession = (
       }
 
       const currentProgress = getCurrentProgress(state)
-      if (!currentProgress || currentProgress.restTimerRunning || currentProgress.holdTimerRunning) {
+      if (
+        !currentProgress ||
+        currentProgress.restTimerRunning ||
+        currentProgress.holdTimerRunning
+      ) {
         return state
       }
 
@@ -361,7 +365,8 @@ export const reduceSession = (
         return state
       }
 
-      const seconds = Number.isInteger(action.seconds) && (action.seconds ?? 0) > 0 ? action.seconds! : 1
+      const seconds =
+        Number.isInteger(action.seconds) && (action.seconds ?? 0) > 0 ? action.seconds! : 1
 
       return withUpdatedExerciseProgress(
         state,
@@ -464,7 +469,8 @@ export const reduceSession = (
         return state
       }
 
-      const seconds = Number.isInteger(action.seconds) && (action.seconds ?? 0) > 0 ? action.seconds! : 1
+      const seconds =
+        Number.isInteger(action.seconds) && (action.seconds ?? 0) > 0 ? action.seconds! : 1
       const nextElapsed = Math.min(
         currentExercise.holdSeconds,
         currentProgress.holdElapsedSeconds + seconds,
