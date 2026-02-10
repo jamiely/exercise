@@ -76,6 +76,28 @@ h2 {
   gap: 0.25rem;
 }
 
+.options-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 0.875rem;
+  background: #f9fafb;
+  padding: 0.75rem;
+  display: grid;
+  gap: 0.625rem;
+}
+
+.option-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #374151;
+  font-weight: 500;
+}
+
+.option-toggle input {
+  width: 1rem;
+  height: 1rem;
+}
+
 .exercise-card {
   border: 1px solid #d1d5db;
   border-radius: 1rem;

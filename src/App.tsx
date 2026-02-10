@@ -2,6 +2,7 @@ import { useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import './App.css'
 import { ProgramLoadError, loadProgram } from './program/program'
 import { createCountdownController, formatCountdownTenths } from './session/countdown'
+import { emitTransitionCue } from './session/cues'
 import type { SessionAction, SessionState } from './session/session'
 import { createSessionState, reduceSession } from './session/session'
 import { persistSession, readPersistedSession } from './session/persistence'
@@ -105,12 +106,32 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
     bootState.initialSession,
   )
   const runtimeRemainingMsRef = useRef(sessionState.runtime.remainingMs)
+  const previousRuntimePhaseRef = useRef(sessionState.runtime.phase)
   const wakeLockSentinelRef = useRef<WakeLockSentinelLike | null>(null)
   const wakeLockRequestInFlightRef = useRef(false)
 
   useEffect(() => {
     runtimeRemainingMsRef.current = sessionState.runtime.remainingMs
   }, [sessionState.runtime.remainingMs])
+
+  useEffect(() => {
+    const previousPhase = previousRuntimePhaseRef.current
+    const nextPhase = sessionState.runtime.phase
+    previousRuntimePhaseRef.current = nextPhase
+
+    if (
+      previousPhase === nextPhase ||
+      (nextPhase !== 'hold' &&
+        nextPhase !== 'repRest' &&
+        nextPhase !== 'setRest' &&
+        nextPhase !== 'exerciseRest' &&
+        nextPhase !== 'complete')
+    ) {
+      return
+    }
+
+    emitTransitionCue(sessionState.options)
+  }, [sessionState.options, sessionState.runtime.phase])
 
   useEffect(() => {
     persistSession(sessionState)
@@ -388,6 +409,37 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
         <p className="subtitle">
           Phase timer: {formatCountdownTenths(sessionState.runtime.remainingMs)}s
         </p>
+      </section>
+      <section className="options-card" aria-label="Cue options">
+        <p className="eyebrow">Options</p>
+        <label className="option-toggle">
+          <input
+            type="checkbox"
+            checked={sessionState.options.soundEnabled}
+            onChange={(event) =>
+              dispatchAction({
+                type: 'set_sound_enabled',
+                enabled: event.currentTarget.checked,
+                now: new Date().toISOString(),
+              })
+            }
+          />
+          <span>Sound cues</span>
+        </label>
+        <label className="option-toggle">
+          <input
+            type="checkbox"
+            checked={sessionState.options.vibrationEnabled}
+            onChange={(event) =>
+              dispatchAction({
+                type: 'set_vibration_enabled',
+                enabled: event.currentTarget.checked,
+                now: new Date().toISOString(),
+              })
+            }
+          />
+          <span>Vibration cues</span>
+        </label>
       </section>
 
       <article className="exercise-card" aria-label="Active exercise">

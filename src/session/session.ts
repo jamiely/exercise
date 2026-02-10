@@ -37,7 +37,13 @@ export type SessionState = {
   currentExerciseId: string | null
   skipQueue: string[]
   exerciseProgress: Record<string, ExerciseProgress>
+  options: SessionOptions
   runtime: SessionRuntimeState
+}
+
+export type SessionOptions = {
+  soundEnabled: boolean
+  vibrationEnabled: boolean
 }
 
 export type SessionRuntimeState = {
@@ -54,6 +60,8 @@ export type SessionAction =
   | { type: 'start_routine'; now?: string }
   | { type: 'pause_routine'; now?: string }
   | { type: 'resume_routine'; now?: string }
+  | { type: 'set_sound_enabled'; now?: string; enabled: boolean }
+  | { type: 'set_vibration_enabled'; now?: string; enabled: boolean }
   | { type: 'tick_runtime_countdown'; now?: string; remainingMs: number }
   | { type: 'complete_runtime_countdown'; now?: string }
   | { type: 'increment_rep'; now?: string }
@@ -128,6 +136,11 @@ const getInitialRuntimeState = (): SessionRuntimeState => ({
   repIndex: 0,
   remainingMs: 0,
   previousPhase: null,
+})
+
+const getInitialSessionOptions = (): SessionOptions => ({
+  soundEnabled: true,
+  vibrationEnabled: true,
 })
 
 const withUpdatedExerciseProgress = (
@@ -269,6 +282,7 @@ export const createSessionState = (
     currentExerciseId: firstExercise ? firstExercise.id : null,
     skipQueue: [],
     exerciseProgress,
+    options: getInitialSessionOptions(),
     runtime: getInitialRuntimeState(),
   }
 }
@@ -360,6 +374,34 @@ export const reduceSession = (
           ...state.runtime,
           phase: nextPhase,
           previousPhase: null,
+        },
+      }
+    }
+    case 'set_sound_enabled': {
+      if (!isInProgress(state) || state.options.soundEnabled === action.enabled) {
+        return state
+      }
+
+      return {
+        ...state,
+        updatedAt: getTimestamp(state, action.now),
+        options: {
+          ...state.options,
+          soundEnabled: action.enabled,
+        },
+      }
+    }
+    case 'set_vibration_enabled': {
+      if (!isInProgress(state) || state.options.vibrationEnabled === action.enabled) {
+        return state
+      }
+
+      return {
+        ...state,
+        updatedAt: getTimestamp(state, action.now),
+        options: {
+          ...state.options,
+          vibrationEnabled: action.enabled,
         },
       }
     }

@@ -25,6 +25,13 @@ describe('App shell', () => {
     expect(screen.getByText(/workflow phase: idle/i)).toBeInTheDocument()
   })
 
+  it('shows sound and vibration options enabled by default', () => {
+    render(<App />)
+
+    expect(screen.getByRole('checkbox', { name: /sound cues/i })).toBeChecked()
+    expect(screen.getByRole('checkbox', { name: /vibration cues/i })).toBeChecked()
+  })
+
   it('enters hold workflow phase when Start is pressed', async () => {
     const user = userEvent.setup()
     render(<App />)
@@ -237,6 +244,60 @@ describe('App shell', () => {
 
     expect(screen.getByText(/workflow phase: hold/i)).toBeInTheDocument()
     expect(screen.queryByText(/wake lock/i)).not.toBeInTheDocument()
+  })
+
+  it('suppresses transition cues when sound and vibration are toggled off', async () => {
+    const user = userEvent.setup()
+    const vibrate = vi.fn()
+    Object.defineProperty(navigator, 'vibrate', {
+      configurable: true,
+      value: vibrate,
+    })
+
+    let audioContextConstructed = 0
+    class AudioContextMock {
+      currentTime = 0
+      destination = {}
+
+      constructor() {
+        audioContextConstructed += 1
+      }
+
+      createGain() {
+        return {
+          connect: vi.fn(),
+          gain: {
+            setValueAtTime: vi.fn(),
+            exponentialRampToValueAtTime: vi.fn(),
+          },
+        }
+      }
+
+      createOscillator() {
+        return {
+          connect: vi.fn(),
+          frequency: { setValueAtTime: vi.fn() },
+          start: vi.fn(),
+          stop: vi.fn(),
+        }
+      }
+
+      async close() {
+        return undefined
+      }
+    }
+    Object.defineProperty(window, 'AudioContext', {
+      configurable: true,
+      value: AudioContextMock,
+    })
+
+    render(<App />)
+    await user.click(screen.getByRole('checkbox', { name: /sound cues/i }))
+    await user.click(screen.getByRole('checkbox', { name: /vibration cues/i }))
+    await user.click(screen.getByRole('button', { name: /^start$/i }))
+
+    expect(audioContextConstructed).toBe(0)
+    expect(vibrate).not.toHaveBeenCalled()
   })
 
   it('counts down set rest runtime phase and auto-starts next set hold', async () => {

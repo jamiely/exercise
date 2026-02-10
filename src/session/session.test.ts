@@ -114,6 +114,31 @@ describe('session reducer', () => {
     expect(state.runtime.setIndex).toBe(0)
     expect(state.runtime.repIndex).toBe(0)
     expect(state.runtime.remainingMs).toBe(0)
+    expect(state.options.soundEnabled).toBe(true)
+    expect(state.options.vibrationEnabled).toBe(true)
+  })
+
+  it('updates sound and vibration options independently', () => {
+    const initial = createSessionState(testProgram, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-options',
+    })
+
+    const soundOff = reduceSession(
+      initial,
+      { type: 'set_sound_enabled', now: '2026-02-10T00:00:01.000Z', enabled: false },
+      testProgram,
+    )
+    const vibrationOff = reduceSession(
+      soundOff,
+      { type: 'set_vibration_enabled', now: '2026-02-10T00:00:02.000Z', enabled: false },
+      testProgram,
+    )
+
+    expect(soundOff.options.soundEnabled).toBe(false)
+    expect(soundOff.options.vibrationEnabled).toBe(true)
+    expect(vibrationOff.options.soundEnabled).toBe(false)
+    expect(vibrationOff.options.vibrationEnabled).toBe(false)
   })
 
   it('starts the runtime workflow in hold phase from idle', () => {

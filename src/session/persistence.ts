@@ -50,6 +50,14 @@ const isRuntimeState = (value: unknown): value is SessionState['runtime'] => {
   )
 }
 
+const isSessionOptions = (value: unknown): value is SessionState['options'] => {
+  if (!isRecord(value)) {
+    return false
+  }
+
+  return typeof value.soundEnabled === 'boolean' && typeof value.vibrationEnabled === 'boolean'
+}
+
 const isSetProgress = (value: unknown): boolean => {
   if (!isRecord(value)) {
     return false
@@ -97,6 +105,7 @@ const isSessionState = (value: unknown): value is SessionState => {
     Array.isArray(value.skipQueue) &&
     value.skipQueue.every((exerciseId) => typeof exerciseId === 'string') &&
     Object.values(value.exerciseProgress).every(isExerciseProgress) &&
+    isSessionOptions(value.options) &&
     isRuntimeState(value.runtime)
   )
 }
