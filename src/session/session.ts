@@ -1,4 +1,9 @@
 import type { Exercise, Program } from '../program/program'
+import {
+  type ActiveRuntimePhase,
+  type SessionRuntimePhase,
+  transitionRuntimePhase,
+} from './phase-machine'
 
 export type SessionStatus = 'in_progress' | 'completed' | 'ended_early'
 export type SessionPhase = 'primary' | 'skip'
@@ -32,10 +37,21 @@ export type SessionState = {
   currentExerciseId: string | null
   skipQueue: string[]
   exerciseProgress: Record<string, ExerciseProgress>
+  runtime: SessionRuntimeState
+}
+
+export type SessionRuntimeState = {
+  phase: SessionRuntimePhase
+  exerciseIndex: number
+  setIndex: number
+  repIndex: number
+  remainingMs: number
+  previousPhase: ActiveRuntimePhase | null
 }
 
 export type SessionAction =
   | { type: 'start_session'; program: Program; now: string; sessionId: string }
+  | { type: 'start_routine'; now?: string }
   | { type: 'increment_rep'; now?: string }
   | { type: 'decrement_rep'; now?: string }
   | { type: 'complete_set'; now?: string }
@@ -88,6 +104,24 @@ const getCurrentExercise = (state: SessionState, program: Program): Exercise | n
   return program.exercises.find((exercise) => exercise.id === state.currentExerciseId) ?? null
 }
 
+const getCurrentExerciseIndex = (state: SessionState, program: Program): number => {
+  if (!state.currentExerciseId) {
+    return 0
+  }
+
+  const index = program.exercises.findIndex((exercise) => exercise.id === state.currentExerciseId)
+  return index >= 0 ? index : 0
+}
+
+const getInitialRuntimeState = (): SessionRuntimeState => ({
+  phase: 'idle',
+  exerciseIndex: 0,
+  setIndex: 0,
+  repIndex: 0,
+  remainingMs: 0,
+  previousPhase: null,
+})
+
 const withUpdatedExerciseProgress = (
   state: SessionState,
   exerciseId: string,
@@ -129,7 +163,25 @@ const withTerminalStatus = (
     endedEarly: status === 'ended_early',
     currentExerciseId: null,
     exerciseProgress,
+    runtime: {
+      ...state.runtime,
+      phase: 'complete',
+      remainingMs: 0,
+      previousPhase: null,
+    },
   }
+}
+
+const getCurrentSetAndRepIndex = (state: SessionState): { setIndex: number; repIndex: number } => {
+  const progress = getCurrentProgress(state)
+  if (!progress) {
+    return { setIndex: 0, repIndex: 0 }
+  }
+
+  const setIndex = Math.max(0, progress.activeSetIndex)
+  const repIndex = Math.max(0, progress.sets[setIndex]?.completedReps ?? 0)
+
+  return { setIndex, repIndex }
 }
 
 const advanceAfterPrimary = (state: SessionState, program: Program, now?: string): SessionState => {
@@ -209,6 +261,7 @@ export const createSessionState = (
     currentExerciseId: firstExercise ? firstExercise.id : null,
     skipQueue: [],
     exerciseProgress,
+    runtime: getInitialRuntimeState(),
   }
 }
 
@@ -220,6 +273,33 @@ export const reduceSession = (
   switch (action.type) {
     case 'start_session':
       return createSessionState(action.program, { now: action.now, sessionId: action.sessionId })
+    case 'start_routine': {
+      if (!isInProgress(state)) {
+        return state
+      }
+
+      const nextPhase = transitionRuntimePhase(state.runtime.phase, 'start')
+      if (!nextPhase) {
+        return state
+      }
+
+      const exerciseIndex = getCurrentExerciseIndex(state, program)
+      const { setIndex, repIndex } = getCurrentSetAndRepIndex(state)
+      const holdSeconds = program.exercises[exerciseIndex]?.holdSeconds ?? null
+
+      return {
+        ...state,
+        updatedAt: getTimestamp(state, action.now),
+        runtime: {
+          phase: nextPhase,
+          exerciseIndex,
+          setIndex,
+          repIndex,
+          remainingMs: holdSeconds !== null ? holdSeconds * 1000 : 0,
+          previousPhase: null,
+        },
+      }
+    }
     case 'increment_rep': {
       if (!isInProgress(state) || !state.currentExerciseId) {
         return state

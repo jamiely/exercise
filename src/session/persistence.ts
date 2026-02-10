@@ -17,6 +17,39 @@ const isSessionStatus = (value: unknown): value is SessionState['status'] =>
 const isSessionPhase = (value: unknown): value is SessionState['currentPhase'] =>
   value === 'primary' || value === 'skip'
 
+const isRuntimePhase = (value: unknown): value is SessionState['runtime']['phase'] =>
+  value === 'idle' ||
+  value === 'hold' ||
+  value === 'repRest' ||
+  value === 'setRest' ||
+  value === 'exerciseRest' ||
+  value === 'paused' ||
+  value === 'complete'
+
+const isPreviousRuntimePhase = (
+  value: unknown,
+): value is SessionState['runtime']['previousPhase'] =>
+  value === null ||
+  value === 'hold' ||
+  value === 'repRest' ||
+  value === 'setRest' ||
+  value === 'exerciseRest'
+
+const isRuntimeState = (value: unknown): value is SessionState['runtime'] => {
+  if (!isRecord(value)) {
+    return false
+  }
+
+  return (
+    isRuntimePhase(value.phase) &&
+    typeof value.exerciseIndex === 'number' &&
+    typeof value.setIndex === 'number' &&
+    typeof value.repIndex === 'number' &&
+    typeof value.remainingMs === 'number' &&
+    isPreviousRuntimePhase(value.previousPhase)
+  )
+}
+
 const isSetProgress = (value: unknown): boolean => {
   if (!isRecord(value)) {
     return false
@@ -63,7 +96,8 @@ const isSessionState = (value: unknown): value is SessionState => {
     (value.currentExerciseId === null || typeof value.currentExerciseId === 'string') &&
     Array.isArray(value.skipQueue) &&
     value.skipQueue.every((exerciseId) => typeof exerciseId === 'string') &&
-    Object.values(value.exerciseProgress).every(isExerciseProgress)
+    Object.values(value.exerciseProgress).every(isExerciseProgress) &&
+    isRuntimeState(value.runtime)
   )
 }
 

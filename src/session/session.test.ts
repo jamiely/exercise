@@ -100,6 +100,36 @@ describe('session reducer', () => {
     expect(state.currentPhase).toBe('primary')
     expect(state.currentExerciseId).toBe('exercise-1')
     expect(state.primaryCursor).toBe(0)
+    expect(state.runtime.phase).toBe('idle')
+    expect(state.runtime.exerciseIndex).toBe(0)
+    expect(state.runtime.setIndex).toBe(0)
+    expect(state.runtime.repIndex).toBe(0)
+    expect(state.runtime.remainingMs).toBe(0)
+  })
+
+  it('starts the runtime workflow in hold phase from idle', () => {
+    const initial = createSessionState(testProgram, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-start-routine',
+    })
+
+    const started = reduceSession(
+      initial,
+      { type: 'start_routine', now: '2026-02-10T00:00:01.000Z' },
+      testProgram,
+    )
+    const ignoredWhenStarted = reduceSession(
+      started,
+      { type: 'start_routine', now: '2026-02-10T00:00:02.000Z' },
+      testProgram,
+    )
+
+    expect(started.runtime.phase).toBe('hold')
+    expect(started.runtime.exerciseIndex).toBe(0)
+    expect(started.runtime.setIndex).toBe(0)
+    expect(started.runtime.repIndex).toBe(0)
+    expect(started.runtime.remainingMs).toBe(0)
+    expect(ignoredWhenStarted).toEqual(started)
   })
 
   it('increments reps up to the target for the active set', () => {

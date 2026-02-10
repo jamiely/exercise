@@ -22,6 +22,18 @@ describe('App shell', () => {
     expect(screen.getByRole('heading', { name: /quad set/i })).toBeInTheDocument()
     expect(screen.getByText(/target: 2 sets x 12 reps/i)).toBeInTheDocument()
     expect(screen.getByText('0/12 reps')).toBeInTheDocument()
+    expect(screen.getByText(/workflow phase: idle/i)).toBeInTheDocument()
+  })
+
+  it('enters hold workflow phase when Start is pressed', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(screen.getByRole('button', { name: /^start$/i }))
+
+    expect(screen.getByText(/workflow phase: hold/i)).toBeInTheDocument()
+    expect(screen.getByText(/phase timer: 0.0s/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^start$/i })).toBeDisabled()
   })
 
   it('increments and undoes reps for active set', async () => {

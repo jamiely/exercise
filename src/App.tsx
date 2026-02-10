@@ -230,6 +230,7 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
       case 'skip_exercise':
       case 'end_session_early':
       case 'finish_session':
+      case 'start_routine':
       case 'start_next_set':
       case 'start_hold_timer':
       case 'stop_hold_timer':
@@ -252,6 +253,10 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
         </p>
         <p className="subtitle">
           {phaseLabel} · {sessionState.skipQueue.length} skipped queued
+        </p>
+        <p className="subtitle">Workflow phase: {sessionState.runtime.phase}</p>
+        <p className="subtitle">
+          Phase timer: {(sessionState.runtime.remainingMs / 1000).toFixed(1)}s
         </p>
       </section>
 
@@ -375,6 +380,13 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
       </section>
 
       <section className="session-actions" aria-label="Exercise actions">
+        <button
+          type="button"
+          onClick={() => dispatchTimed('start_routine')}
+          disabled={sessionState.runtime.phase !== 'idle'}
+        >
+          Start
+        </button>
         <button
           type="button"
           className="secondary-button"
