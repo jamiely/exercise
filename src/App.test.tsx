@@ -51,15 +51,14 @@ describe('App shell', () => {
     expect(screen.getByRole('checkbox', { name: /vibration cues/i })).toBeChecked()
   })
 
-  it('opens override modal from the bottom overrides button', async () => {
+  it('shows override actions inside the options screen', async () => {
     const user = userEvent.setup()
     render(<App />)
     enterNewSession()
 
     await user.click(screen.getByRole('button', { name: /^start$/i }))
-    await user.click(screen.getByRole('button', { name: /overrides/i }))
+    ensureOptionsScreen()
 
-    expect(screen.getByRole('dialog', { name: /override actions/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /skip rep/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /skip rest/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /end set/i })).toBeInTheDocument()
@@ -459,7 +458,7 @@ describe('App shell', () => {
     expect(screen.getByText('0/5 reps')).toBeInTheDocument()
   })
 
-  it('skips rep from override modal and transitions hold to rep rest', async () => {
+  it('skips rep from options overrides and transitions hold to rep rest', async () => {
     const program = loadProgram()
     const session = createSessionState(program, {
       now: '2026-02-10T00:00:00.000Z',
@@ -483,15 +482,16 @@ describe('App shell', () => {
 
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: /resume/i }))
-    fireEvent.click(screen.getByRole('button', { name: /overrides/i }))
+    ensureOptionsScreen()
     fireEvent.click(screen.getByRole('button', { name: /skip rep/i }))
+    fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
 
     expectOnOptionsScreen(/workflow phase: represt/i)
     expectOnOptionsScreen(/phase timer: 30.0s/i)
     expect(screen.getByText('1/5 reps')).toBeInTheDocument()
   })
 
-  it('skips rest from override modal and transitions rep rest to hold', () => {
+  it('skips rest from options overrides and transitions rep rest to hold', () => {
     const program = loadProgram()
     const session = createSessionState(program, {
       now: '2026-02-10T00:00:00.000Z',
@@ -527,15 +527,16 @@ describe('App shell', () => {
 
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: /resume/i }))
-    fireEvent.click(screen.getByRole('button', { name: /overrides/i }))
+    ensureOptionsScreen()
     fireEvent.click(screen.getByRole('button', { name: /skip rest/i }))
+    fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
 
     expectOnOptionsScreen(/workflow phase: hold/i)
     expectOnOptionsScreen(/phase timer: 40.0s/i)
     expect(screen.getByText('1/5 reps')).toBeInTheDocument()
   })
 
-  it('ends set from override modal and transitions to set rest', () => {
+  it('ends set from options overrides and transitions to set rest', () => {
     const program = loadProgram()
     const session = createSessionState(program, {
       now: '2026-02-10T00:00:00.000Z',
@@ -573,15 +574,16 @@ describe('App shell', () => {
 
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: /resume/i }))
-    fireEvent.click(screen.getByRole('button', { name: /overrides/i }))
+    ensureOptionsScreen()
     fireEvent.click(screen.getByRole('button', { name: /end set/i }))
+    fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
 
     expectOnOptionsScreen(/workflow phase: setrest/i)
     expectOnOptionsScreen(/phase timer: 30.0s/i)
     expect(screen.getByText('10/10 reps')).toBeInTheDocument()
   })
 
-  it('ends exercise from override modal and transitions to exercise rest', () => {
+  it('ends exercise from options overrides and transitions to exercise rest', () => {
     const program = loadProgram()
     const session = createSessionState(program, {
       now: '2026-02-10T00:00:00.000Z',
@@ -622,8 +624,9 @@ describe('App shell', () => {
 
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: /resume/i }))
-    fireEvent.click(screen.getByRole('button', { name: /overrides/i }))
+    ensureOptionsScreen()
     fireEvent.click(screen.getByRole('button', { name: /end exercise/i }))
+    fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
 
     expectOnOptionsScreen(/workflow phase: exerciserest/i)
     expectOnOptionsScreen(/phase timer: 30.0s/i)

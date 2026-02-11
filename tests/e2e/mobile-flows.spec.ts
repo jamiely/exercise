@@ -151,6 +151,19 @@ test('uses one routine button that cycles Start, Pause, Resume, and Pause', asyn
   await expect(page.getByRole('button', { name: /^pause$/i })).toBeVisible()
 })
 
+test('renders overrides in Options and applies end exercise override there', async ({ page }) => {
+  await tapByRoleName(page, 'button', /^start$/i)
+  await tapByRoleName(page, 'button', /options/i)
+
+  await expect(page.getByRole('button', { name: /skip rep/i })).toBeVisible()
+  await expect(page.getByRole('button', { name: /skip rest/i })).toBeVisible()
+  await expect(page.getByRole('button', { name: /end set/i })).toBeVisible()
+  await expect(page.getByRole('button', { name: /end exercise/i })).toBeVisible()
+
+  await tapByRoleName(page, 'button', /end exercise/i)
+  await expect(page.getByText(/workflow phase: exerciserest/i)).toBeVisible()
+})
+
 test('one-tap Start auto-completes seeded hold workflow path with no progression taps', async ({
   page,
 }) => {

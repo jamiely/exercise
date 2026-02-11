@@ -102,7 +102,6 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
   const bootState = useMemo(() => buildSessionBootState(program), [program])
   const [pendingResume, setPendingResume] = useState<SessionState | null>(bootState.pendingResume)
   const [hasEnteredSession, setHasEnteredSession] = useState(false)
-  const [isOverrideMenuOpen, setIsOverrideMenuOpen] = useState(false)
   const [isSessionOptionsOpen, setIsSessionOptionsOpen] = useState(false)
   const [sessionState, dispatch] = useReducer(
     (state: SessionState, action: SessionAction) => reduceSession(state, action, program),
@@ -404,7 +403,6 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
 
   const dispatchOverride = (actionType: Extract<SessionAction['type'], `override_${string}`>) => {
     dispatchAction({ type: actionType, now: new Date().toISOString() })
-    setIsOverrideMenuOpen(false)
   }
 
   const dispatchTimed = (actionType: SessionAction['type']) => {
@@ -433,8 +431,6 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
     }
   }
 
-  const canOpenOverrideMenu =
-    sessionState.runtime.phase !== 'idle' && sessionState.runtime.phase !== 'complete'
   const canSkipRep = sessionState.runtime.phase === 'hold'
   const canSkipRest =
     sessionState.runtime.phase === 'repRest' ||
@@ -499,6 +495,29 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
             />
             <span>Vibration cues</span>
           </label>
+          <p className="eyebrow">Overrides</p>
+          <div className="options-override-actions">
+            <button
+              type="button"
+              onClick={() => dispatchOverride('override_skip_rep')}
+              disabled={!canSkipRep}
+            >
+              Skip Rep
+            </button>
+            <button
+              type="button"
+              onClick={() => dispatchOverride('override_skip_rest')}
+              disabled={!canSkipRest}
+            >
+              Skip Rest
+            </button>
+            <button type="button" onClick={() => dispatchOverride('override_end_set')}>
+              End Set
+            </button>
+            <button type="button" onClick={() => dispatchOverride('override_end_exercise')}>
+              End Exercise
+            </button>
+          </div>
         </section>
         <button
           type="button"
@@ -677,58 +696,6 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
           End Session Early
         </button>
       </section>
-      <section className="override-actions" aria-label="Override actions launcher">
-        <button
-          type="button"
-          className="tertiary-button override-launcher-button"
-          onClick={() => setIsOverrideMenuOpen(true)}
-          disabled={!canOpenOverrideMenu}
-        >
-          Overrides
-        </button>
-      </section>
-      {isOverrideMenuOpen ? (
-        <div className="override-modal-backdrop">
-          <section
-            className="override-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Override actions"
-          >
-            <h2>Overrides</h2>
-            <p className="subtitle">Apply one quick transition.</p>
-            <div className="override-modal-actions">
-              <button
-                type="button"
-                onClick={() => dispatchOverride('override_skip_rep')}
-                disabled={!canSkipRep}
-              >
-                Skip Rep
-              </button>
-              <button
-                type="button"
-                onClick={() => dispatchOverride('override_skip_rest')}
-                disabled={!canSkipRest}
-              >
-                Skip Rest
-              </button>
-              <button type="button" onClick={() => dispatchOverride('override_end_set')}>
-                End Set
-              </button>
-              <button type="button" onClick={() => dispatchOverride('override_end_exercise')}>
-                End Exercise
-              </button>
-              <button
-                type="button"
-                className="secondary-button"
-                onClick={() => setIsOverrideMenuOpen(false)}
-              >
-                Close
-              </button>
-            </div>
-          </section>
-        </div>
-      ) : null}
     </main>
   )
 }
