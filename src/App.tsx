@@ -79,6 +79,19 @@ const formatDurationSnapshot = (
   return `${minutes}m ${seconds}s`
 }
 
+const formatElapsedWorkoutTime = (elapsedSeconds: number): string => {
+  const totalSeconds = Math.max(0, Math.floor(elapsedSeconds))
+  const hours = Math.floor(totalSeconds / 3600)
+  const minutes = Math.floor((totalSeconds % 3600) / 60)
+  const seconds = totalSeconds % 60
+
+  if (hours > 0) {
+    return `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+  }
+
+  return `${minutes}:${String(seconds).padStart(2, '0')}`
+}
+
 const getSessionSummary = (sessionState: SessionState, totalExercises: number) => {
   const exerciseProgress = Object.values(sessionState.exerciseProgress)
   const completedExercises = exerciseProgress.filter((progress) => progress.completed).length
@@ -231,6 +244,18 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
   }, [sessionState.status, timerExercise, timerProgress])
 
   useEffect(() => {
+    if (sessionState.status !== 'in_progress' || !sessionState.workoutTimerRunning) {
+      return
+    }
+
+    const intervalId = window.setInterval(() => {
+      dispatch({ type: 'tick_workout_timer', now: new Date().toISOString() })
+    }, 1000)
+
+    return () => window.clearInterval(intervalId)
+  }, [sessionState.status, sessionState.workoutTimerRunning])
+
+  useEffect(() => {
     if (
       sessionState.status !== 'in_progress' ||
       !timerProgress ||
@@ -356,6 +381,9 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
         <p className="eyebrow">Exercise Session</p>
         <h1>{sessionState.status === 'completed' ? 'Session completed' : 'Session ended early'}</h1>
         <p className="subtitle">{program.programName}</p>
+        <p className="workout-timer">
+          Workout time: {formatElapsedWorkoutTime(sessionState.workoutElapsedSeconds)}
+        </p>
         <section className="summary-card" aria-label="Session summary">
           <p className="summary-row">
             <span>Completed exercises</span>
@@ -453,6 +481,9 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
       <main className="app-shell">
         <p className="eyebrow">Exercise Session</p>
         <h1>{program.programName}</h1>
+        <p className="workout-timer">
+          Workout time: {formatElapsedWorkoutTime(sessionState.workoutElapsedSeconds)}
+        </p>
         <section className="session-meta" aria-label="Session progress">
           <p className="subtitle">
             Exercise {exerciseIndex + 1}/{program.exercises.length}
@@ -572,6 +603,9 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
 
   return (
     <main className="app-shell">
+      <p className="workout-timer">
+        Workout time: {formatElapsedWorkoutTime(sessionState.workoutElapsedSeconds)}
+      </p>
       <article className="exercise-card" aria-label="Active exercise">
         <p className="eyebrow">Current Exercise</p>
         <h2>{currentExercise.name}</h2>

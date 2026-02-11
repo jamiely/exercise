@@ -35,6 +35,13 @@ h2 {
   color: #4b5563;
 }
 
+.workout-timer {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #4b5563;
+}
+
 .resume-actions {
   margin-top: 0.75rem;
   display: grid;

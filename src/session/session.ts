@@ -39,6 +39,8 @@ export type SessionState = {
   exerciseProgress: Record<string, ExerciseProgress>
   options: SessionOptions
   runtime: SessionRuntimeState
+  workoutElapsedSeconds: number
+  workoutTimerRunning: boolean
 }
 
 export type SessionOptions = {
@@ -78,6 +80,7 @@ export type SessionAction =
   | { type: 'reset_hold_timer'; now?: string }
   | { type: 'tick_hold_timer'; now?: string; seconds?: number }
   | { type: 'complete_hold_rep'; now?: string }
+  | { type: 'tick_workout_timer'; now?: string; seconds?: number }
   | { type: 'complete_exercise'; now?: string }
   | { type: 'skip_exercise'; now?: string }
   | { type: 'end_session_early'; now?: string }
@@ -194,6 +197,7 @@ const withTerminalStatus = (
       remainingMs: 0,
       previousPhase: null,
     },
+    workoutTimerRunning: false,
   }
 }
 
@@ -288,6 +292,8 @@ export const createSessionState = (
     exerciseProgress,
     options: getInitialSessionOptions(),
     runtime: getInitialRuntimeState(),
+    workoutElapsedSeconds: 0,
+    workoutTimerRunning: false,
   }
 }
 
@@ -324,6 +330,7 @@ export const reduceSession = (
           remainingMs: holdSeconds !== null ? holdSeconds * 1000 : 0,
           previousPhase: null,
         },
+        workoutTimerRunning: true,
       }
     }
     case 'pause_routine': {
@@ -355,6 +362,7 @@ export const reduceSession = (
           phase: nextPhase,
           previousPhase: activePhase,
         },
+        workoutTimerRunning: false,
       }
     }
     case 'resume_routine': {
@@ -379,6 +387,7 @@ export const reduceSession = (
           phase: nextPhase,
           previousPhase: null,
         },
+        workoutTimerRunning: true,
       }
     }
     case 'override_skip_rep': {
@@ -765,6 +774,22 @@ export const reduceSession = (
           remainingMs: holdRemainingMs,
           previousPhase: null,
         },
+      }
+    }
+    case 'tick_workout_timer': {
+      if (!isInProgress(state) || !state.workoutTimerRunning) {
+        return state
+      }
+
+      const increment = action.seconds ?? 1
+      if (increment <= 0) {
+        return state
+      }
+
+      return {
+        ...state,
+        updatedAt: getTimestamp(state, action.now),
+        workoutElapsedSeconds: state.workoutElapsedSeconds + increment,
       }
     }
     case 'increment_rep': {

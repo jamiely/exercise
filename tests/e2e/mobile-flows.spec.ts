@@ -167,6 +167,29 @@ test('uses one routine button that cycles Start, Pause, Resume, and Pause', asyn
   await expect(page.getByRole('button', { name: /^pause$/i })).toBeVisible()
 })
 
+test('tracks workout timer, pauses it, and shows the final elapsed time after ending', async ({
+  page,
+}) => {
+  await expect(page.getByText('Workout time: 0:00')).toBeVisible()
+
+  await tapByRoleName(page, 'button', /^start$/i)
+  await page.waitForTimeout(2100)
+  await expect(page.getByText('Workout time: 0:02')).toBeVisible()
+
+  await tapByRoleName(page, 'button', /^pause$/i)
+  await page.waitForTimeout(1500)
+  await expect(page.getByText('Workout time: 0:02')).toBeVisible()
+
+  await tapByRoleName(page, 'button', /^resume$/i)
+  await page.waitForTimeout(1100)
+  await expect(page.getByText('Workout time: 0:03')).toBeVisible()
+
+  await tapByRoleName(page, 'button', /^pause$/i)
+  await tapOptionsAction(page, /end session early/i)
+  await expect(page.getByRole('heading', { name: /session ended early/i })).toBeVisible()
+  await expect(page.getByText('Workout time: 0:03')).toBeVisible()
+})
+
 test('renders overrides in Options and applies end exercise override there', async ({ page }) => {
   await tapByRoleName(page, 'button', /^start$/i)
   await tapByRoleName(page, 'button', /options/i)

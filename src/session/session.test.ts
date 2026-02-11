@@ -114,6 +114,8 @@ describe('session reducer', () => {
     expect(state.runtime.setIndex).toBe(0)
     expect(state.runtime.repIndex).toBe(0)
     expect(state.runtime.remainingMs).toBe(0)
+    expect(state.workoutElapsedSeconds).toBe(0)
+    expect(state.workoutTimerRunning).toBe(false)
     expect(state.options.soundEnabled).toBe(true)
     expect(state.options.vibrationEnabled).toBe(true)
   })
@@ -163,6 +165,7 @@ describe('session reducer', () => {
     expect(started.runtime.setIndex).toBe(0)
     expect(started.runtime.repIndex).toBe(0)
     expect(started.runtime.remainingMs).toBe(0)
+    expect(started.workoutTimerRunning).toBe(true)
     expect(ignoredWhenStarted).toEqual(started)
   })
 
@@ -202,9 +205,48 @@ describe('session reducer', () => {
     expect(paused.runtime.phase).toBe('paused')
     expect(paused.runtime.previousPhase).toBe('hold')
     expect(paused.runtime.remainingMs).toBe(4200)
+    expect(paused.workoutTimerRunning).toBe(false)
     expect(resumed.runtime.phase).toBe('hold')
     expect(resumed.runtime.previousPhase).toBeNull()
     expect(resumed.runtime.remainingMs).toBe(4200)
+    expect(resumed.workoutTimerRunning).toBe(true)
+  })
+
+  it('ticks elapsed workout time only while the workout timer is running', () => {
+    const initial = createSessionState(testProgram, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-workout-timer',
+    })
+
+    const ignoredBeforeStart = reduceSession(
+      initial,
+      { type: 'tick_workout_timer', now: '2026-02-10T00:00:01.000Z' },
+      testProgram,
+    )
+    const started = reduceSession(
+      initial,
+      { type: 'start_routine', now: '2026-02-10T00:00:02.000Z' },
+      testProgram,
+    )
+    const ticked = reduceSession(
+      started,
+      { type: 'tick_workout_timer', now: '2026-02-10T00:00:03.000Z' },
+      testProgram,
+    )
+    const paused = reduceSession(
+      ticked,
+      { type: 'pause_routine', now: '2026-02-10T00:00:04.000Z' },
+      testProgram,
+    )
+    const ignoredWhilePaused = reduceSession(
+      paused,
+      { type: 'tick_workout_timer', now: '2026-02-10T00:00:05.000Z' },
+      testProgram,
+    )
+
+    expect(ignoredBeforeStart.workoutElapsedSeconds).toBe(0)
+    expect(ticked.workoutElapsedSeconds).toBe(1)
+    expect(ignoredWhilePaused.workoutElapsedSeconds).toBe(1)
   })
 
   it('marks final exercise complete after rep rest resolves at routine boundary', () => {
@@ -249,6 +291,7 @@ describe('session reducer', () => {
     expect(completed.exerciseProgress['exercise-3'].sets[0].completedReps).toBe(1)
     expect(finalized.status).toBe('completed')
     expect(finalized.runtime.phase).toBe('complete')
+    expect(finalized.workoutTimerRunning).toBe(false)
     expect(finalized.currentExerciseId).toBeNull()
     expect(finalized.exerciseProgress['exercise-3'].completed).toBe(true)
   })

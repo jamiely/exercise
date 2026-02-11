@@ -97,6 +97,39 @@ describe('App shell', () => {
     expect(screen.getByRole('button', { name: /^pause$/i })).toBeEnabled()
   })
 
+  it('tracks workout time, pauses with routine pause, and shows final elapsed time on end', async () => {
+    vi.useFakeTimers()
+
+    render(<App />)
+    enterNewSession()
+    expect(screen.getByText('Workout time: 0:00')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /^start$/i }))
+    await act(async () => {
+      vi.advanceTimersByTime(2100)
+    })
+    expect(screen.getByText('Workout time: 0:02')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /^pause$/i }))
+    await act(async () => {
+      vi.advanceTimersByTime(2000)
+    })
+    expect(screen.getByText('Workout time: 0:02')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /^resume$/i }))
+    await act(async () => {
+      vi.advanceTimersByTime(1000)
+    })
+    expect(screen.getByText('Workout time: 0:03')).toBeInTheDocument()
+
+    ensureOptionsScreen()
+    expect(screen.getByText('Workout time: 0:03')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /end session early/i }))
+
+    expect(screen.getByRole('heading', { name: /session ended early/i })).toBeInTheDocument()
+    expect(screen.getByText('Workout time: 0:03')).toBeInTheDocument()
+  })
+
   it('counts down hold runtime phase in tenths and automatically enters rep rest', async () => {
     vi.useFakeTimers()
     const program = loadProgram()

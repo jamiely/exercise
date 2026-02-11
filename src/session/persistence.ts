@@ -106,7 +106,9 @@ const isSessionState = (value: unknown): value is SessionState => {
     value.skipQueue.every((exerciseId) => typeof exerciseId === 'string') &&
     Object.values(value.exerciseProgress).every(isExerciseProgress) &&
     isSessionOptions(value.options) &&
-    isRuntimeState(value.runtime)
+    isRuntimeState(value.runtime) &&
+    typeof value.workoutElapsedSeconds === 'number' &&
+    typeof value.workoutTimerRunning === 'boolean'
   )
 }
 
