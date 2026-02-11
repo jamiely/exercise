@@ -6,6 +6,10 @@ const tapByRoleName = async (page: Page, role: 'button' | 'heading', name: RegEx
   await page.getByRole(role, { name }).click()
 }
 
+const startNewSession = async (page: Page) => {
+  await tapByRoleName(page, 'button', /start new session/i)
+}
+
 const addReps = async (page: Page, count: number) => {
   for (let rep = 0; rep < count; rep += 1) {
     await tapByRoleName(page, 'button', /\+1 rep/i)
@@ -91,6 +95,8 @@ test.beforeEach(async ({ page }) => {
   })
   await page.reload()
   await expect(page.getByRole('heading', { name: /knee pain/i })).toBeVisible()
+  await expect(page.getByRole('button', { name: /start new session/i })).toBeVisible()
+  await startNewSession(page)
   await expect(page.getByRole('heading', { name: /quad set/i })).toBeVisible()
 })
 
@@ -132,8 +138,8 @@ test('one-tap Start auto-completes seeded hold workflow path with no progression
   await seedWallSitAutoSession(page)
   await page.reload()
 
-  await expect(page.getByRole('heading', { name: /resume in-progress session\?/i })).toBeVisible()
-  await tapByRoleName(page, 'button', /resume/i)
+  await expect(page.getByRole('button', { name: /resume session/i })).toBeVisible()
+  await tapByRoleName(page, 'button', /resume session/i)
   await expect(page.getByRole('heading', { name: /wall sit \(shallow\)/i })).toBeVisible()
   await expect(page.getByText(/workflow phase: idle/i)).toBeVisible()
 
@@ -182,8 +188,8 @@ test('prompts to resume on reload with active session', async ({ page }) => {
 
   await page.reload()
 
-  await expect(page.getByRole('heading', { name: /resume in-progress session\?/i })).toBeVisible()
-  await tapByRoleName(page, 'button', /resume/i)
+  await expect(page.getByRole('button', { name: /resume session/i })).toBeVisible()
+  await tapByRoleName(page, 'button', /resume session/i)
   await expect(page.getByRole('heading', { name: /quad set/i })).toBeVisible()
   await expect(page.getByText('1/12 reps')).toBeVisible()
 })

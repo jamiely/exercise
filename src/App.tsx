@@ -101,6 +101,7 @@ const getSessionSummary = (sessionState: SessionState, totalExercises: number) =
 const LoadedProgramView = ({ program }: LoadedProgramProps) => {
   const bootState = useMemo(() => buildSessionBootState(program), [program])
   const [pendingResume, setPendingResume] = useState<SessionState | null>(bootState.pendingResume)
+  const [hasEnteredSession, setHasEnteredSession] = useState(false)
   const [isOverrideMenuOpen, setIsOverrideMenuOpen] = useState(false)
   const [sessionState, dispatch] = useReducer(
     (state: SessionState, action: SessionAction) => reduceSession(state, action, program),
@@ -291,15 +292,28 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
     sessionState.status,
   ])
 
-  if (pendingResume) {
+  if (!hasEnteredSession) {
+    const hasPersistedSession = pendingResume !== null
+
     return (
       <main className="app-shell">
         <p className="eyebrow">Exercise Session</p>
-        <h1>Resume in-progress session?</h1>
-        <p className="subtitle">Pick up where you left off or start a fresh session.</p>
+        <h1>{program.programName}</h1>
+        <p className="subtitle">Resume your last session or start a fresh one.</p>
         <div className="resume-actions">
-          <button type="button" onClick={() => setPendingResume(null)}>
-            Resume
+          <button
+            type="button"
+            onClick={() => {
+              if (!hasPersistedSession) {
+                return
+              }
+
+              setPendingResume(null)
+              setHasEnteredSession(true)
+            }}
+            disabled={!hasPersistedSession}
+          >
+            Resume Session
           </button>
           <button
             type="button"
@@ -308,11 +322,29 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
               const now = new Date().toISOString()
               setPendingResume(null)
               dispatch({ type: 'start_session', program, now, sessionId: now })
+              setHasEnteredSession(true)
             }}
           >
-            Start New
+            Start New Session
           </button>
         </div>
+        {!hasPersistedSession ? (
+          <p className="subtitle">No in-progress session found yet.</p>
+        ) : null}
+        <section className="program-outline" aria-label="Exercise list">
+          <p className="eyebrow">Exercise List</p>
+          <ul className="program-outline-list">
+            {program.exercises.map((exercise) => (
+              <li key={exercise.id} className="program-outline-item">
+                <span>{exercise.name}</span>
+                <span>
+                  {exercise.targetSets} x {exercise.targetRepsPerSet}
+                  {exercise.holdSeconds !== null ? ` · ${exercise.holdSeconds}s hold` : ''}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
       </main>
     )
   }

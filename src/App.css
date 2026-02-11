@@ -53,6 +53,36 @@ h2 {
   touch-action: manipulation;
 }
 
+.program-outline {
+  margin-top: 0.25rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 1rem;
+  background: #f9fafb;
+  padding: 0.875rem;
+}
+
+.program-outline-list {
+  margin: 0.625rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.625rem;
+}
+
+.program-outline-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.95rem;
+  color: #374151;
+}
+
+.program-outline-item span:last-child {
+  color: #6b7280;
+  text-align: right;
+  white-space: nowrap;
+}
+
 .secondary-button {
   border-color: #d1d5db;
   background: #f9fafb;

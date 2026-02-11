@@ -7,6 +7,10 @@ import { persistSession, readPersistedSession } from './session/persistence'
 import { createSessionState } from './session/session'
 
 describe('App shell', () => {
+  const enterNewSession = () => {
+    fireEvent.click(screen.getByRole('button', { name: /start new session/i }))
+  }
+
   beforeEach(() => {
     window.localStorage.clear()
   })
@@ -15,21 +19,22 @@ describe('App shell', () => {
     vi.useRealTimers()
   })
 
-  it('renders the active exercise session screen from loaded program', () => {
+  it('renders the title screen with resume/new controls and exercise list', () => {
     render(<App />)
 
     expect(screen.getByRole('heading', { name: /knee pain/i })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: /quad set/i })).toBeInTheDocument()
-    expect(screen.getByText(/2 sets x 12 reps/i)).toBeInTheDocument()
-    expect(screen.getByText(/set 1\/2/i)).toBeInTheDocument()
-    expect(screen.getByText('0/12 reps')).toBeInTheDocument()
-    expect(screen.getByText(/workflow phase: idle/i)).toBeInTheDocument()
-    expect(screen.queryByText(/target:/i)).not.toBeInTheDocument()
-    expect(screen.queryByText(/active set:/i)).not.toBeInTheDocument()
+    expect(screen.getByText(/resume your last session or start a fresh one/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /resume session/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /start new session/i })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: /exercise list/i })).toBeInTheDocument()
+    expect(screen.getByText(/quad set/i)).toBeInTheDocument()
+    expect(screen.getByText(/straight leg raise/i)).toBeInTheDocument()
+    expect(screen.getByText(/wall sit \(shallow\)/i)).toBeInTheDocument()
   })
 
   it('shows sound and vibration options enabled by default', () => {
     render(<App />)
+    enterNewSession()
 
     expect(screen.getByRole('checkbox', { name: /sound cues/i })).toBeChecked()
     expect(screen.getByRole('checkbox', { name: /vibration cues/i })).toBeChecked()
@@ -38,6 +43,7 @@ describe('App shell', () => {
   it('opens override modal from the bottom overrides button', async () => {
     const user = userEvent.setup()
     render(<App />)
+    enterNewSession()
 
     await user.click(screen.getByRole('button', { name: /^start$/i }))
     await user.click(screen.getByRole('button', { name: /overrides/i }))
@@ -52,6 +58,7 @@ describe('App shell', () => {
   it('enters hold workflow phase when Start is pressed', async () => {
     const user = userEvent.setup()
     render(<App />)
+    enterNewSession()
 
     await user.click(screen.getByRole('button', { name: /^start$/i }))
 
@@ -126,7 +133,7 @@ describe('App shell', () => {
     persistSession(holdSession)
 
     render(<App />)
-    fireEvent.click(screen.getByRole('button', { name: /^resume$/i }))
+    fireEvent.click(screen.getByRole('button', { name: /resume/i }))
 
     await act(async () => {
       vi.advanceTimersByTime(300)
@@ -142,7 +149,7 @@ describe('App shell', () => {
     })
     expect(screen.getByText(/phase timer: 0.7s/i)).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: /^resume$/i }))
+    fireEvent.click(screen.getByRole('button', { name: /resume/i }))
     expect(screen.getByText(/workflow phase: hold/i)).toBeInTheDocument()
     expect(screen.getByText(/phase timer: 0.7s/i)).toBeInTheDocument()
 
@@ -186,7 +193,7 @@ describe('App shell', () => {
     })
 
     render(<App />)
-    fireEvent.click(screen.getByRole('button', { name: /^resume$/i }))
+    fireEvent.click(screen.getByRole('button', { name: /resume/i }))
 
     await act(async () => {
       vi.advanceTimersByTime(300)
@@ -237,7 +244,7 @@ describe('App shell', () => {
     persistSession(holdSession)
 
     render(<App />)
-    fireEvent.click(screen.getByRole('button', { name: /^resume$/i }))
+    fireEvent.click(screen.getByRole('button', { name: /resume/i }))
 
     await act(async () => {})
     expect(request).toHaveBeenCalledWith('screen')
@@ -257,6 +264,7 @@ describe('App shell', () => {
     })
 
     render(<App />)
+    enterNewSession()
     fireEvent.click(screen.getByRole('button', { name: /^start$/i }))
 
     expect(screen.getByText(/workflow phase: hold/i)).toBeInTheDocument()
@@ -309,6 +317,7 @@ describe('App shell', () => {
     })
 
     render(<App />)
+    enterNewSession()
     await user.click(screen.getByRole('checkbox', { name: /sound cues/i }))
     await user.click(screen.getByRole('checkbox', { name: /vibration cues/i }))
     await user.click(screen.getByRole('button', { name: /^start$/i }))
@@ -445,7 +454,7 @@ describe('App shell', () => {
     persistSession(holdSession)
 
     render(<App />)
-    fireEvent.click(screen.getByRole('button', { name: /^resume$/i }))
+    fireEvent.click(screen.getByRole('button', { name: /resume/i }))
     fireEvent.click(screen.getByRole('button', { name: /overrides/i }))
     fireEvent.click(screen.getByRole('button', { name: /skip rep/i }))
 
@@ -489,7 +498,7 @@ describe('App shell', () => {
     persistSession(repRestSession)
 
     render(<App />)
-    fireEvent.click(screen.getByRole('button', { name: /^resume$/i }))
+    fireEvent.click(screen.getByRole('button', { name: /resume/i }))
     fireEvent.click(screen.getByRole('button', { name: /overrides/i }))
     fireEvent.click(screen.getByRole('button', { name: /skip rest/i }))
 
@@ -535,7 +544,7 @@ describe('App shell', () => {
     persistSession(holdSession)
 
     render(<App />)
-    fireEvent.click(screen.getByRole('button', { name: /^resume$/i }))
+    fireEvent.click(screen.getByRole('button', { name: /resume/i }))
     fireEvent.click(screen.getByRole('button', { name: /overrides/i }))
     fireEvent.click(screen.getByRole('button', { name: /end set/i }))
 
@@ -584,7 +593,7 @@ describe('App shell', () => {
     persistSession(holdSession)
 
     render(<App />)
-    fireEvent.click(screen.getByRole('button', { name: /^resume$/i }))
+    fireEvent.click(screen.getByRole('button', { name: /resume/i }))
     fireEvent.click(screen.getByRole('button', { name: /overrides/i }))
     fireEvent.click(screen.getByRole('button', { name: /end exercise/i }))
 
@@ -597,6 +606,7 @@ describe('App shell', () => {
     const user = userEvent.setup()
 
     render(<App />)
+    enterNewSession()
 
     const undoButton = screen.getByRole('button', { name: /undo rep/i })
     expect(undoButton).toBeDisabled()
@@ -613,6 +623,7 @@ describe('App shell', () => {
   it('shows rest timer between sets and advances after start-next-set', async () => {
     vi.useFakeTimers()
     render(<App />)
+    enterNewSession()
 
     const completeSetButton = screen.getByRole('button', { name: /complete set/i })
     expect(completeSetButton).toBeDisabled()
@@ -649,6 +660,7 @@ describe('App shell', () => {
     const user = userEvent.setup()
 
     render(<App />)
+    enterNewSession()
 
     const completeExercise = screen.getByRole('button', { name: /complete exercise/i })
     expect(completeExercise).toBeDisabled()
@@ -670,6 +682,7 @@ describe('App shell', () => {
 
   it('shows a de-emphasized end-session-early control on the active session screen', () => {
     render(<App />)
+    enterNewSession()
 
     const endEarlyButton = screen.getByRole('button', { name: /end session early/i })
     expect(endEarlyButton).toBeInTheDocument()
@@ -681,6 +694,7 @@ describe('App shell', () => {
     const user = userEvent.setup()
 
     render(<App />)
+    enterNewSession()
 
     await user.click(screen.getByRole('button', { name: /skip exercise/i }))
     expect(screen.getByRole('heading', { name: /straight leg raise/i })).toBeInTheDocument()
@@ -745,6 +759,7 @@ describe('App shell', () => {
     const user = userEvent.setup()
 
     render(<App />)
+    enterNewSession()
     await user.click(screen.getByRole('button', { name: /skip exercise/i }))
     await user.click(screen.getByRole('button', { name: /end session early/i }))
 
@@ -903,7 +918,7 @@ describe('App shell', () => {
     expect(screen.getByText('Rest timer: 6s')).toBeInTheDocument()
   })
 
-  it('shows a resume prompt when an in-progress session exists', () => {
+  it('enables resume when an in-progress session exists', () => {
     const program = loadProgram()
     const session = createSessionState(program, {
       now: '2026-02-10T00:00:00.000Z',
@@ -913,9 +928,9 @@ describe('App shell', () => {
 
     render(<App />)
 
-    expect(screen.getByRole('heading', { name: /resume in-progress session/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /resume/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /start new/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /knee pain/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /resume session/i })).toBeEnabled()
+    expect(screen.getByRole('button', { name: /start new session/i })).toBeInTheDocument()
   })
 
   it('resumes the persisted session when user chooses resume', async () => {
