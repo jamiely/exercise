@@ -825,16 +825,57 @@ export const reduceSession = (
           ? { ...setProgress, completedReps: setProgress.completedReps + 1 }
           : setProgress,
       )
+      const nextCompletedReps = currentSet.completedReps + 1
+      const isSetCompleted = nextCompletedReps >= currentSet.targetReps
 
-      return withUpdatedExerciseProgress(
+      if (!isSetCompleted) {
+        return withUpdatedExerciseProgress(
+          state,
+          state.currentExerciseId,
+          {
+            ...currentProgress,
+            sets: nextSets,
+          },
+          action.now,
+        )
+      }
+
+      const hasNextSet = currentProgress.activeSetIndex < currentProgress.sets.length - 1
+      if (hasNextSet) {
+        return withUpdatedExerciseProgress(
+          state,
+          state.currentExerciseId,
+          {
+            ...currentProgress,
+            sets: nextSets,
+            activeSetIndex: currentProgress.activeSetIndex + 1,
+            restTimerRunning: false,
+            restElapsedSeconds: 0,
+            holdTimerRunning: false,
+            holdElapsedSeconds: 0,
+          },
+          action.now,
+        )
+      }
+
+      const progressedState = withUpdatedExerciseProgress(
         state,
         state.currentExerciseId,
         {
           ...currentProgress,
           sets: nextSets,
+          completed: true,
+          restTimerRunning: false,
+          restElapsedSeconds: 0,
+          holdTimerRunning: false,
+          holdElapsedSeconds: 0,
         },
         action.now,
       )
+
+      return progressedState.currentPhase === 'primary'
+        ? advanceAfterPrimary(progressedState, program, action.now)
+        : advanceAfterSkip(progressedState, action.now)
     }
     case 'decrement_rep': {
       if (!isInProgress(state) || !state.currentExerciseId) {

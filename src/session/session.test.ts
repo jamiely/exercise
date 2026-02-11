@@ -501,36 +501,25 @@ describe('session reducer', () => {
     })
 
     const withReps = reduceSession(
-      reduceSession(
-        initial,
-        { type: 'increment_rep', now: '2026-02-10T00:00:01.000Z' },
-        testProgram,
-      ),
-      { type: 'increment_rep', now: '2026-02-10T00:00:02.000Z' },
+      initial,
+      { type: 'increment_rep', now: '2026-02-10T00:00:01.000Z' },
       testProgram,
     )
     const once = reduceSession(
       withReps,
-      { type: 'decrement_rep', now: '2026-02-10T00:00:03.000Z' },
+      { type: 'decrement_rep', now: '2026-02-10T00:00:02.000Z' },
       testProgram,
     )
     const twice = reduceSession(
       once,
-      { type: 'decrement_rep', now: '2026-02-10T00:00:04.000Z' },
+      { type: 'decrement_rep', now: '2026-02-10T00:00:03.000Z' },
       testProgram,
     )
-    const capped = reduceSession(
-      twice,
-      { type: 'decrement_rep', now: '2026-02-10T00:00:05.000Z' },
-      testProgram,
-    )
-
-    expect(once.exerciseProgress['exercise-1'].sets[0].completedReps).toBe(1)
+    expect(once.exerciseProgress['exercise-1'].sets[0].completedReps).toBe(0)
     expect(twice.exerciseProgress['exercise-1'].sets[0].completedReps).toBe(0)
-    expect(capped.exerciseProgress['exercise-1'].sets[0].completedReps).toBe(0)
   })
 
-  it('starts rest on complete_set and advances only after start_next_set', () => {
+  it('auto-advances set immediately when incrementing into set completion', () => {
     const initial = createSessionState(filledSetProgram, {
       now: '2026-02-10T00:00:00.000Z',
       sessionId: 'session-2',
@@ -540,28 +529,9 @@ describe('session reducer', () => {
       { type: 'increment_rep', now: '2026-02-10T00:00:01.000Z' },
       filledSetProgram,
     )
-    const resting = reduceSession(
-      withRep,
-      { type: 'complete_set', now: '2026-02-10T00:00:02.000Z' },
-      filledSetProgram,
-    )
-    const ticked = reduceSession(
-      resting,
-      { type: 'tick_rest_timer', now: '2026-02-10T00:00:03.000Z' },
-      filledSetProgram,
-    )
-    const advanced = reduceSession(
-      ticked,
-      { type: 'start_next_set', now: '2026-02-10T00:00:04.000Z' },
-      filledSetProgram,
-    )
-
-    expect(resting.exerciseProgress['exercise-1'].activeSetIndex).toBe(0)
-    expect(resting.exerciseProgress['exercise-1'].restTimerRunning).toBe(true)
-    expect(ticked.exerciseProgress['exercise-1'].restElapsedSeconds).toBe(1)
-    expect(advanced.exerciseProgress['exercise-1'].activeSetIndex).toBe(1)
-    expect(advanced.exerciseProgress['exercise-1'].restTimerRunning).toBe(false)
-    expect(advanced.exerciseProgress['exercise-1'].restElapsedSeconds).toBe(0)
+    expect(withRep.exerciseProgress['exercise-1'].activeSetIndex).toBe(1)
+    expect(withRep.exerciseProgress['exercise-1'].restTimerRunning).toBe(false)
+    expect(withRep.exerciseProgress['exercise-1'].restElapsedSeconds).toBe(0)
   })
 
   it('requires hold timer completion before hold-based rep increments', () => {

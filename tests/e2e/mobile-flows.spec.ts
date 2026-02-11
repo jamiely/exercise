@@ -117,20 +117,16 @@ test.beforeEach(async ({ page }) => {
 
 test('progresses in strict order after completing first exercise', async ({ page }) => {
   await addReps(page, 12)
-  await tapOptionsAction(page, /complete set/i)
-  await tapByRoleName(page, 'button', /back to exercise/i)
-  await tapByRoleName(page, 'button', /start next set/i)
-  await addReps(page, 12)
+  await expect(page.getByText('Set 2/2')).toBeVisible()
+  await expect(page.getByText('0/12 reps')).toBeVisible()
 
-  await expect(page.getByText('12/12 reps')).toBeVisible()
-  await tapOptionsAction(page, /complete exercise/i)
-  await tapByRoleName(page, 'button', /back to exercise/i)
+  await addReps(page, 12)
 
   await expect(page.getByRole('heading', { name: /straight leg raise/i })).toBeVisible()
   await expectOnOptionsScreen(page, /exercise 2\/3/i)
 })
 
-test('updates reps, shows rest timer, and advances set state', async ({ page }) => {
+test('updates reps and auto-advances set state on the final rep', async ({ page }) => {
   await expect(page.getByText(/target:/i)).toHaveCount(0)
   await expect(page.getByText(/active set:/i)).toHaveCount(0)
   await expect(page.getByLabel('Set tracker')).toHaveCount(0)
@@ -142,15 +138,9 @@ test('updates reps, shows rest timer, and advances set state', async ({ page }) 
   await expect(page.getByText('0/12 reps')).toBeVisible()
 
   await addReps(page, 12)
-  await tapOptionsAction(page, /complete set/i)
-  await tapByRoleName(page, 'button', /back to exercise/i)
-
-  await expect(page.getByText('Rest timer: 0s')).toBeVisible()
-  await page.waitForTimeout(1100)
-  await expect(page.getByText('Rest timer: 1s')).toBeVisible()
-
-  await tapByRoleName(page, 'button', /start next set/i)
+  await expect(page.getByText('Set 2/2')).toBeVisible()
   await expect(page.getByText('0/12 reps')).toBeVisible()
+  await expect(page.getByText(/rest timer:/i)).toHaveCount(0)
   await expect(page.getByLabel('Set tracker')).toHaveCount(0)
 })
 

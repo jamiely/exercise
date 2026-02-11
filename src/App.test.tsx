@@ -699,39 +699,21 @@ describe('App shell', () => {
     expect(screen.getByRole('button', { name: /undo rep/i })).toBeDisabled()
   })
 
-  it('shows rest timer between sets and advances set progress after start-next-set', async () => {
-    vi.useFakeTimers()
+  it('auto-advances to the next set after the final rep of the active set', () => {
     render(<App />)
     enterNewSession()
 
     ensureOptionsScreen()
-    const completeSetButton = screen.getByRole('button', { name: /complete set/i })
-    expect(completeSetButton).toBeDisabled()
+    expect(screen.getByRole('button', { name: /complete set/i })).toBeDisabled()
     fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
 
     for (let rep = 0; rep < 12; rep += 1) {
       fireEvent.click(screen.getByRole('button', { name: /\+1 rep/i }))
     }
 
-    ensureOptionsScreen()
-    expect(screen.getByRole('button', { name: /complete set/i })).toBeEnabled()
-    fireEvent.click(screen.getByRole('button', { name: /complete set/i }))
-    fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
-
-    expect(screen.queryByRole('region', { name: /set tracker/i })).not.toBeInTheDocument()
-    expect(screen.getByText('Set 1/2')).toBeInTheDocument()
-    expect(screen.getByText('12/12 reps')).toBeInTheDocument()
-    expect(screen.getByText('Rest timer: 0s')).toBeInTheDocument()
-
-    await act(async () => {
-      vi.advanceTimersByTime(3000)
-    })
-    expect(screen.getByText('Rest timer: 3s')).toBeInTheDocument()
-
-    fireEvent.click(screen.getByRole('button', { name: /start next set/i }))
-
     expect(screen.getByText('Set 2/2')).toBeInTheDocument()
     expect(screen.getByText('0/12 reps')).toBeInTheDocument()
+    expect(screen.queryByText(/rest timer:/i)).not.toBeInTheDocument()
   })
 
   it('keeps complete-exercise disabled until all sets are fully done', async () => {
@@ -750,16 +732,15 @@ describe('App shell', () => {
 
     ensureOptionsScreen()
     expect(screen.getByRole('button', { name: /complete exercise/i })).toBeDisabled()
-    await user.click(screen.getByRole('button', { name: /complete set/i }))
     await user.click(screen.getByRole('button', { name: /back to exercise/i }))
-    await user.click(screen.getByRole('button', { name: /start next set/i }))
 
     for (let rep = 0; rep < 12; rep += 1) {
       await user.click(screen.getByRole('button', { name: /\+1 rep/i }))
     }
 
+    expect(screen.getByRole('heading', { name: /straight leg raise/i })).toBeInTheDocument()
     ensureOptionsScreen()
-    expect(screen.getByRole('button', { name: /complete exercise/i })).toBeEnabled()
+    expect(screen.getByRole('button', { name: /complete exercise/i })).toBeDisabled()
   })
 
   it('shows a de-emphasized end-session-early control on the options screen', () => {
