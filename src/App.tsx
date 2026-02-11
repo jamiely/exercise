@@ -432,9 +432,7 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
         <h1>{program.programName}</h1>
         {hasPersistedSession ? (
           <p className="subtitle">Resume your last session or start a fresh one.</p>
-        ) : (
-          <p className="subtitle">Start a fresh session.</p>
-        )}
+        ) : null}
         <div className="resume-actions">
           {hasPersistedSession ? (
             <button
@@ -460,9 +458,6 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
             Start New Session
           </button>
         </div>
-        {!hasPersistedSession ? (
-          <p className="subtitle">No in-progress session found yet.</p>
-        ) : null}
         <section className="program-outline" aria-label="Exercise list">
           <p className="eyebrow">Exercise List</p>
           <ul className="program-outline-list">

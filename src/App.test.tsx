@@ -38,7 +38,8 @@ describe('App shell', () => {
     render(<App />)
 
     expect(screen.getByRole('heading', { name: /knee pain/i })).toBeInTheDocument()
-    expect(screen.getByText(/start a fresh session/i)).toBeInTheDocument()
+    expect(screen.queryByText(/start a fresh session/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/no in-progress session found yet/i)).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /resume session/i })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: /start new session/i })).toBeInTheDocument()
     expect(screen.getByRole('region', { name: /exercise list/i })).toBeInTheDocument()
