@@ -173,13 +173,13 @@ describe('App shell', () => {
 
     expectOnOptionsScreen(/workflow phase: hold/i)
     expectOnOptionsScreen(/phase timer: 1.0s/i)
-    expect(screen.getByText('Hold timer: 1.0s/40s')).toBeInTheDocument()
+    expect(screen.getByText('Hold timer: 1.0s')).toBeInTheDocument()
 
     await act(async () => {
       vi.advanceTimersByTime(300)
     })
     expectOnOptionsScreen(/phase timer: 0.7s/i)
-    expect(screen.getByText('Hold timer: 0.7s/40s')).toBeInTheDocument()
+    expect(screen.getByText('Hold timer: 0.7s')).toBeInTheDocument()
 
     await act(async () => {
       vi.advanceTimersByTime(700)
@@ -786,7 +786,7 @@ describe('App shell', () => {
 
     expect(screen.getByRole('heading', { name: /straight leg raise/i })).toBeInTheDocument()
     expect(screen.getByText('Hold Running')).toBeInTheDocument()
-    expect(screen.getByText('Hold timer: 3.0s/3s')).toBeInTheDocument()
+    expect(screen.getByText('Hold timer: 3.0s')).toBeInTheDocument()
     expect(readPersistedSession()?.runtime.exerciseIndex).toBe(1)
     expect(readPersistedSession()?.runtime.remainingMs).toBe(3000)
 
@@ -794,7 +794,7 @@ describe('App shell', () => {
       vi.advanceTimersByTime(300)
     })
 
-    expect(screen.getByText(/Hold timer: 2\.\ds\/3s/)).toBeInTheDocument()
+    expect(screen.getByText(/Hold timer: 2\.\ds/)).toBeInTheDocument()
   })
 
   it('auto-advances to the next set after the final rep of the active set', () => {
@@ -948,7 +948,7 @@ describe('App shell', () => {
 
     expect(screen.getByRole('heading', { name: /straight leg raise/i })).toBeInTheDocument()
     expect(screen.getByText('Hold Running')).toBeInTheDocument()
-    expect(screen.getByText('Hold timer: 3.0s/3s')).toBeInTheDocument()
+    expect(screen.getByText('Hold timer: 3.0s')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /pause hold/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /reset hold/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /complete hold rep/i })).not.toBeInTheDocument()
@@ -956,7 +956,7 @@ describe('App shell', () => {
     await act(async () => {
       vi.advanceTimersByTime(200)
     })
-    expect(screen.getByText('Hold timer: 2.8s/3s')).toBeInTheDocument()
+    expect(screen.getByText('Hold timer: 2.8s')).toBeInTheDocument()
   })
 
   it('auto-completes a hold rep once the hold timer reaches target', async () => {
@@ -978,20 +978,20 @@ describe('App shell', () => {
     fireEvent.click(screen.getByRole('button', { name: /resume/i }))
 
     expect(screen.getByRole('heading', { name: /wall sit \(shallow\)/i })).toBeInTheDocument()
-    expect(screen.getByText('Hold timer: 40.0s/40s')).toBeInTheDocument()
+    expect(screen.getByText('Hold timer: 40.0s')).toBeInTheDocument()
     expect(screen.getByText('Hold Running')).toBeInTheDocument()
 
     await act(async () => {
       vi.advanceTimersByTime(200)
     })
-    expect(screen.getByText('Hold timer: 39.8s/40s')).toBeInTheDocument()
+    expect(screen.getByText('Hold timer: 39.8s')).toBeInTheDocument()
 
     await act(async () => {
       vi.advanceTimersByTime(39_800)
     })
     expect(screen.getByText('1/5 reps')).toBeInTheDocument()
-    expect(screen.getByText('Hold timer: 40.0s/40s')).toBeInTheDocument()
-    expect(screen.getByText('Rest timer: 40.0s/40s')).toBeInTheDocument()
+    expect(screen.getByText('Hold timer: 40.0s')).toBeInTheDocument()
+    expect(screen.getByText('Rest timer: 40.0s')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /start hold/i })).not.toBeInTheDocument()
 
     await act(async () => {
@@ -1065,9 +1065,9 @@ describe('App shell', () => {
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: /resume/i }))
 
-    expect(screen.getByText('Rest timer: 26.0s/30s')).toBeInTheDocument()
+    expect(screen.getByText('Rest timer: 26.0s')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /add 30 seconds/i }))
-    expect(screen.getByText('Rest timer: 0.0s/30s')).toBeInTheDocument()
+    expect(screen.getByText('Rest timer: 0.0s')).toBeInTheDocument()
   })
 
   it('does not render manual hold pause/reset/complete controls', () => {
@@ -1116,11 +1116,11 @@ describe('App shell', () => {
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: /resume/i }))
 
-    expect(screen.getByText('Rest timer: 26.0s/30s')).toBeInTheDocument()
+    expect(screen.getByText('Rest timer: 26.0s')).toBeInTheDocument()
     await act(async () => {
       vi.advanceTimersByTime(2000)
     })
-    expect(screen.getByText('Rest timer: 24.0s/30s')).toBeInTheDocument()
+    expect(screen.getByText('Rest timer: 24.0s')).toBeInTheDocument()
   })
 
   it('enables resume when an in-progress session exists', () => {

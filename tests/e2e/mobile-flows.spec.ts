@@ -131,7 +131,7 @@ test('starts hold timer after auto-progress from quad set to straight leg raise'
 }) => {
   await addReps(page, 24)
   await expect(page.getByRole('heading', { name: /straight leg raise/i })).toBeVisible()
-  await expect(page.getByText(/Hold timer: \d+\.\d+s\/3(?:\.0)?s/i)).toBeVisible()
+  await expect(page.getByText(/Hold timer: \d+\.\d+s/i)).toBeVisible()
   const runtimeState = await page.evaluate((sessionStorageKey) => {
     const raw = window.localStorage.getItem(sessionStorageKey)
     if (!raw) {
@@ -157,7 +157,7 @@ test('starts hold timer after auto-progress from quad set to straight leg raise'
       .locator('.timer-card .timer-text')
       .filter({ hasText: /hold timer:/i })
       .innerText()
-    const match = timerText.match(/hold timer:\s*([0-9]+\.[0-9])s\/3(?:\.0)?s/i)
+    const match = timerText.match(/hold timer:\s*([0-9]+\.[0-9])s/i)
     if (!match) {
       throw new Error(`Unable to parse hold timer text: ${timerText}`)
     }
@@ -336,7 +336,7 @@ test('auto-starts hold timer when reaching a hold exercise and completes a rep a
 
   await tapByRoleName(page, 'button', /back to exercise/i)
   await expect(page.getByRole('heading', { name: /straight leg raise/i })).toBeVisible()
-  await expect(page.getByText(/Hold timer: \d+\.\d+s\/3(?:\.0)?s/i)).toBeVisible()
+  await expect(page.getByText(/Hold timer: \d+\.\d+s/i)).toBeVisible()
   await expect(holdTimerRunning).toBe(true)
   await expect(page.getByRole('button', { name: /start hold/i })).toHaveCount(0)
   await expect(page.getByRole('button', { name: /pause hold/i })).toHaveCount(0)
@@ -344,11 +344,11 @@ test('auto-starts hold timer when reaching a hold exercise and completes a rep a
   await expect(page.getByRole('button', { name: /complete hold rep/i })).toHaveCount(0)
 
   await page.waitForTimeout(350)
-  await expect(page.getByText(/Hold timer: \d+\.\d+s\/3(?:\.0)?s/i)).toBeVisible()
+  await expect(page.getByText(/Hold timer: \d+\.\d+s/i)).toBeVisible()
 
   await page.waitForTimeout(3000)
   await expect(page.getByText('1/10 reps')).toBeVisible()
-  await expect(page.getByText(/Hold timer: 3\.0s\/3(?:\.0)?s/i)).toBeVisible()
+  await expect(page.getByText(/Hold timer: 3\.0s/i)).toBeVisible()
 })
 
 test('cycles through skipped queue after primary pass', async ({ page }) => {

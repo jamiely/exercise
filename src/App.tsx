@@ -97,16 +97,11 @@ const formatTimerSeconds = (seconds: number): string => {
   return `${safeSeconds.toFixed(1)}s`
 }
 
-const formatTimerTotalSeconds = (seconds: number): string => {
-  const safeSeconds = Number.isFinite(seconds) ? Math.max(0, seconds) : 0
-  return `${Math.round(safeSeconds)}s`
-}
-
 const formatCountdownPair = (elapsedSeconds: number, totalSeconds: number): string => {
   const safeTotalSeconds = Number.isFinite(totalSeconds) ? Math.max(0, totalSeconds) : 0
   const safeElapsedSeconds = Number.isFinite(elapsedSeconds) ? Math.max(0, elapsedSeconds) : 0
   const remainingSeconds = Math.max(0, safeTotalSeconds - safeElapsedSeconds)
-  return `${formatTimerSeconds(remainingSeconds)}/${formatTimerTotalSeconds(safeTotalSeconds)}`
+  return formatTimerSeconds(remainingSeconds)
 }
 
 const getSessionSummary = (sessionState: SessionState, totalExercises: number) => {
