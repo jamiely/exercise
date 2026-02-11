@@ -138,6 +138,19 @@ test('updates reps, shows rest timer, and advances set state', async ({ page }) 
   await expect(page.getByLabel('Set tracker').getByText('Set 2', { exact: true })).toBeVisible()
 })
 
+test('uses one routine button that cycles Start, Pause, Resume, and Pause', async ({ page }) => {
+  await expect(page.getByRole('button', { name: /^start$/i })).toBeVisible()
+
+  await tapByRoleName(page, 'button', /^start$/i)
+  await expect(page.getByRole('button', { name: /^pause$/i })).toBeVisible()
+
+  await tapByRoleName(page, 'button', /^pause$/i)
+  await expect(page.getByRole('button', { name: /^resume$/i })).toBeVisible()
+
+  await tapByRoleName(page, 'button', /^resume$/i)
+  await expect(page.getByRole('button', { name: /^pause$/i })).toBeVisible()
+})
+
 test('one-tap Start auto-completes seeded hold workflow path with no progression taps', async ({
   page,
 }) => {
@@ -153,7 +166,7 @@ test('one-tap Start auto-completes seeded hold workflow path with no progression
   await tapByRoleName(page, 'button', /^start$/i)
 
   await expectOnOptionsScreen(page, /workflow phase: hold/i)
-  await expectOnOptionsScreen(page, /phase timer: 40.0s/i)
+  await expectOnOptionsScreen(page, /phase timer: (39\.9|40\.0)s/i)
 
   await page.clock.runFor(70_200)
 

@@ -75,7 +75,22 @@ describe('App shell', () => {
 
     expectOnOptionsScreen(/workflow phase: hold/i)
     expectOnOptionsScreen(/phase timer: 0.0s/i)
-    expect(screen.getByRole('button', { name: /^start$/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /^pause$/i })).toBeEnabled()
+  })
+
+  it('toggles routine control label from Start to Pause to Resume and back to Pause', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    enterNewSession()
+
+    await user.click(screen.getByRole('button', { name: /^start$/i }))
+    expect(screen.getByRole('button', { name: /^pause$/i })).toBeEnabled()
+
+    await user.click(screen.getByRole('button', { name: /^pause$/i }))
+    expect(screen.getByRole('button', { name: /^resume$/i })).toBeEnabled()
+
+    await user.click(screen.getByRole('button', { name: /^resume$/i }))
+    expect(screen.getByRole('button', { name: /^pause$/i })).toBeEnabled()
   })
 
   it('counts down hold runtime phase in tenths and automatically enters rep rest', async () => {

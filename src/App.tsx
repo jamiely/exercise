@@ -440,6 +440,17 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
     sessionState.runtime.phase === 'repRest' ||
     sessionState.runtime.phase === 'setRest' ||
     sessionState.runtime.phase === 'exerciseRest'
+  const routineControl =
+    sessionState.runtime.phase === 'paused'
+      ? { label: 'Resume', actionType: 'resume_routine' as const, disabled: false }
+      : sessionState.runtime.phase === 'idle'
+        ? { label: 'Start', actionType: 'start_routine' as const, disabled: false }
+        : sessionState.runtime.phase === 'hold' ||
+            sessionState.runtime.phase === 'repRest' ||
+            sessionState.runtime.phase === 'setRest' ||
+            sessionState.runtime.phase === 'exerciseRest'
+          ? { label: 'Pause', actionType: 'pause_routine' as const, disabled: false }
+          : { label: 'Start', actionType: 'start_routine' as const, disabled: true }
 
   if (isSessionOptionsOpen) {
     return (
@@ -624,10 +635,10 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
       <section className="session-actions" aria-label="Exercise actions">
         <button
           type="button"
-          onClick={() => dispatchTimed('start_routine')}
-          disabled={sessionState.runtime.phase !== 'idle'}
+          onClick={() => dispatchTimed(routineControl.actionType)}
+          disabled={routineControl.disabled}
         >
-          Start
+          {routineControl.label}
         </button>
         <button
           type="button"
@@ -635,27 +646,6 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
           onClick={() => setIsSessionOptionsOpen(true)}
         >
           Options
-        </button>
-        <button
-          type="button"
-          className="secondary-button"
-          onClick={() => dispatchTimed('pause_routine')}
-          disabled={
-            sessionState.runtime.phase !== 'hold' &&
-            sessionState.runtime.phase !== 'repRest' &&
-            sessionState.runtime.phase !== 'setRest' &&
-            sessionState.runtime.phase !== 'exerciseRest'
-          }
-        >
-          Pause
-        </button>
-        <button
-          type="button"
-          className="secondary-button"
-          onClick={() => dispatchTimed('resume_routine')}
-          disabled={sessionState.runtime.phase !== 'paused'}
-        >
-          Resume
         </button>
         <button
           type="button"
