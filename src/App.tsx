@@ -727,7 +727,6 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
       </p>
       <article className="exercise-card" aria-label="Active exercise">
         <div className="exercise-header-row">
-          <p className="eyebrow">Current Exercise</p>
           <p className="eyebrow">
             Current exercise: {formatElapsedWorkoutTime(sessionState.currentExerciseElapsedSeconds)}
           </p>

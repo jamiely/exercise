@@ -27,3 +27,12 @@ test('opens and closes in-session options screen', async ({ page }) => {
   await page.getByRole('button', { name: /back to exercise/i }).click()
   await expect(page.getByRole('heading', { name: /quad set/i })).toBeVisible()
 })
+
+test('renders workout timer with muted styling', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: /start new session/i }).click()
+
+  const workoutTimer = page.getByText('Workout time: 0:00')
+  await expect(workoutTimer).toHaveCSS('color', 'rgb(156, 163, 175)')
+  await expect(workoutTimer).toHaveCSS('font-weight', '500')
+})
