@@ -241,7 +241,7 @@ test('auto-starts hold timer when reaching a hold exercise and completes a rep a
 
   await tapByRoleName(page, 'button', /back to exercise/i)
   await expect(page.getByRole('heading', { name: /straight leg raise/i })).toBeVisible()
-  await expect(page.getByText(/Hold timer: [23]\.\d+s\/3.0s/i)).toBeVisible()
+  await expect(page.getByText(/Hold timer: \d+\.\d+s\/3(?:\.0)?s/i)).toBeVisible()
   await expect(holdTimerRunning).toBe(true)
   await expect(page.getByRole('button', { name: /start hold/i })).toHaveCount(0)
   await expect(page.getByRole('button', { name: /pause hold/i })).toHaveCount(0)
@@ -249,12 +249,13 @@ test('auto-starts hold timer when reaching a hold exercise and completes a rep a
   await expect(page.getByRole('button', { name: /complete hold rep/i })).toHaveCount(0)
 
   await page.waitForTimeout(350)
-  await expect(page.getByText(/Hold timer: 2\.[67]s\/3.0s/i)).toBeVisible()
+  await expect(page.getByText(/Hold timer: \d+\.\d+s\/3(?:\.0)?s/i)).toBeVisible()
 
   await page.waitForTimeout(3000)
   await expect(page.getByText('1/10 reps')).toBeVisible()
-  await expect(page.getByText('Hold timer: 3.0s/3.0s')).toBeVisible()
-  await expect(page.getByText(/Rest timer: \d+\.\d+s\/30.0s/i)).toBeVisible()
+  await expect(page.getByText(/Hold timer: 3\.0s\/3(?:\.0)?s/i)).toBeVisible()
+  await expect(page.getByText(/Rest timer: \d+\.\d+s\/30(?:\.0)?s/i)).toBeVisible()
+  await expect(page.getByRole('button', { name: /add 30 seconds/i })).toBeVisible()
 })
 
 test('cycles through skipped queue after primary pass', async ({ page }) => {

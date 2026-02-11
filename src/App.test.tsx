@@ -38,8 +38,8 @@ describe('App shell', () => {
     render(<App />)
 
     expect(screen.getByRole('heading', { name: /knee pain/i })).toBeInTheDocument()
-    expect(screen.getByText(/resume your last session or start a fresh one/i)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /resume session/i })).toBeDisabled()
+    expect(screen.getByText(/start a fresh session/i)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /resume session/i })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: /start new session/i })).toBeInTheDocument()
     expect(screen.getByRole('region', { name: /exercise list/i })).toBeInTheDocument()
     expect(screen.getByText(/quad set/i)).toBeInTheDocument()
@@ -851,7 +851,7 @@ describe('App shell', () => {
 
     expect(screen.getByRole('heading', { name: /straight leg raise/i })).toBeInTheDocument()
     expect(screen.getByText('Hold Running')).toBeInTheDocument()
-    expect(screen.getByText('Hold timer: 3.0s/3.0s')).toBeInTheDocument()
+    expect(screen.getByText('Hold timer: 3.0s/3s')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /pause hold/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /reset hold/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /complete hold rep/i })).not.toBeInTheDocument()
@@ -859,7 +859,7 @@ describe('App shell', () => {
     await act(async () => {
       vi.advanceTimersByTime(200)
     })
-    expect(screen.getByText('Hold timer: 2.8s/3.0s')).toBeInTheDocument()
+    expect(screen.getByText('Hold timer: 2.8s/3s')).toBeInTheDocument()
   })
 
   it('auto-completes a hold rep once the hold timer reaches target', async () => {
@@ -881,26 +881,96 @@ describe('App shell', () => {
     fireEvent.click(screen.getByRole('button', { name: /resume/i }))
 
     expect(screen.getByRole('heading', { name: /wall sit \(shallow\)/i })).toBeInTheDocument()
-    expect(screen.getByText('Hold timer: 40.0s/40.0s')).toBeInTheDocument()
+    expect(screen.getByText('Hold timer: 40.0s/40s')).toBeInTheDocument()
     expect(screen.getByText('Hold Running')).toBeInTheDocument()
 
     await act(async () => {
       vi.advanceTimersByTime(200)
     })
-    expect(screen.getByText('Hold timer: 39.8s/40.0s')).toBeInTheDocument()
+    expect(screen.getByText('Hold timer: 39.8s/40s')).toBeInTheDocument()
 
     await act(async () => {
       vi.advanceTimersByTime(39_800)
     })
     expect(screen.getByText('1/5 reps')).toBeInTheDocument()
-    expect(screen.getByText('Hold timer: 40.0s/40.0s')).toBeInTheDocument()
-    expect(screen.getByText('Rest timer: 30.0s/30.0s')).toBeInTheDocument()
+    expect(screen.getByText('Hold timer: 40.0s/40s')).toBeInTheDocument()
+    expect(screen.getByText('Rest timer: 30.0s/30s')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /start hold/i })).not.toBeInTheDocument()
 
     await act(async () => {
       vi.advanceTimersByTime(30_000)
     })
     expect(screen.getByText('Hold Running')).toBeInTheDocument()
+  })
+
+  it('renders hold card above rest card during hold-exercise rest', () => {
+    const program = loadProgram()
+    const session = createSessionState(program, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-hold-rest-order',
+    })
+    const exerciseId = program.exercises[2].id
+    const holdRestSession = {
+      ...session,
+      primaryCursor: 2,
+      currentExerciseId: exerciseId,
+      updatedAt: '2026-02-10T00:00:05.000Z',
+      exerciseProgress: {
+        ...session.exerciseProgress,
+        [exerciseId]: {
+          ...session.exerciseProgress[exerciseId],
+          restTimerRunning: true,
+          restElapsedSeconds: 1,
+          holdTimerRunning: false,
+          holdElapsedSeconds: 0,
+        },
+      },
+    }
+    persistSession(holdRestSession)
+
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: /resume/i }))
+
+    const holdCard = screen.getByText(/^hold$/i).closest('.timer-card')
+    const restCard = screen.getByText(/^rest$/i).closest('.timer-card')
+    expect(holdCard).not.toBeNull()
+    expect(restCard).not.toBeNull()
+    if (!holdCard || !restCard) {
+      throw new Error('Expected hold and rest cards to be rendered')
+    }
+    expect(
+      holdCard.compareDocumentPosition(restCard) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+  })
+
+  it('adds one full rest period when tapping the rest plus button', () => {
+    const program = loadProgram()
+    const session = createSessionState(program, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-rest-plus',
+    })
+    const exerciseId = program.exercises[0].id
+    const restSession = {
+      ...session,
+      currentExerciseId: exerciseId,
+      updatedAt: '2026-02-10T00:00:05.000Z',
+      exerciseProgress: {
+        ...session.exerciseProgress,
+        [exerciseId]: {
+          ...session.exerciseProgress[exerciseId],
+          restTimerRunning: true,
+          restElapsedSeconds: 4,
+        },
+      },
+    }
+    persistSession(restSession)
+
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: /resume/i }))
+
+    expect(screen.getByText('Rest timer: 26.0s/30s')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /add 30 seconds/i }))
+    expect(screen.getByText('Rest timer: 0.0s/30s')).toBeInTheDocument()
   })
 
   it('does not render manual hold pause/reset/complete controls', () => {
@@ -949,11 +1019,11 @@ describe('App shell', () => {
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: /resume/i }))
 
-    expect(screen.getByText('Rest timer: 26.0s/30.0s')).toBeInTheDocument()
+    expect(screen.getByText('Rest timer: 26.0s/30s')).toBeInTheDocument()
     await act(async () => {
       vi.advanceTimersByTime(2000)
     })
-    expect(screen.getByText('Rest timer: 24.0s/30.0s')).toBeInTheDocument()
+    expect(screen.getByText('Rest timer: 24.0s/30s')).toBeInTheDocument()
   })
 
   it('enables resume when an in-progress session exists', () => {

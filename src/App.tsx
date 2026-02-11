@@ -97,11 +97,16 @@ const formatTimerSeconds = (seconds: number): string => {
   return `${safeSeconds.toFixed(1)}s`
 }
 
+const formatTimerTotalSeconds = (seconds: number): string => {
+  const safeSeconds = Number.isFinite(seconds) ? Math.max(0, seconds) : 0
+  return `${Math.round(safeSeconds)}s`
+}
+
 const formatCountdownPair = (elapsedSeconds: number, totalSeconds: number): string => {
   const safeTotalSeconds = Number.isFinite(totalSeconds) ? Math.max(0, totalSeconds) : 0
   const safeElapsedSeconds = Number.isFinite(elapsedSeconds) ? Math.max(0, elapsedSeconds) : 0
   const remainingSeconds = Math.max(0, safeTotalSeconds - safeElapsedSeconds)
-  return `${formatTimerSeconds(remainingSeconds)}/${formatTimerSeconds(safeTotalSeconds)}`
+  return `${formatTimerSeconds(remainingSeconds)}/${formatTimerTotalSeconds(safeTotalSeconds)}`
 }
 
 const getSessionSummary = (sessionState: SessionState, totalExercises: number) => {
@@ -208,8 +213,12 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
   }, [sessionState.options, sessionState.runtime.phase])
 
   useEffect(() => {
+    if (!hasEnteredSession) {
+      return
+    }
+
     persistSession(sessionState)
-  }, [sessionState])
+  }, [hasEnteredSession, sessionState])
 
   useEffect(() => {
     const onVisibilityChange = () => {
@@ -421,22 +430,23 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
       <main className="app-shell">
         <p className="eyebrow">Exercise Session</p>
         <h1>{program.programName}</h1>
-        <p className="subtitle">Resume your last session or start a fresh one.</p>
+        {hasPersistedSession ? (
+          <p className="subtitle">Resume your last session or start a fresh one.</p>
+        ) : (
+          <p className="subtitle">Start a fresh session.</p>
+        )}
         <div className="resume-actions">
-          <button
-            type="button"
-            onClick={() => {
-              if (!hasPersistedSession) {
-                return
-              }
-
-              setPendingResume(null)
-              setHasEnteredSession(true)
-            }}
-            disabled={!hasPersistedSession}
-          >
-            Resume Session
-          </button>
+          {hasPersistedSession ? (
+            <button
+              type="button"
+              onClick={() => {
+                setPendingResume(null)
+                setHasEnteredSession(true)
+              }}
+            >
+              Resume Session
+            </button>
+          ) : null}
           <button
             type="button"
             className="secondary-button"
@@ -516,6 +526,7 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
     0,
     program.exercises.findIndex((exercise) => exercise.id === currentExercise.id),
   )
+  const restPeriodSeconds = Math.max(1, Math.round(currentExercise.repRestMs / 1000))
   const phaseLabel = sessionState.currentPhase === 'primary' ? 'Primary pass' : 'Skipped cycle'
 
   const dispatchAction = (action: SessionAction) => {
@@ -558,17 +569,19 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
     sessionState.runtime.phase === 'repRest' ||
     sessionState.runtime.phase === 'setRest' ||
     sessionState.runtime.phase === 'exerciseRest'
+  const isRuntimeActivePhase =
+    sessionState.runtime.phase === 'hold' ||
+    sessionState.runtime.phase === 'repRest' ||
+    sessionState.runtime.phase === 'setRest' ||
+    sessionState.runtime.phase === 'exerciseRest'
+  const isAnyTimerRunning =
+    isRuntimeActivePhase || sessionState.workoutTimerRunning || currentProgress.restTimerRunning
   const routineControl =
     sessionState.runtime.phase === 'paused'
       ? { label: 'Resume', actionType: 'resume_routine' as const, disabled: false }
-      : sessionState.runtime.phase === 'idle'
-        ? { label: 'Start', actionType: 'start_routine' as const, disabled: false }
-        : sessionState.runtime.phase === 'hold' ||
-            sessionState.runtime.phase === 'repRest' ||
-            sessionState.runtime.phase === 'setRest' ||
-            sessionState.runtime.phase === 'exerciseRest'
-          ? { label: 'Pause', actionType: 'pause_routine' as const, disabled: false }
-          : { label: 'Start', actionType: 'start_routine' as const, disabled: true }
+      : isAnyTimerRunning
+        ? { label: 'Pause', actionType: 'pause_routine' as const, disabled: false }
+        : { label: 'Start', actionType: 'start_routine' as const, disabled: false }
 
   if (isSessionOptionsOpen) {
     return (
@@ -724,9 +737,37 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
             </button>
           ) : null}
         </div>
+        {isHoldExercise && currentExercise.holdSeconds !== null ? (
+          <div className="timer-card" aria-live="polite">
+            <p className="eyebrow">Hold</p>
+            <p className="timer-text">
+              Hold timer:{' '}
+              {formatCountdownPair(currentProgress.holdElapsedSeconds, currentExercise.holdSeconds)}
+            </p>
+            <p className="subtitle">
+              {currentProgress.holdTimerRunning ? 'Hold Running' : 'Hold Pending'}
+            </p>
+          </div>
+        ) : null}
         {currentProgress.restTimerRunning ? (
           <div className="timer-card" aria-live="polite">
-            <p className="eyebrow">Rest</p>
+            <div className="timer-header-row">
+              <p className="eyebrow">Rest</p>
+              <button
+                type="button"
+                className="timer-plus-button"
+                onClick={() =>
+                  dispatchAction({
+                    type: 'tick_rest_timer',
+                    now: new Date().toISOString(),
+                    seconds: restPeriodSeconds,
+                  })
+                }
+                aria-label={`Add ${restPeriodSeconds} seconds`}
+              >
+                +
+              </button>
+            </div>
             <p className="timer-text">
               Rest timer:{' '}
               {formatCountdownPair(
@@ -743,18 +784,6 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
                 Start Next Set
               </button>
             ) : null}
-          </div>
-        ) : null}
-        {isHoldExercise && currentExercise.holdSeconds !== null ? (
-          <div className="timer-card" aria-live="polite">
-            <p className="eyebrow">Hold</p>
-            <p className="timer-text">
-              Hold timer:{' '}
-              {formatCountdownPair(currentProgress.holdElapsedSeconds, currentExercise.holdSeconds)}
-            </p>
-            <p className="subtitle">
-              {currentProgress.holdTimerRunning ? 'Hold Running' : 'Hold Pending'}
-            </p>
           </div>
         ) : null}
       </article>

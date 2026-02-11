@@ -179,6 +179,26 @@ h2 {
   font-weight: 600;
 }
 
+.timer-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.timer-plus-button {
+  min-height: 2rem;
+  min-width: 2rem;
+  padding: 0;
+  border: 1px solid #111827;
+  border-radius: 9999px;
+  background: #111827;
+  color: #f9fafb;
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
 .timer-controls {
   display: grid;
   gap: 0.5rem;
