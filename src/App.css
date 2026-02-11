@@ -179,6 +179,15 @@ h2 {
   gap: 0.5rem;
 }
 
+.timer-card-muted {
+  background: #f3f4f6;
+}
+
+.timer-card-muted .timer-text {
+  color: #6b7280;
+  font-weight: 500;
+}
+
 .timer-text {
   margin: 0;
   font-size: 1rem;

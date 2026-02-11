@@ -565,6 +565,7 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
     currentProgress.restTimerRunning ||
     isRuntimeRepRestForCurrentExercise ||
     shouldShowHoldExerciseRestFallback
+  const isRestTimerActive = currentProgress.restTimerRunning || isRuntimeRepRestForCurrentExercise
 
   const dispatchAction = (action: SessionAction) => {
     dispatch(action)
@@ -796,7 +797,10 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
           </div>
         ) : null}
         {shouldShowRestCard ? (
-          <div className="timer-card" aria-live="polite">
+          <div
+            className={`timer-card ${isRestTimerActive ? 'timer-card-active' : 'timer-card-muted'}`}
+            aria-live="polite"
+          >
             <div className="timer-header-row">
               <p className="eyebrow">Rest</p>
               <button

@@ -208,6 +208,51 @@ describe('App shell', () => {
     expect(screen.getByText(/rest timer:/i)).toBeInTheDocument()
   })
 
+  it('uses muted rest display when rest timer is not active', () => {
+    const program = loadProgram()
+    const session = createSessionState(program, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-muted-rest-display',
+    })
+    const holdExercise = program.exercises[1]
+    const holdProgress = session.exerciseProgress[holdExercise.id]
+    const activeSet = holdProgress.sets[0]
+
+    persistSession({
+      ...session,
+      primaryCursor: 1,
+      currentExerciseId: holdExercise.id,
+      updatedAt: '2026-02-10T00:00:03.000Z',
+      runtime: {
+        phase: 'paused',
+        exerciseIndex: 1,
+        setIndex: 0,
+        repIndex: 1,
+        remainingMs: 0,
+        previousPhase: 'hold',
+      },
+      exerciseProgress: {
+        ...session.exerciseProgress,
+        [holdExercise.id]: {
+          ...holdProgress,
+          holdTimerRunning: false,
+          holdElapsedSeconds: 0,
+          restTimerRunning: false,
+          restElapsedSeconds: 0,
+          sets: [{ ...activeSet, completedReps: 1 }],
+        },
+      },
+    })
+
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: /resume session/i }))
+
+    const restTimerText = screen.getByText(/rest timer:/i)
+    const restCard = restTimerText.closest('.timer-card')
+    expect(restCard).not.toBeNull()
+    expect(restCard).toHaveClass('timer-card-muted')
+  })
+
   it('pauses and resumes runtime countdown with exact remaining tenths preserved', async () => {
     vi.useFakeTimers()
     const program = loadProgram()
