@@ -1366,7 +1366,7 @@ export const reduceSession = (
       )
       const nextQueue = [...queueWithoutCurrent, currentExerciseId]
 
-      return {
+      const advancedState = {
         ...updatedProgressState,
         skipQueue: nextQueue,
         currentExerciseId: nextQueue[0] ?? currentExerciseId,
@@ -1376,6 +1376,8 @@ export const reduceSession = (
             : 0,
         updatedAt: getTimestamp(updatedProgressState, action.now),
       }
+
+      return withAutoStartedHoldForExercise(advancedState, program, advancedState.currentExerciseId)
     }
     case 'end_session_early':
       return isInProgress(state) ? withTerminalStatus(state, 'ended_early', action.now) : state

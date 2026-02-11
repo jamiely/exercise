@@ -865,6 +865,48 @@ describe('session reducer', () => {
     expect(state.exerciseProgress['exercise-3'].holdTimerRunning).toBe(true)
   })
 
+  it('auto-starts hold timer when skip-pass rotation lands on a hold exercise', () => {
+    let state = createSessionState(testProgram, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-auto-hold-on-skip-pass',
+    })
+
+    state = reduceSession(
+      state,
+      { type: 'skip_exercise', now: '2026-02-10T00:00:01.000Z' },
+      testProgram,
+    )
+    state = reduceSession(
+      state,
+      { type: 'skip_exercise', now: '2026-02-10T00:00:02.000Z' },
+      testProgram,
+    )
+    state = reduceSession(
+      state,
+      { type: 'skip_exercise', now: '2026-02-10T00:00:03.000Z' },
+      testProgram,
+    )
+
+    expect(state.currentPhase).toBe('skip')
+    expect(state.currentExerciseId).toBe('exercise-1')
+
+    state = reduceSession(
+      state,
+      { type: 'skip_exercise', now: '2026-02-10T00:00:04.000Z' },
+      testProgram,
+    )
+    expect(state.currentExerciseId).toBe('exercise-2')
+    expect(state.exerciseProgress['exercise-2'].holdTimerRunning).toBe(false)
+
+    state = reduceSession(
+      state,
+      { type: 'skip_exercise', now: '2026-02-10T00:00:05.000Z' },
+      testProgram,
+    )
+    expect(state.currentExerciseId).toBe('exercise-3')
+    expect(state.exerciseProgress['exercise-3'].holdTimerRunning).toBe(true)
+  })
+
   it('re-enqueues in skip pass when skipped again', () => {
     let state = createSessionState(testProgram, {
       now: '2026-02-10T00:00:00.000Z',
