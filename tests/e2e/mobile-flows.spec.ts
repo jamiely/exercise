@@ -144,6 +144,19 @@ test('updates reps and auto-advances set state on the final rep', async ({ page 
   await expect(page.getByLabel('Set tracker')).toHaveCount(0)
 })
 
+test('starts routine from +1 rep and keeps workflow timer visible on reps exercises', async ({
+  page,
+}) => {
+  await expect(page.getByRole('button', { name: /^start$/i })).toBeVisible()
+  await expect(page.getByText(/phase timer: 0.0s/i)).toBeVisible()
+
+  await tapByRoleName(page, 'button', /\+1 rep/i)
+
+  await expect(page.getByText('1/12 reps')).toBeVisible()
+  await expect(page.getByRole('button', { name: /^pause$/i })).toBeVisible()
+  await expect(page.getByText(/phase: hold/i)).toBeVisible()
+})
+
 test('uses one routine button that cycles Start, Pause, Resume, and Pause', async ({ page }) => {
   await expect(page.getByRole('button', { name: /^start$/i })).toBeVisible()
 

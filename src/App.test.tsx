@@ -700,6 +700,25 @@ describe('App shell', () => {
     expect(screen.getByRole('button', { name: /undo rep/i })).toBeDisabled()
   })
 
+  it('starts routine when +1 rep is tapped and shows the workflow timer on reps exercises', async () => {
+    vi.useFakeTimers()
+
+    render(<App />)
+    enterNewSession()
+    expect(screen.getByRole('button', { name: /^start$/i })).toBeInTheDocument()
+    expect(screen.getByText(/phase timer: 0.0s/i)).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /\+1 rep/i }))
+
+    expect(screen.getByText('1/12 reps')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^pause$/i })).toBeInTheDocument()
+
+    await act(async () => {
+      vi.advanceTimersByTime(1100)
+    })
+    expect(screen.getByText('Workout time: 0:01')).toBeInTheDocument()
+  })
+
   it('auto-advances to the next set after the final rep of the active set', () => {
     render(<App />)
     enterNewSession()

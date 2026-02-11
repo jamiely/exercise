@@ -582,6 +582,7 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
       : isAnyTimerRunning
         ? { label: 'Pause', actionType: 'pause_routine' as const, disabled: false }
         : { label: 'Start', actionType: 'start_routine' as const, disabled: false }
+  const shouldAutoStartRoutineOnRepTap = routineControl.label === 'Start'
 
   if (isSessionOptionsOpen) {
     return (
@@ -730,12 +731,24 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
           {!isHoldExercise ? (
             <button
               type="button"
-              onClick={() => dispatchTimed('increment_rep')}
+              onClick={() => {
+                if (shouldAutoStartRoutineOnRepTap) {
+                  dispatchTimed('start_routine')
+                }
+                dispatchTimed('increment_rep')
+              }}
               disabled={currentProgress.restTimerRunning}
             >
               +1 Rep
             </button>
           ) : null}
+        </div>
+        <div className="timer-card" aria-live="polite">
+          <p className="eyebrow">Workflow</p>
+          <p className="timer-text">Phase: {sessionState.runtime.phase}</p>
+          <p className="timer-text">
+            Phase timer: {formatCountdownTenths(sessionState.runtime.remainingMs)}s
+          </p>
         </div>
         {isHoldExercise && currentExercise.holdSeconds !== null ? (
           <div className="timer-card" aria-live="polite">
