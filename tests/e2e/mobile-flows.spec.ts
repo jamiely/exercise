@@ -16,6 +16,12 @@ const addReps = async (page: Page, count: number) => {
   }
 }
 
+const expectOnOptionsScreen = async (page: Page, text: RegExp | string) => {
+  await tapByRoleName(page, 'button', /options/i)
+  await expect(page.getByText(text)).toBeVisible()
+  await tapByRoleName(page, 'button', /back to exercise/i)
+}
+
 const seedWallSitAutoSession = async (page: Page) => {
   await page.evaluate((sessionStorageKey) => {
     const raw = window.localStorage.getItem(sessionStorageKey)
@@ -110,7 +116,7 @@ test('progresses in strict order after completing first exercise', async ({ page
   await tapByRoleName(page, 'button', /complete exercise/i)
 
   await expect(page.getByRole('heading', { name: /straight leg raise/i })).toBeVisible()
-  await expect(page.getByText(/exercise 2\/3/i)).toBeVisible()
+  await expectOnOptionsScreen(page, /exercise 2\/3/i)
 })
 
 test('updates reps, shows rest timer, and advances set state', async ({ page }) => {
@@ -141,13 +147,13 @@ test('one-tap Start auto-completes seeded hold workflow path with no progression
   await expect(page.getByRole('button', { name: /resume session/i })).toBeVisible()
   await tapByRoleName(page, 'button', /resume session/i)
   await expect(page.getByRole('heading', { name: /wall sit \(shallow\)/i })).toBeVisible()
-  await expect(page.getByText(/workflow phase: idle/i)).toBeVisible()
+  await expectOnOptionsScreen(page, /workflow phase: idle/i)
 
   await page.clock.install()
   await tapByRoleName(page, 'button', /^start$/i)
 
-  await expect(page.getByText(/workflow phase: hold/i)).toBeVisible()
-  await expect(page.getByText(/phase timer: 40.0s/i)).toBeVisible()
+  await expectOnOptionsScreen(page, /workflow phase: hold/i)
+  await expectOnOptionsScreen(page, /phase timer: 40.0s/i)
 
   await page.clock.runFor(70_200)
 
@@ -171,15 +177,15 @@ test('completes a hold rep after hold target duration', async ({ page }) => {
 test('cycles through skipped queue after primary pass', async ({ page }) => {
   await tapByRoleName(page, 'button', /skip exercise/i)
   await expect(page.getByRole('heading', { name: /straight leg raise/i })).toBeVisible()
-  await expect(page.getByText(/primary pass . 1 skipped queued/i)).toBeVisible()
+  await expectOnOptionsScreen(page, /primary pass . 1 skipped queued/i)
 
   await tapByRoleName(page, 'button', /skip exercise/i)
   await expect(page.getByRole('heading', { name: /wall sit \(shallow\)/i })).toBeVisible()
-  await expect(page.getByText(/primary pass . 2 skipped queued/i)).toBeVisible()
+  await expectOnOptionsScreen(page, /primary pass . 2 skipped queued/i)
 
   await tapByRoleName(page, 'button', /skip exercise/i)
   await expect(page.getByRole('heading', { name: /quad set/i })).toBeVisible()
-  await expect(page.getByText(/skipped cycle . 3 skipped queued/i)).toBeVisible()
+  await expectOnOptionsScreen(page, /skipped cycle . 3 skipped queued/i)
 })
 
 test('prompts to resume on reload with active session', async ({ page }) => {

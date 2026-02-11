@@ -12,3 +12,15 @@ test('loads app shell on mobile viewport', async ({ page }) => {
   await expect(page.getByText(/straight leg raise/i)).toBeVisible()
   await expect(page.getByText(/wall sit \(shallow\)/i)).toBeVisible()
 })
+
+test('opens and closes in-session options screen', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: /start new session/i }).click()
+
+  await page.getByRole('button', { name: /options/i }).click()
+  await expect(page.getByRole('heading', { name: /knee pain/i })).toBeVisible()
+  await expect(page.getByRole('region', { name: /cue options/i })).toBeVisible()
+
+  await page.getByRole('button', { name: /back to exercise/i }).click()
+  await expect(page.getByRole('heading', { name: /quad set/i })).toBeVisible()
+})

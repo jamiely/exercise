@@ -10,6 +10,16 @@ describe('App shell', () => {
   const enterNewSession = () => {
     fireEvent.click(screen.getByRole('button', { name: /start new session/i }))
   }
+  const ensureOptionsScreen = () => {
+    if (!screen.queryByRole('button', { name: /back to exercise/i })) {
+      fireEvent.click(screen.getByRole('button', { name: /options/i }))
+    }
+  }
+  const expectOnOptionsScreen = (text: RegExp | string) => {
+    ensureOptionsScreen()
+    expect(screen.getByText(text)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
+  }
 
   beforeEach(() => {
     window.localStorage.clear()
@@ -35,6 +45,7 @@ describe('App shell', () => {
   it('shows sound and vibration options enabled by default', () => {
     render(<App />)
     enterNewSession()
+    ensureOptionsScreen()
 
     expect(screen.getByRole('checkbox', { name: /sound cues/i })).toBeChecked()
     expect(screen.getByRole('checkbox', { name: /vibration cues/i })).toBeChecked()
@@ -62,8 +73,8 @@ describe('App shell', () => {
 
     await user.click(screen.getByRole('button', { name: /^start$/i }))
 
-    expect(screen.getByText(/workflow phase: hold/i)).toBeInTheDocument()
-    expect(screen.getByText(/phase timer: 0.0s/i)).toBeInTheDocument()
+    expectOnOptionsScreen(/workflow phase: hold/i)
+    expectOnOptionsScreen(/phase timer: 0.0s/i)
     expect(screen.getByRole('button', { name: /^start$/i })).toBeDisabled()
   })
 
@@ -93,19 +104,19 @@ describe('App shell', () => {
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: /resume/i }))
 
-    expect(screen.getByText(/workflow phase: hold/i)).toBeInTheDocument()
-    expect(screen.getByText(/phase timer: 1.0s/i)).toBeInTheDocument()
+    expectOnOptionsScreen(/workflow phase: hold/i)
+    expectOnOptionsScreen(/phase timer: 1.0s/i)
 
     await act(async () => {
       vi.advanceTimersByTime(300)
     })
-    expect(screen.getByText(/phase timer: 0.7s/i)).toBeInTheDocument()
+    expectOnOptionsScreen(/phase timer: 0.7s/i)
 
     await act(async () => {
       vi.advanceTimersByTime(700)
     })
-    expect(screen.getByText(/workflow phase: represt/i)).toBeInTheDocument()
-    expect(screen.getByText(/phase timer: 30.0s/i)).toBeInTheDocument()
+    expectOnOptionsScreen(/workflow phase: represt/i)
+    expectOnOptionsScreen(/phase timer: 30.0s/i)
     expect(screen.getByText('1/5 reps')).toBeInTheDocument()
   })
 
@@ -138,25 +149,25 @@ describe('App shell', () => {
     await act(async () => {
       vi.advanceTimersByTime(300)
     })
-    expect(screen.getByText(/phase timer: 0.7s/i)).toBeInTheDocument()
+    expectOnOptionsScreen(/phase timer: 0.7s/i)
 
     fireEvent.click(screen.getByRole('button', { name: /^pause$/i }))
-    expect(screen.getByText(/workflow phase: paused/i)).toBeInTheDocument()
-    expect(screen.getByText(/phase timer: 0.7s/i)).toBeInTheDocument()
+    expectOnOptionsScreen(/workflow phase: paused/i)
+    expectOnOptionsScreen(/phase timer: 0.7s/i)
 
     await act(async () => {
       vi.advanceTimersByTime(500)
     })
-    expect(screen.getByText(/phase timer: 0.7s/i)).toBeInTheDocument()
+    expectOnOptionsScreen(/phase timer: 0.7s/i)
 
     fireEvent.click(screen.getByRole('button', { name: /resume/i }))
-    expect(screen.getByText(/workflow phase: hold/i)).toBeInTheDocument()
-    expect(screen.getByText(/phase timer: 0.7s/i)).toBeInTheDocument()
+    expectOnOptionsScreen(/workflow phase: hold/i)
+    expectOnOptionsScreen(/phase timer: 0.7s/i)
 
     await act(async () => {
       vi.advanceTimersByTime(200)
     })
-    expect(screen.getByText(/phase timer: 0.5s/i)).toBeInTheDocument()
+    expectOnOptionsScreen(/phase timer: 0.5s/i)
   })
 
   it('auto-pauses runtime countdown when app becomes hidden', async () => {
@@ -198,20 +209,20 @@ describe('App shell', () => {
     await act(async () => {
       vi.advanceTimersByTime(300)
     })
-    expect(screen.getByText(/phase timer: 0.7s/i)).toBeInTheDocument()
+    expectOnOptionsScreen(/phase timer: 0.7s/i)
 
     hidden = true
     act(() => {
       document.dispatchEvent(new Event('visibilitychange'))
     })
 
-    expect(screen.getByText(/workflow phase: paused/i)).toBeInTheDocument()
-    expect(screen.getByText(/phase timer: 0.7s/i)).toBeInTheDocument()
+    expectOnOptionsScreen(/workflow phase: paused/i)
+    expectOnOptionsScreen(/phase timer: 0.7s/i)
 
     await act(async () => {
       vi.advanceTimersByTime(500)
     })
-    expect(screen.getByText(/phase timer: 0.7s/i)).toBeInTheDocument()
+    expectOnOptionsScreen(/phase timer: 0.7s/i)
   })
 
   it('requests wake lock in active runtime phases and releases on pause', async () => {
@@ -250,7 +261,7 @@ describe('App shell', () => {
     expect(request).toHaveBeenCalledWith('screen')
 
     fireEvent.click(screen.getByRole('button', { name: /^pause$/i }))
-    expect(screen.getByText(/workflow phase: paused/i)).toBeInTheDocument()
+    expectOnOptionsScreen(/workflow phase: paused/i)
 
     const sentinel = await request.mock.results[0].value
     expect(sentinel.release).toHaveBeenCalledTimes(1)
@@ -267,7 +278,7 @@ describe('App shell', () => {
     enterNewSession()
     fireEvent.click(screen.getByRole('button', { name: /^start$/i }))
 
-    expect(screen.getByText(/workflow phase: hold/i)).toBeInTheDocument()
+    expectOnOptionsScreen(/workflow phase: hold/i)
     expect(screen.queryByText(/wake lock/i)).not.toBeInTheDocument()
   })
 
@@ -318,8 +329,10 @@ describe('App shell', () => {
 
     render(<App />)
     enterNewSession()
+    ensureOptionsScreen()
     await user.click(screen.getByRole('checkbox', { name: /sound cues/i }))
     await user.click(screen.getByRole('checkbox', { name: /vibration cues/i }))
+    fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
     await user.click(screen.getByRole('button', { name: /^start$/i }))
 
     expect(audioContextConstructed).toBe(0)
@@ -366,15 +379,15 @@ describe('App shell', () => {
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: /resume/i }))
 
-    expect(screen.getByText(/workflow phase: setrest/i)).toBeInTheDocument()
-    expect(screen.getByText(/phase timer: 1.0s/i)).toBeInTheDocument()
+    expectOnOptionsScreen(/workflow phase: setrest/i)
+    expectOnOptionsScreen(/phase timer: 1.0s/i)
 
     await act(async () => {
       vi.advanceTimersByTime(1_000)
     })
 
-    expect(screen.getByText(/workflow phase: hold/i)).toBeInTheDocument()
-    expect(screen.getByText(/phase timer: 3.0s/i)).toBeInTheDocument()
+    expectOnOptionsScreen(/workflow phase: hold/i)
+    expectOnOptionsScreen(/phase timer: 3.0s/i)
     expect(screen.getByText('0/10 reps')).toBeInTheDocument()
   })
 
@@ -415,8 +428,8 @@ describe('App shell', () => {
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: /resume/i }))
 
-    expect(screen.getByText(/workflow phase: exerciserest/i)).toBeInTheDocument()
-    expect(screen.getByText(/phase timer: 1.0s/i)).toBeInTheDocument()
+    expectOnOptionsScreen(/workflow phase: exerciserest/i)
+    expectOnOptionsScreen(/phase timer: 1.0s/i)
     expect(
       screen.getByRole('heading', { name: new RegExp(program.exercises[1].name, 'i') }),
     ).toBeInTheDocument()
@@ -426,8 +439,8 @@ describe('App shell', () => {
     })
 
     expect(screen.getByRole('heading', { name: /wall sit \(shallow\)/i })).toBeInTheDocument()
-    expect(screen.getByText(/workflow phase: hold/i)).toBeInTheDocument()
-    expect(screen.getByText(/phase timer: 40.0s/i)).toBeInTheDocument()
+    expectOnOptionsScreen(/workflow phase: hold/i)
+    expectOnOptionsScreen(/phase timer: 40.0s/i)
     expect(screen.getByText('0/5 reps')).toBeInTheDocument()
   })
 
@@ -458,8 +471,8 @@ describe('App shell', () => {
     fireEvent.click(screen.getByRole('button', { name: /overrides/i }))
     fireEvent.click(screen.getByRole('button', { name: /skip rep/i }))
 
-    expect(screen.getByText(/workflow phase: represt/i)).toBeInTheDocument()
-    expect(screen.getByText(/phase timer: 30.0s/i)).toBeInTheDocument()
+    expectOnOptionsScreen(/workflow phase: represt/i)
+    expectOnOptionsScreen(/phase timer: 30.0s/i)
     expect(screen.getByText('1/5 reps')).toBeInTheDocument()
   })
 
@@ -502,8 +515,8 @@ describe('App shell', () => {
     fireEvent.click(screen.getByRole('button', { name: /overrides/i }))
     fireEvent.click(screen.getByRole('button', { name: /skip rest/i }))
 
-    expect(screen.getByText(/workflow phase: hold/i)).toBeInTheDocument()
-    expect(screen.getByText(/phase timer: 40.0s/i)).toBeInTheDocument()
+    expectOnOptionsScreen(/workflow phase: hold/i)
+    expectOnOptionsScreen(/phase timer: 40.0s/i)
     expect(screen.getByText('1/5 reps')).toBeInTheDocument()
   })
 
@@ -548,8 +561,8 @@ describe('App shell', () => {
     fireEvent.click(screen.getByRole('button', { name: /overrides/i }))
     fireEvent.click(screen.getByRole('button', { name: /end set/i }))
 
-    expect(screen.getByText(/workflow phase: setrest/i)).toBeInTheDocument()
-    expect(screen.getByText(/phase timer: 30.0s/i)).toBeInTheDocument()
+    expectOnOptionsScreen(/workflow phase: setrest/i)
+    expectOnOptionsScreen(/phase timer: 30.0s/i)
     expect(screen.getByText('10/10 reps')).toBeInTheDocument()
   })
 
@@ -597,8 +610,8 @@ describe('App shell', () => {
     fireEvent.click(screen.getByRole('button', { name: /overrides/i }))
     fireEvent.click(screen.getByRole('button', { name: /end exercise/i }))
 
-    expect(screen.getByText(/workflow phase: exerciserest/i)).toBeInTheDocument()
-    expect(screen.getByText(/phase timer: 30.0s/i)).toBeInTheDocument()
+    expectOnOptionsScreen(/workflow phase: exerciserest/i)
+    expectOnOptionsScreen(/phase timer: 30.0s/i)
     expect(screen.getByText('10/10 reps')).toBeInTheDocument()
   })
 
@@ -698,19 +711,19 @@ describe('App shell', () => {
 
     await user.click(screen.getByRole('button', { name: /skip exercise/i }))
     expect(screen.getByRole('heading', { name: /straight leg raise/i })).toBeInTheDocument()
-    expect(screen.getByText(/primary pass · 1 skipped queued/i)).toBeInTheDocument()
+    expectOnOptionsScreen(/primary pass · 1 skipped queued/i)
 
     await user.click(screen.getByRole('button', { name: /skip exercise/i }))
     expect(screen.getByRole('heading', { name: /wall sit \(shallow\)/i })).toBeInTheDocument()
-    expect(screen.getByText(/primary pass · 2 skipped queued/i)).toBeInTheDocument()
+    expectOnOptionsScreen(/primary pass · 2 skipped queued/i)
 
     await user.click(screen.getByRole('button', { name: /skip exercise/i }))
     expect(screen.getByRole('heading', { name: /quad set/i })).toBeInTheDocument()
-    expect(screen.getByText(/skipped cycle · 3 skipped queued/i)).toBeInTheDocument()
+    expectOnOptionsScreen(/skipped cycle · 3 skipped queued/i)
 
     await user.click(screen.getByRole('button', { name: /skip exercise/i }))
     expect(screen.getByRole('heading', { name: /straight leg raise/i })).toBeInTheDocument()
-    expect(screen.getByText(/skipped cycle · 3 skipped queued/i)).toBeInTheDocument()
+    expectOnOptionsScreen(/skipped cycle · 3 skipped queued/i)
   })
 
   it('marks session complete when last queued skipped exercise is completed', async () => {
@@ -951,10 +964,11 @@ describe('App shell', () => {
     render(<App />)
     await user.click(screen.getByRole('button', { name: /resume/i }))
 
-    expect(screen.getByRole('heading', { name: /knee pain/i })).toBeInTheDocument()
     expect(
       screen.getByRole('heading', { name: new RegExp(program.exercises[1].name, 'i') }),
     ).toBeInTheDocument()
+    ensureOptionsScreen()
+    expect(screen.getByRole('heading', { name: /knee pain/i })).toBeInTheDocument()
   })
 
   it('starts a new session and replaces stale in-progress state', async () => {
@@ -975,10 +989,11 @@ describe('App shell', () => {
     render(<App />)
     await user.click(screen.getByRole('button', { name: /start new/i }))
 
-    expect(screen.getByRole('heading', { name: /knee pain/i })).toBeInTheDocument()
     expect(
       screen.getByRole('heading', { name: new RegExp(program.exercises[0].name, 'i') }),
     ).toBeInTheDocument()
+    ensureOptionsScreen()
+    expect(screen.getByRole('heading', { name: /knee pain/i })).toBeInTheDocument()
 
     const persisted = readPersistedSession()
     expect(persisted?.currentExerciseId).toBe(program.exercises[0].id)

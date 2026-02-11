@@ -206,6 +206,10 @@ h2 {
   gap: 0.625rem;
 }
 
+.options-screen-back {
+  min-height: 2.875rem;
+}
+
 .override-actions {
   margin-top: 0.125rem;
   display: grid;

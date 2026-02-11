@@ -103,6 +103,7 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
   const [pendingResume, setPendingResume] = useState<SessionState | null>(bootState.pendingResume)
   const [hasEnteredSession, setHasEnteredSession] = useState(false)
   const [isOverrideMenuOpen, setIsOverrideMenuOpen] = useState(false)
+  const [isSessionOptionsOpen, setIsSessionOptionsOpen] = useState(false)
   const [sessionState, dispatch] = useReducer(
     (state: SessionState, action: SessionAction) => reduceSession(state, action, program),
     bootState.initialSession,
@@ -440,54 +441,67 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
     sessionState.runtime.phase === 'setRest' ||
     sessionState.runtime.phase === 'exerciseRest'
 
+  if (isSessionOptionsOpen) {
+    return (
+      <main className="app-shell">
+        <p className="eyebrow">Exercise Session</p>
+        <h1>{program.programName}</h1>
+        <section className="session-meta" aria-label="Session progress">
+          <p className="subtitle">
+            Exercise {exerciseIndex + 1}/{program.exercises.length}
+          </p>
+          <p className="subtitle">
+            {phaseLabel} · {sessionState.skipQueue.length} skipped queued
+          </p>
+          <p className="subtitle">Workflow phase: {sessionState.runtime.phase}</p>
+          <p className="subtitle">
+            Phase timer: {formatCountdownTenths(sessionState.runtime.remainingMs)}s
+          </p>
+        </section>
+        <section className="options-card" aria-label="Cue options">
+          <p className="eyebrow">Options</p>
+          <label className="option-toggle">
+            <input
+              type="checkbox"
+              checked={sessionState.options.soundEnabled}
+              onChange={(event) =>
+                dispatchAction({
+                  type: 'set_sound_enabled',
+                  enabled: event.currentTarget.checked,
+                  now: new Date().toISOString(),
+                })
+              }
+            />
+            <span>Sound cues</span>
+          </label>
+          <label className="option-toggle">
+            <input
+              type="checkbox"
+              checked={sessionState.options.vibrationEnabled}
+              onChange={(event) =>
+                dispatchAction({
+                  type: 'set_vibration_enabled',
+                  enabled: event.currentTarget.checked,
+                  now: new Date().toISOString(),
+                })
+              }
+            />
+            <span>Vibration cues</span>
+          </label>
+        </section>
+        <button
+          type="button"
+          className="secondary-button options-screen-back"
+          onClick={() => setIsSessionOptionsOpen(false)}
+        >
+          Back to Exercise
+        </button>
+      </main>
+    )
+  }
+
   return (
     <main className="app-shell">
-      <p className="eyebrow">Exercise Session</p>
-      <h1>{program.programName}</h1>
-      <section className="session-meta" aria-label="Session progress">
-        <p className="subtitle">
-          Exercise {exerciseIndex + 1}/{program.exercises.length}
-        </p>
-        <p className="subtitle">
-          {phaseLabel} · {sessionState.skipQueue.length} skipped queued
-        </p>
-        <p className="subtitle">Workflow phase: {sessionState.runtime.phase}</p>
-        <p className="subtitle">
-          Phase timer: {formatCountdownTenths(sessionState.runtime.remainingMs)}s
-        </p>
-      </section>
-      <section className="options-card" aria-label="Cue options">
-        <p className="eyebrow">Options</p>
-        <label className="option-toggle">
-          <input
-            type="checkbox"
-            checked={sessionState.options.soundEnabled}
-            onChange={(event) =>
-              dispatchAction({
-                type: 'set_sound_enabled',
-                enabled: event.currentTarget.checked,
-                now: new Date().toISOString(),
-              })
-            }
-          />
-          <span>Sound cues</span>
-        </label>
-        <label className="option-toggle">
-          <input
-            type="checkbox"
-            checked={sessionState.options.vibrationEnabled}
-            onChange={(event) =>
-              dispatchAction({
-                type: 'set_vibration_enabled',
-                enabled: event.currentTarget.checked,
-                now: new Date().toISOString(),
-              })
-            }
-          />
-          <span>Vibration cues</span>
-        </label>
-      </section>
-
       <article className="exercise-card" aria-label="Active exercise">
         <p className="eyebrow">Current Exercise</p>
         <h2>{currentExercise.name}</h2>
@@ -614,6 +628,13 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
           disabled={sessionState.runtime.phase !== 'idle'}
         >
           Start
+        </button>
+        <button
+          type="button"
+          className="secondary-button"
+          onClick={() => setIsSessionOptionsOpen(true)}
+        >
+          Options
         </button>
         <button
           type="button"
