@@ -5,3 +5,4 @@
 - Add Playwright tests for any new features.
 - Run Prettier for formatting.
 - Commit after every feature is complete.
+- Ask clarifying questions to improve feature quality before implementation.
