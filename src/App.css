@@ -215,7 +215,13 @@ h2 {
   gap: 0.625rem;
 }
 
-.options-override-actions button {
+.options-session-actions {
+  display: grid;
+  gap: 0.625rem;
+}
+
+.options-override-actions button,
+.options-session-actions button {
   min-height: 2.75rem;
   border: 1px solid #111827;
   border-radius: 0.75rem;

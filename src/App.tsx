@@ -518,6 +518,38 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
               End Exercise
             </button>
           </div>
+          <p className="eyebrow">Session Actions</p>
+          <div className="options-session-actions">
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => dispatchTimed('complete_set')}
+              disabled={!isActiveSetComplete || !hasNextSet || currentProgress.restTimerRunning}
+            >
+              Complete Set
+            </button>
+            <button
+              type="button"
+              onClick={() => dispatchTimed('complete_exercise')}
+              disabled={!allSetsComplete}
+            >
+              Complete Exercise
+            </button>
+            <button
+              type="button"
+              className="tertiary-button"
+              onClick={() => dispatchTimed('skip_exercise')}
+            >
+              Skip Exercise
+            </button>
+            <button
+              type="button"
+              className="tertiary-button end-session-button"
+              onClick={() => dispatchTimed('end_session_early')}
+            >
+              End Session Early
+            </button>
+          </div>
         </section>
         <button
           type="button"
@@ -665,35 +697,6 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
           onClick={() => setIsSessionOptionsOpen(true)}
         >
           Options
-        </button>
-        <button
-          type="button"
-          className="secondary-button"
-          onClick={() => dispatchTimed('complete_set')}
-          disabled={!isActiveSetComplete || !hasNextSet || currentProgress.restTimerRunning}
-        >
-          Complete Set
-        </button>
-        <button
-          type="button"
-          onClick={() => dispatchTimed('complete_exercise')}
-          disabled={!allSetsComplete}
-        >
-          Complete Exercise
-        </button>
-        <button
-          type="button"
-          className="tertiary-button"
-          onClick={() => dispatchTimed('skip_exercise')}
-        >
-          Skip Exercise
-        </button>
-        <button
-          type="button"
-          className="tertiary-button end-session-button"
-          onClick={() => dispatchTimed('end_session_early')}
-        >
-          End Session Early
         </button>
       </section>
     </main>

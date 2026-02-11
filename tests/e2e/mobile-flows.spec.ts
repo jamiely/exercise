@@ -17,9 +17,18 @@ const addReps = async (page: Page, count: number) => {
 }
 
 const expectOnOptionsScreen = async (page: Page, text: RegExp | string) => {
-  await tapByRoleName(page, 'button', /options/i)
+  if (!(await page.getByRole('button', { name: /back to exercise/i }).isVisible())) {
+    await tapByRoleName(page, 'button', /options/i)
+  }
   await expect(page.getByText(text)).toBeVisible()
   await tapByRoleName(page, 'button', /back to exercise/i)
+}
+
+const tapOptionsAction = async (page: Page, name: RegExp | string) => {
+  if (!(await page.getByRole('button', { name: /back to exercise/i }).isVisible())) {
+    await tapByRoleName(page, 'button', /options/i)
+  }
+  await tapByRoleName(page, 'button', name)
 }
 
 const seedWallSitAutoSession = async (page: Page) => {
@@ -108,12 +117,14 @@ test.beforeEach(async ({ page }) => {
 
 test('progresses in strict order after completing first exercise', async ({ page }) => {
   await addReps(page, 12)
-  await tapByRoleName(page, 'button', /complete set/i)
+  await tapOptionsAction(page, /complete set/i)
+  await tapByRoleName(page, 'button', /back to exercise/i)
   await tapByRoleName(page, 'button', /start next set/i)
   await addReps(page, 12)
 
   await expect(page.getByText('12/12 reps')).toBeVisible()
-  await tapByRoleName(page, 'button', /complete exercise/i)
+  await tapOptionsAction(page, /complete exercise/i)
+  await tapByRoleName(page, 'button', /back to exercise/i)
 
   await expect(page.getByRole('heading', { name: /straight leg raise/i })).toBeVisible()
   await expectOnOptionsScreen(page, /exercise 2\/3/i)
@@ -127,7 +138,8 @@ test('updates reps, shows rest timer, and advances set state', async ({ page }) 
   await expect(page.getByText('1/12 reps')).toBeVisible()
 
   await addReps(page, 11)
-  await tapByRoleName(page, 'button', /complete set/i)
+  await tapOptionsAction(page, /complete set/i)
+  await tapByRoleName(page, 'button', /back to exercise/i)
 
   await expect(page.getByText('Rest timer: 0s')).toBeVisible()
   await page.waitForTimeout(1100)
@@ -187,7 +199,8 @@ test('one-tap Start auto-completes seeded hold workflow path with no progression
 })
 
 test('completes a hold rep after hold target duration', async ({ page }) => {
-  await tapByRoleName(page, 'button', /skip exercise/i)
+  await tapOptionsAction(page, /skip exercise/i)
+  await tapByRoleName(page, 'button', /back to exercise/i)
   await expect(page.getByRole('heading', { name: /straight leg raise/i })).toBeVisible()
   await expect(page.getByText('Hold timer: 0/3s')).toBeVisible()
 
@@ -201,15 +214,18 @@ test('completes a hold rep after hold target duration', async ({ page }) => {
 })
 
 test('cycles through skipped queue after primary pass', async ({ page }) => {
-  await tapByRoleName(page, 'button', /skip exercise/i)
+  await tapOptionsAction(page, /skip exercise/i)
+  await tapByRoleName(page, 'button', /back to exercise/i)
   await expect(page.getByRole('heading', { name: /straight leg raise/i })).toBeVisible()
   await expectOnOptionsScreen(page, /primary pass . 1 skipped queued/i)
 
-  await tapByRoleName(page, 'button', /skip exercise/i)
+  await tapOptionsAction(page, /skip exercise/i)
+  await tapByRoleName(page, 'button', /back to exercise/i)
   await expect(page.getByRole('heading', { name: /wall sit \(shallow\)/i })).toBeVisible()
   await expectOnOptionsScreen(page, /primary pass . 2 skipped queued/i)
 
-  await tapByRoleName(page, 'button', /skip exercise/i)
+  await tapOptionsAction(page, /skip exercise/i)
+  await tapByRoleName(page, 'button', /back to exercise/i)
   await expect(page.getByRole('heading', { name: /quad set/i })).toBeVisible()
   await expectOnOptionsScreen(page, /skipped cycle . 3 skipped queued/i)
 })
@@ -227,8 +243,8 @@ test('prompts to resume on reload with active session', async ({ page }) => {
 })
 
 test('ends session early and shows summary state', async ({ page }) => {
-  await tapByRoleName(page, 'button', /skip exercise/i)
-  await tapByRoleName(page, 'button', /end session early/i)
+  await tapOptionsAction(page, /skip exercise/i)
+  await tapOptionsAction(page, /end session early/i)
 
   await expect(page.getByRole('heading', { name: /session ended early/i })).toBeVisible()
   await expect(page.getByText(/completed exercises/i)).toBeVisible()

@@ -20,6 +20,10 @@ describe('App shell', () => {
     expect(screen.getByText(text)).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
   }
+  const clickOptionsAction = (name: RegExp | string) => {
+    ensureOptionsScreen()
+    fireEvent.click(screen.getByRole('button', { name }))
+  }
 
   beforeEach(() => {
     window.localStorage.clear()
@@ -656,21 +660,24 @@ describe('App shell', () => {
     render(<App />)
     enterNewSession()
 
+    ensureOptionsScreen()
     const completeSetButton = screen.getByRole('button', { name: /complete set/i })
     expect(completeSetButton).toBeDisabled()
+    fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
 
     for (let rep = 0; rep < 12; rep += 1) {
       fireEvent.click(screen.getByRole('button', { name: /\+1 rep/i }))
     }
 
-    expect(completeSetButton).toBeEnabled()
+    ensureOptionsScreen()
+    expect(screen.getByRole('button', { name: /complete set/i })).toBeEnabled()
+    fireEvent.click(screen.getByRole('button', { name: /complete set/i }))
+    fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
 
     const setOneCard = screen.getByText('Set 1').closest('div')
     const setTwoCard = screen.getByText('Set 2').closest('div')
     expect(setOneCard).toHaveClass('is-active')
     expect(setTwoCard).not.toHaveClass('is-active')
-
-    fireEvent.click(completeSetButton)
 
     expect(screen.getByText('12/12 reps')).toBeInTheDocument()
     expect(screen.getByText('Rest timer: 0s')).toBeInTheDocument()
@@ -693,27 +700,32 @@ describe('App shell', () => {
     render(<App />)
     enterNewSession()
 
-    const completeExercise = screen.getByRole('button', { name: /complete exercise/i })
-    expect(completeExercise).toBeDisabled()
+    ensureOptionsScreen()
+    expect(screen.getByRole('button', { name: /complete exercise/i })).toBeDisabled()
+    fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
 
     for (let rep = 0; rep < 12; rep += 1) {
       await user.click(screen.getByRole('button', { name: /\+1 rep/i }))
     }
 
-    expect(completeExercise).toBeDisabled()
+    ensureOptionsScreen()
+    expect(screen.getByRole('button', { name: /complete exercise/i })).toBeDisabled()
     await user.click(screen.getByRole('button', { name: /complete set/i }))
+    await user.click(screen.getByRole('button', { name: /back to exercise/i }))
     await user.click(screen.getByRole('button', { name: /start next set/i }))
 
     for (let rep = 0; rep < 12; rep += 1) {
       await user.click(screen.getByRole('button', { name: /\+1 rep/i }))
     }
 
-    expect(completeExercise).toBeEnabled()
+    ensureOptionsScreen()
+    expect(screen.getByRole('button', { name: /complete exercise/i })).toBeEnabled()
   })
 
-  it('shows a de-emphasized end-session-early control on the active session screen', () => {
+  it('shows a de-emphasized end-session-early control on the options screen', () => {
     render(<App />)
     enterNewSession()
+    ensureOptionsScreen()
 
     const endEarlyButton = screen.getByRole('button', { name: /end session early/i })
     expect(endEarlyButton).toBeInTheDocument()
@@ -721,25 +733,27 @@ describe('App shell', () => {
     expect(endEarlyButton).toHaveClass('end-session-button')
   })
 
-  it('cycles skipped exercises after primary pass and re-enqueues when skipped again', async () => {
-    const user = userEvent.setup()
-
+  it('cycles skipped exercises after primary pass and re-enqueues when skipped again', () => {
     render(<App />)
     enterNewSession()
 
-    await user.click(screen.getByRole('button', { name: /skip exercise/i }))
+    clickOptionsAction(/skip exercise/i)
+    fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
     expect(screen.getByRole('heading', { name: /straight leg raise/i })).toBeInTheDocument()
     expectOnOptionsScreen(/primary pass · 1 skipped queued/i)
 
-    await user.click(screen.getByRole('button', { name: /skip exercise/i }))
+    clickOptionsAction(/skip exercise/i)
+    fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
     expect(screen.getByRole('heading', { name: /wall sit \(shallow\)/i })).toBeInTheDocument()
     expectOnOptionsScreen(/primary pass · 2 skipped queued/i)
 
-    await user.click(screen.getByRole('button', { name: /skip exercise/i }))
+    clickOptionsAction(/skip exercise/i)
+    fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
     expect(screen.getByRole('heading', { name: /quad set/i })).toBeInTheDocument()
     expectOnOptionsScreen(/skipped cycle · 3 skipped queued/i)
 
-    await user.click(screen.getByRole('button', { name: /skip exercise/i }))
+    clickOptionsAction(/skip exercise/i)
+    fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
     expect(screen.getByRole('heading', { name: /straight leg raise/i })).toBeInTheDocument()
     expectOnOptionsScreen(/skipped cycle · 3 skipped queued/i)
   })
@@ -776,7 +790,7 @@ describe('App shell', () => {
 
     render(<App />)
     await user.click(screen.getByRole('button', { name: /resume/i }))
-    await user.click(screen.getByRole('button', { name: /complete exercise/i }))
+    clickOptionsAction(/complete exercise/i)
 
     expect(screen.getByRole('heading', { name: /session completed/i })).toBeInTheDocument()
     expect(screen.getByText(/completed exercises/i)).toBeInTheDocument()
@@ -786,13 +800,11 @@ describe('App shell', () => {
     expect(readPersistedSession()).toBeNull()
   })
 
-  it('ends early and shows an ended-early summary with unresolved skipped count', async () => {
-    const user = userEvent.setup()
-
+  it('ends early and shows an ended-early summary with unresolved skipped count', () => {
     render(<App />)
     enterNewSession()
-    await user.click(screen.getByRole('button', { name: /skip exercise/i }))
-    await user.click(screen.getByRole('button', { name: /end session early/i }))
+    clickOptionsAction(/skip exercise/i)
+    clickOptionsAction(/end session early/i)
 
     expect(screen.getByRole('heading', { name: /session ended early/i })).toBeInTheDocument()
     expect(screen.getByText(/completed exercises/i)).toBeInTheDocument()
