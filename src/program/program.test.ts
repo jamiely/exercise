@@ -136,4 +136,36 @@ describe('parseProgram', () => {
 
     expect(() => parseProgram(invalidProgram)).toThrow(/order values must be unique/i)
   })
+
+  it.each([
+    [{}, /version must be a positive integer/i],
+    [null, /program must be an object/i],
+    [{ ...validProgram, programName: '   ' }, /programname must be a non-empty string/i],
+    [{ ...validProgram, exercises: [] }, /exercises must be a non-empty array/i],
+    [
+      { ...validProgram, exercises: [{ ...validProgram.exercises[0], holdSeconds: 0 }] },
+      /holdseconds must be null or a positive number/i,
+    ],
+    [
+      { ...validProgram, exercises: [{ ...validProgram.exercises[0], repRestMs: 0 }] },
+      /represtms must be null, undefined, or a positive number/i,
+    ],
+    [
+      { ...validProgram, exercises: [{ ...validProgram.exercises[0], notes: 123 }] },
+      /notes must be null or a string/i,
+    ],
+    [
+      {
+        ...validProgram,
+        exercises: [{ ...validProgram.exercises[0], availableOnOrAfter: '2026/02/10' }],
+      },
+      /availableonorafter must be null or an iso date/i,
+    ],
+    [
+      { ...validProgram, exercises: [{ ...validProgram.exercises[0], optional: 'yes' }] },
+      /optional must be a boolean/i,
+    ],
+  ])('throws for invalid schema values %#', (input, message) => {
+    expect(() => parseProgram(input)).toThrow(message)
+  })
 })

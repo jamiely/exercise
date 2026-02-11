@@ -999,4 +999,631 @@ describe('session reducer', () => {
     expect(ended.exerciseProgress['exercise-3'].holdTimerRunning).toBe(false)
     expect(ended.exerciseProgress['exercise-1'].restTimerRunning).toBe(false)
   })
+
+  it('uses zeroed indexes when starting runtime without a current exercise', () => {
+    const initial = createSessionState(testProgram, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-no-current',
+    })
+    const withoutCurrent = {
+      ...initial,
+      currentExerciseId: null,
+      primaryCursor: 99,
+      updatedAt: '2026-02-10T00:00:01.000Z',
+    }
+
+    const started = reduceSession(
+      withoutCurrent,
+      { type: 'start_routine', now: '2026-02-10T00:00:02.000Z' },
+      testProgram,
+    )
+
+    expect(started.runtime.phase).toBe('hold')
+    expect(started.runtime.exerciseIndex).toBe(0)
+    expect(started.runtime.setIndex).toBe(0)
+    expect(started.runtime.repIndex).toBe(0)
+  })
+
+  it('returns unchanged for runtime actions when status or phase guards fail', () => {
+    const initial = createSessionState(testProgram, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-runtime-guards',
+    })
+    const completed = reduceSession(
+      initial,
+      { type: 'finish_session', now: '2026-02-10T00:00:01.000Z' },
+      testProgram,
+    )
+
+    const pausedNonActive = reduceSession(
+      initial,
+      { type: 'pause_routine', now: '2026-02-10T00:00:02.000Z' },
+      testProgram,
+    )
+    const resumeNotPaused = reduceSession(
+      initial,
+      { type: 'resume_routine', now: '2026-02-10T00:00:03.000Z' },
+      testProgram,
+    )
+    const resumeMissingPrevious = reduceSession(
+      { ...initial, runtime: { ...initial.runtime, phase: 'paused', previousPhase: null } },
+      { type: 'resume_routine', now: '2026-02-10T00:00:04.000Z' },
+      testProgram,
+    )
+    const tickWhilePaused = reduceSession(
+      { ...initial, runtime: { ...initial.runtime, phase: 'paused' } },
+      { type: 'tick_runtime_countdown', now: '2026-02-10T00:00:05.000Z', remainingMs: 5000 },
+      testProgram,
+    )
+    const overrideHoldWhenIdle = reduceSession(
+      initial,
+      { type: 'override_skip_rep', now: '2026-02-10T00:00:06.000Z' },
+      testProgram,
+    )
+    const overrideRestWhenIdle = reduceSession(
+      initial,
+      { type: 'override_skip_rest', now: '2026-02-10T00:00:07.000Z' },
+      testProgram,
+    )
+    const startAfterComplete = reduceSession(
+      completed,
+      { type: 'start_routine', now: '2026-02-10T00:00:08.000Z' },
+      testProgram,
+    )
+
+    expect(pausedNonActive).toEqual(initial)
+    expect(resumeNotPaused).toEqual(initial)
+    expect(resumeMissingPrevious).toEqual({
+      ...initial,
+      runtime: { ...initial.runtime, phase: 'paused', previousPhase: null },
+    })
+    expect(tickWhilePaused).toEqual({
+      ...initial,
+      runtime: { ...initial.runtime, phase: 'paused' },
+    })
+    expect(overrideHoldWhenIdle).toEqual(initial)
+    expect(overrideRestWhenIdle).toEqual(initial)
+    expect(startAfterComplete).toEqual(completed)
+  })
+
+  it('supports override_end_set and override_end_exercise terminal runtime branches', () => {
+    const singleExerciseProgram: Program = {
+      ...testProgram,
+      exercises: [
+        {
+          ...testProgram.exercises[0],
+          targetSets: 1,
+          targetRepsPerSet: 3,
+        },
+      ],
+    }
+    const initial = createSessionState(singleExerciseProgram, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-override-terminal',
+    })
+
+    const endedBySet = reduceSession(
+      initial,
+      { type: 'override_end_set', now: '2026-02-10T00:00:01.000Z' },
+      singleExerciseProgram,
+    )
+    const endedByExercise = reduceSession(
+      initial,
+      { type: 'override_end_exercise', now: '2026-02-10T00:00:02.000Z' },
+      singleExerciseProgram,
+    )
+
+    expect(endedBySet.status).toBe('completed')
+    expect(endedBySet.runtime.phase).toBe('complete')
+    expect(endedBySet.exerciseProgress[singleExerciseProgram.exercises[0].id].completed).toBe(true)
+    expect(endedByExercise.status).toBe('completed')
+    expect(endedByExercise.runtime.phase).toBe('complete')
+    expect(endedByExercise.exerciseProgress[singleExerciseProgram.exercises[0].id].completed).toBe(
+      true,
+    )
+  })
+
+  it('returns unchanged when override actions reference invalid runtime indexes', () => {
+    const initial = createSessionState(testProgram, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-override-invalid',
+    })
+    const withoutCurrent = { ...initial, currentExerciseId: null }
+    const runtimeExerciseOutOfRange = {
+      ...initial,
+      runtime: { ...initial.runtime, exerciseIndex: 999 },
+    }
+    const runtimeSetOutOfRange = {
+      ...initial,
+      runtime: { ...initial.runtime, setIndex: 999 },
+    }
+
+    expect(reduceSession(withoutCurrent, { type: 'override_end_set' }, testProgram)).toEqual(
+      withoutCurrent,
+    )
+    expect(
+      reduceSession(runtimeExerciseOutOfRange, { type: 'override_end_set' }, testProgram),
+    ).toEqual(runtimeExerciseOutOfRange)
+    expect(reduceSession(runtimeSetOutOfRange, { type: 'override_end_set' }, testProgram)).toEqual(
+      runtimeSetOutOfRange,
+    )
+
+    expect(reduceSession(withoutCurrent, { type: 'override_end_exercise' }, testProgram)).toEqual(
+      withoutCurrent,
+    )
+    expect(
+      reduceSession(runtimeExerciseOutOfRange, { type: 'override_end_exercise' }, testProgram),
+    ).toEqual(runtimeExerciseOutOfRange)
+  })
+
+  it('covers complete_runtime_countdown guard and terminal branches', () => {
+    const initial = createSessionState(testProgram, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-complete-runtime-guards',
+    })
+
+    const noCurrent = { ...initial, currentExerciseId: null }
+    expect(reduceSession(noCurrent, { type: 'complete_runtime_countdown' }, testProgram)).toEqual(
+      noCurrent,
+    )
+
+    const runtimeExerciseOutOfRange = {
+      ...initial,
+      runtime: { ...initial.runtime, exerciseIndex: 999 },
+    }
+    expect(
+      reduceSession(runtimeExerciseOutOfRange, { type: 'complete_runtime_countdown' }, testProgram),
+    ).toEqual(runtimeExerciseOutOfRange)
+
+    const runtimeSetOutOfRange = {
+      ...initial,
+      runtime: { ...initial.runtime, setIndex: 999 },
+    }
+    expect(
+      reduceSession(runtimeSetOutOfRange, { type: 'complete_runtime_countdown' }, testProgram),
+    ).toEqual(runtimeSetOutOfRange)
+
+    const alreadyCompleteHold = {
+      ...initial,
+      runtime: { ...initial.runtime, phase: 'hold' as const, setIndex: 0 },
+      exerciseProgress: {
+        ...initial.exerciseProgress,
+        [testProgram.exercises[0].id]: {
+          ...initial.exerciseProgress[testProgram.exercises[0].id],
+          sets: [{ setNumber: 1, completedReps: 2, targetReps: 2 }],
+        },
+      },
+    }
+    expect(
+      reduceSession(alreadyCompleteHold, { type: 'complete_runtime_countdown' }, testProgram),
+    ).toEqual(alreadyCompleteHold)
+
+    const invalidPhase = {
+      ...initial,
+      runtime: { ...initial.runtime, phase: 'idle' as const },
+    }
+    expect(
+      reduceSession(invalidPhase, { type: 'complete_runtime_countdown' }, testProgram),
+    ).toEqual(invalidPhase)
+
+    const singleExerciseProgram: Program = {
+      ...testProgram,
+      exercises: [{ ...testProgram.exercises[0], targetSets: 1, targetRepsPerSet: 1 }],
+    }
+    const singleInitial = createSessionState(singleExerciseProgram, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-complete-runtime-terminal',
+    })
+    const exerciseRestTerminal = reduceSession(
+      {
+        ...singleInitial,
+        runtime: {
+          ...singleInitial.runtime,
+          phase: 'exerciseRest',
+          exerciseIndex: 0,
+          setIndex: 0,
+          repIndex: 1,
+        },
+      },
+      { type: 'complete_runtime_countdown', now: '2026-02-10T00:00:02.000Z' },
+      singleExerciseProgram,
+    )
+
+    expect(exerciseRestTerminal.status).toBe('completed')
+    expect(exerciseRestTerminal.currentExerciseId).toBeNull()
+
+    const setRestWithoutNextSet = reduceSession(
+      {
+        ...singleInitial,
+        runtime: {
+          ...singleInitial.runtime,
+          phase: 'setRest',
+          exerciseIndex: 0,
+          setIndex: 5,
+        },
+      },
+      { type: 'complete_runtime_countdown', now: '2026-02-10T00:00:03.000Z' },
+      singleExerciseProgram,
+    )
+    expect(setRestWithoutNextSet.runtime.setIndex).toBe(5)
+
+    const emptyProgram: Program = {
+      version: 1,
+      programName: 'Empty',
+      exercises: [],
+    }
+    const noNextExercise = reduceSession(
+      {
+        ...initial,
+        runtime: {
+          ...initial.runtime,
+          phase: 'exerciseRest',
+          exerciseIndex: 0,
+          setIndex: 0,
+          repIndex: 0,
+        },
+      },
+      { type: 'complete_runtime_countdown', now: '2026-02-10T00:00:04.000Z' },
+      emptyProgram,
+    )
+    expect(noNextExercise.runtime.phase).toBe('exerciseRest')
+  })
+
+  it('covers action guards across manual and hold timers', () => {
+    const initial = createSessionState(filledSetProgram, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-manual-guards',
+    })
+
+    expect(
+      reduceSession(
+        { ...initial, currentExerciseId: null },
+        { type: 'increment_rep' },
+        filledSetProgram,
+      ),
+    ).toEqual({ ...initial, currentExerciseId: null })
+    expect(
+      reduceSession(
+        { ...initial, currentExerciseId: 'missing-id' },
+        { type: 'increment_rep' },
+        filledSetProgram,
+      ),
+    ).toEqual({ ...initial, currentExerciseId: 'missing-id' })
+
+    const holdExerciseState = {
+      ...initial,
+      currentExerciseId: testProgram.exercises[2].id,
+      primaryCursor: 2,
+    }
+    expect(reduceSession(holdExerciseState, { type: 'increment_rep' }, testProgram)).toEqual(
+      holdExerciseState,
+    )
+
+    const completedSet = {
+      ...initial,
+      exerciseProgress: {
+        ...initial.exerciseProgress,
+        [filledSetProgram.exercises[0].id]: {
+          ...initial.exerciseProgress[filledSetProgram.exercises[0].id],
+          sets: [
+            { setNumber: 1, completedReps: 1, targetReps: 1 },
+            { setNumber: 2, completedReps: 0, targetReps: 1 },
+          ],
+        },
+      },
+    }
+    expect(reduceSession(completedSet, { type: 'increment_rep' }, filledSetProgram)).toEqual(
+      completedSet,
+    )
+
+    expect(
+      reduceSession(
+        { ...initial, currentExerciseId: null },
+        { type: 'decrement_rep' },
+        filledSetProgram,
+      ),
+    ).toEqual({ ...initial, currentExerciseId: null })
+    expect(
+      reduceSession(
+        { ...initial, currentExerciseId: 'missing-id' },
+        { type: 'decrement_rep' },
+        filledSetProgram,
+      ),
+    ).toEqual({ ...initial, currentExerciseId: 'missing-id' })
+
+    expect(
+      reduceSession(
+        { ...initial, currentExerciseId: null },
+        { type: 'complete_set' },
+        filledSetProgram,
+      ),
+    ).toEqual({ ...initial, currentExerciseId: null })
+    expect(
+      reduceSession(
+        { ...initial, currentExerciseId: 'missing-id' },
+        { type: 'complete_set' },
+        filledSetProgram,
+      ),
+    ).toEqual({ ...initial, currentExerciseId: 'missing-id' })
+    expect(reduceSession(initial, { type: 'complete_set' }, filledSetProgram)).toEqual(initial)
+  })
+
+  it('covers guard branches for timer actions and unknown actions', () => {
+    const initial = createSessionState(testProgram, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-timer-guards',
+    })
+
+    const completed = reduceSession(
+      initial,
+      { type: 'finish_session', now: '2026-02-10T00:00:01.000Z' },
+      testProgram,
+    )
+    expect(
+      reduceSession(completed, { type: 'tick_workout_timer', seconds: 0 }, testProgram),
+    ).toEqual(completed)
+    expect(reduceSession(initial, { type: 'tick_workout_timer', seconds: 0 }, testProgram)).toEqual(
+      initial,
+    )
+
+    const optionsNoChange = reduceSession(
+      initial,
+      { type: 'set_sound_enabled', enabled: true },
+      testProgram,
+    )
+    const vibrationNoChange = reduceSession(
+      initial,
+      { type: 'set_vibration_enabled', enabled: true },
+      testProgram,
+    )
+    expect(optionsNoChange).toEqual(initial)
+    expect(vibrationNoChange).toEqual(initial)
+
+    const unknownActionResult = reduceSession(
+      initial,
+      { type: 'unknown_action' } as never,
+      testProgram,
+    )
+    expect(unknownActionResult).toEqual(initial)
+  })
+
+  it('covers remaining guard branches for set, hold, rest, skip, and complete actions', () => {
+    const initial = createSessionState(testProgram, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-remaining-guards',
+    })
+
+    const pausedAfterComplete = reduceSession(
+      reduceSession(initial, { type: 'finish_session' }, testProgram),
+      { type: 'pause_routine' },
+      testProgram,
+    )
+    expect(pausedAfterComplete.status).toBe('completed')
+
+    const runningWorkout = {
+      ...initial,
+      workoutTimerRunning: true,
+    }
+    expect(
+      reduceSession(runningWorkout, { type: 'tick_workout_timer', seconds: 0 }, testProgram),
+    ).toEqual(runningWorkout)
+
+    const noNextSetState = createSessionState(testProgram, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-no-next-set',
+    })
+    const noNextSetProgress = {
+      ...noNextSetState.exerciseProgress[testProgram.exercises[0].id],
+      sets: [{ setNumber: 1, completedReps: 2, targetReps: 2 }],
+      activeSetIndex: 0,
+      restTimerRunning: true,
+    }
+    const noNextSet = {
+      ...noNextSetState,
+      exerciseProgress: {
+        ...noNextSetState.exerciseProgress,
+        [testProgram.exercises[0].id]: noNextSetProgress,
+      },
+    }
+    expect(reduceSession(noNextSet, { type: 'complete_set' }, testProgram)).toEqual(noNextSet)
+    expect(reduceSession(noNextSet, { type: 'start_next_set' }, testProgram)).toEqual(noNextSet)
+
+    const holdExerciseProgram: Program = {
+      ...testProgram,
+      exercises: [{ ...testProgram.exercises[2], targetSets: 2, targetRepsPerSet: 1 }],
+    }
+    const holdInitial = createSessionState(holdExerciseProgram, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-hold-guards',
+    })
+    const holdReady = {
+      ...holdInitial,
+      exerciseProgress: {
+        ...holdInitial.exerciseProgress,
+        [holdExerciseProgram.exercises[0].id]: {
+          ...holdInitial.exerciseProgress[holdExerciseProgram.exercises[0].id],
+          restTimerRunning: true,
+          sets: [
+            { setNumber: 1, completedReps: 1, targetReps: 1 },
+            { setNumber: 2, completedReps: 0, targetReps: 1 },
+          ],
+        },
+      },
+    }
+    const toNextSet = reduceSession(
+      holdReady,
+      { type: 'complete_rep_rest', now: '2026-02-10T00:00:01.000Z' },
+      holdExerciseProgram,
+    )
+    expect(toNextSet.exerciseProgress[holdExerciseProgram.exercises[0].id].activeSetIndex).toBe(1)
+
+    const holdSetMissing = {
+      ...holdReady,
+      exerciseProgress: {
+        ...holdReady.exerciseProgress,
+        [holdExerciseProgram.exercises[0].id]: {
+          ...holdReady.exerciseProgress[holdExerciseProgram.exercises[0].id],
+          activeSetIndex: 99,
+        },
+      },
+    }
+    expect(
+      reduceSession(holdSetMissing, { type: 'complete_rep_rest' }, holdExerciseProgram),
+    ).toEqual(holdSetMissing)
+
+    const currentNull = { ...initial, currentExerciseId: null }
+    const currentMissing = { ...initial, currentExerciseId: 'missing-id' }
+
+    expect(reduceSession(currentNull, { type: 'complete_rep_rest' }, testProgram)).toEqual(
+      currentNull,
+    )
+    expect(reduceSession(currentMissing, { type: 'complete_rep_rest' }, testProgram)).toEqual(
+      currentMissing,
+    )
+    expect(reduceSession(currentNull, { type: 'tick_rest_timer' }, testProgram)).toEqual(
+      currentNull,
+    )
+    expect(reduceSession(currentMissing, { type: 'tick_rest_timer' }, testProgram)).toEqual(
+      currentMissing,
+    )
+    expect(reduceSession(initial, { type: 'tick_rest_timer' }, testProgram)).toEqual(initial)
+
+    expect(reduceSession(currentNull, { type: 'start_hold_timer' }, testProgram)).toEqual(
+      currentNull,
+    )
+    expect(reduceSession(currentMissing, { type: 'start_hold_timer' }, testProgram)).toEqual(
+      currentMissing,
+    )
+    const holdBlockedByRest = reduceSession(
+      {
+        ...holdInitial,
+        exerciseProgress: {
+          ...holdInitial.exerciseProgress,
+          [holdExerciseProgram.exercises[0].id]: {
+            ...holdInitial.exerciseProgress[holdExerciseProgram.exercises[0].id],
+            restTimerRunning: true,
+          },
+        },
+      },
+      { type: 'start_hold_timer' },
+      holdExerciseProgram,
+    )
+    expect(holdBlockedByRest).toEqual({
+      ...holdInitial,
+      exerciseProgress: {
+        ...holdInitial.exerciseProgress,
+        [holdExerciseProgram.exercises[0].id]: {
+          ...holdInitial.exerciseProgress[holdExerciseProgram.exercises[0].id],
+          restTimerRunning: true,
+        },
+      },
+    })
+    const holdBlockedByCompleteSet = reduceSession(
+      {
+        ...holdInitial,
+        exerciseProgress: {
+          ...holdInitial.exerciseProgress,
+          [holdExerciseProgram.exercises[0].id]: {
+            ...holdInitial.exerciseProgress[holdExerciseProgram.exercises[0].id],
+            sets: [
+              { setNumber: 1, completedReps: 1, targetReps: 1 },
+              { setNumber: 2, completedReps: 0, targetReps: 1 },
+            ],
+          },
+        },
+      },
+      { type: 'start_hold_timer' },
+      holdExerciseProgram,
+    )
+    expect(
+      holdBlockedByCompleteSet.exerciseProgress[holdExerciseProgram.exercises[0].id]
+        .holdTimerRunning,
+    ).toBe(false)
+
+    expect(reduceSession(currentNull, { type: 'stop_hold_timer' }, testProgram)).toEqual(
+      currentNull,
+    )
+    expect(reduceSession(currentMissing, { type: 'stop_hold_timer' }, testProgram)).toEqual(
+      currentMissing,
+    )
+    expect(reduceSession(currentNull, { type: 'reset_hold_timer' }, testProgram)).toEqual(
+      currentNull,
+    )
+    expect(reduceSession(currentMissing, { type: 'reset_hold_timer' }, testProgram)).toEqual(
+      currentMissing,
+    )
+    expect(reduceSession(currentNull, { type: 'tick_hold_timer' }, testProgram)).toEqual(
+      currentNull,
+    )
+    expect(reduceSession(currentMissing, { type: 'tick_hold_timer' }, testProgram)).toEqual(
+      currentMissing,
+    )
+    expect(reduceSession(currentNull, { type: 'complete_hold_rep' }, testProgram)).toEqual(
+      currentNull,
+    )
+    expect(reduceSession(currentMissing, { type: 'complete_hold_rep' }, testProgram)).toEqual(
+      currentMissing,
+    )
+
+    const holdWithRestRunning = {
+      ...holdInitial,
+      exerciseProgress: {
+        ...holdInitial.exerciseProgress,
+        [holdExerciseProgram.exercises[0].id]: {
+          ...holdInitial.exerciseProgress[holdExerciseProgram.exercises[0].id],
+          restTimerRunning: true,
+        },
+      },
+    }
+    expect(
+      reduceSession(holdWithRestRunning, { type: 'complete_hold_rep' }, holdExerciseProgram),
+    ).toEqual(holdWithRestRunning)
+
+    expect(reduceSession(currentMissing, { type: 'complete_exercise' }, testProgram)).toEqual(
+      currentMissing,
+    )
+    expect(reduceSession(currentNull, { type: 'skip_exercise' }, testProgram)).toEqual(currentNull)
+    expect(reduceSession(currentMissing, { type: 'skip_exercise' }, testProgram)).toEqual(
+      currentMissing,
+    )
+
+    const skipPhaseNoQueue = {
+      ...initial,
+      currentPhase: 'skip' as const,
+      skipQueue: [],
+      exerciseProgress: {
+        ...initial.exerciseProgress,
+        [testProgram.exercises[0].id]: {
+          ...initial.exerciseProgress[testProgram.exercises[0].id],
+          sets: [{ setNumber: 1, completedReps: 2, targetReps: 2 }],
+        },
+      },
+    }
+    const completedFromSkip = reduceSession(
+      skipPhaseNoQueue,
+      { type: 'complete_exercise', now: '2026-02-10T00:00:05.000Z' },
+      testProgram,
+    )
+    expect(completedFromSkip.status).toBe('completed')
+
+    const autoHoldAlreadyRunning = {
+      ...initial,
+      primaryCursor: 1,
+      currentExerciseId: testProgram.exercises[1].id,
+      exerciseProgress: {
+        ...initial.exerciseProgress,
+        [testProgram.exercises[2].id]: {
+          ...initial.exerciseProgress[testProgram.exercises[2].id],
+          holdTimerRunning: true,
+        },
+      },
+    }
+    const skippedToHold = reduceSession(
+      autoHoldAlreadyRunning,
+      { type: 'skip_exercise', now: '2026-02-10T00:00:06.000Z' },
+      testProgram,
+    )
+    expect(skippedToHold.currentExerciseId).toBe(testProgram.exercises[2].id)
+    expect(skippedToHold.exerciseProgress[testProgram.exercises[2].id].holdTimerRunning).toBe(true)
+  })
 })
