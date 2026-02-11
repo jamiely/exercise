@@ -499,6 +499,14 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
           <div className="options-override-actions">
             <button
               type="button"
+              className="secondary-button"
+              onClick={() => dispatchTimed('decrement_rep')}
+              disabled={activeSet.completedReps === 0 || currentProgress.restTimerRunning}
+            >
+              Undo Rep
+            </button>
+            <button
+              type="button"
               onClick={() => dispatchOverride('override_skip_rep')}
               disabled={!canSkipRep}
             >
@@ -574,9 +582,20 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
         <p className="subtitle">
           Set {currentProgress.activeSetIndex + 1}/{currentProgress.sets.length}
         </p>
-        <p className="rep-display" aria-live="polite">
-          {activeSet.completedReps}/{activeSet.targetReps} reps
-        </p>
+        <div className="rep-row">
+          <p className="rep-display" aria-live="polite">
+            {activeSet.completedReps}/{activeSet.targetReps} reps
+          </p>
+          {!isHoldExercise ? (
+            <button
+              type="button"
+              onClick={() => dispatchTimed('increment_rep')}
+              disabled={currentProgress.restTimerRunning}
+            >
+              +1 Rep
+            </button>
+          ) : null}
+        </div>
         {currentProgress.restTimerRunning ? (
           <div className="timer-card" aria-live="polite">
             <p className="eyebrow">Rest</p>
@@ -631,37 +650,6 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
           </div>
         ) : null}
       </article>
-
-      <section className="primary-controls" aria-label="Rep controls">
-        {isHoldExercise ? (
-          <button
-            type="button"
-            className="secondary-button"
-            onClick={() => dispatchTimed('decrement_rep')}
-            disabled={activeSet.completedReps === 0 || currentProgress.restTimerRunning}
-          >
-            Undo Rep
-          </button>
-        ) : (
-          <>
-            <button
-              type="button"
-              onClick={() => dispatchTimed('increment_rep')}
-              disabled={currentProgress.restTimerRunning}
-            >
-              +1 Rep
-            </button>
-            <button
-              type="button"
-              className="secondary-button"
-              onClick={() => dispatchTimed('decrement_rep')}
-              disabled={activeSet.completedReps === 0 || currentProgress.restTimerRunning}
-            >
-              Undo Rep
-            </button>
-          </>
-        )}
-      </section>
 
       <section className="session-actions" aria-label="Exercise actions">
         <button

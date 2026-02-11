@@ -137,8 +137,11 @@ test('updates reps, shows rest timer, and advances set state', async ({ page }) 
 
   await tapByRoleName(page, 'button', /\+1 rep/i)
   await expect(page.getByText('1/12 reps')).toBeVisible()
+  await tapOptionsAction(page, /undo rep/i)
+  await tapByRoleName(page, 'button', /back to exercise/i)
+  await expect(page.getByText('0/12 reps')).toBeVisible()
 
-  await addReps(page, 11)
+  await addReps(page, 12)
   await tapOptionsAction(page, /complete set/i)
   await tapByRoleName(page, 'button', /back to exercise/i)
 
@@ -168,6 +171,7 @@ test('renders overrides in Options and applies end exercise override there', asy
   await tapByRoleName(page, 'button', /^start$/i)
   await tapByRoleName(page, 'button', /options/i)
 
+  await expect(page.getByRole('button', { name: /undo rep/i })).toBeVisible()
   await expect(page.getByRole('button', { name: /skip rep/i })).toBeVisible()
   await expect(page.getByRole('button', { name: /skip rest/i })).toBeVisible()
   await expect(page.getByRole('button', { name: /end set/i })).toBeVisible()

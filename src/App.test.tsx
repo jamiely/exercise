@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { vi } from 'vitest'
 import App from './App'
@@ -63,6 +63,7 @@ describe('App shell', () => {
     await user.click(screen.getByRole('button', { name: /^start$/i }))
     ensureOptionsScreen()
 
+    expect(screen.getByRole('button', { name: /undo rep/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /skip rep/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /skip rest/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /end set/i })).toBeInTheDocument()
@@ -644,16 +645,25 @@ describe('App shell', () => {
     enterNewSession()
     expect(screen.queryByRole('region', { name: /set tracker/i })).not.toBeInTheDocument()
 
+    const activeExerciseCard = screen.getByRole('article', { name: /active exercise/i })
+    expect(within(activeExerciseCard).getByRole('button', { name: /\+1 rep/i })).toBeInTheDocument()
+
+    ensureOptionsScreen()
     const undoButton = screen.getByRole('button', { name: /undo rep/i })
     expect(undoButton).toBeDisabled()
+    fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
 
     await user.click(screen.getByRole('button', { name: /\+1 rep/i }))
     expect(screen.getByText('1/12 reps')).toBeInTheDocument()
-    expect(undoButton).toBeEnabled()
 
-    await user.click(undoButton)
+    ensureOptionsScreen()
+    expect(screen.getByRole('button', { name: /undo rep/i })).toBeEnabled()
+    await user.click(screen.getByRole('button', { name: /undo rep/i }))
+    fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
+
     expect(screen.getByText('0/12 reps')).toBeInTheDocument()
-    expect(undoButton).toBeDisabled()
+    ensureOptionsScreen()
+    expect(screen.getByRole('button', { name: /undo rep/i })).toBeDisabled()
   })
 
   it('shows rest timer between sets and advances set progress after start-next-set', async () => {
