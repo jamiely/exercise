@@ -92,6 +92,11 @@ const formatElapsedWorkoutTime = (elapsedSeconds: number): string => {
   return `${minutes}:${String(seconds).padStart(2, '0')}`
 }
 
+const formatSecondsTenths = (seconds: number): string => {
+  const safeSeconds = Number.isFinite(seconds) ? Math.max(0, seconds) : 0
+  return safeSeconds.toFixed(1)
+}
+
 const getSessionSummary = (sessionState: SessionState, totalExercises: number) => {
   const exerciseProgress = Object.values(sessionState.exerciseProgress)
   const completedExercises = exerciseProgress.filter((progress) => progress.completed).length
@@ -305,6 +310,7 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
   useEffect(() => {
     if (
       sessionState.status !== 'in_progress' ||
+      sessionState.runtime.phase !== 'idle' ||
       !timerProgress ||
       !timerExercise ||
       timerExercise.holdSeconds === null ||
@@ -315,10 +321,26 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
 
     const intervalId = window.setInterval(() => {
       dispatch({ type: 'tick_hold_timer', now: new Date().toISOString() })
-    }, 1000)
+    }, 100)
 
     return () => window.clearInterval(intervalId)
-  }, [sessionState.status, timerExercise, timerProgress])
+  }, [sessionState.runtime.phase, sessionState.status, timerExercise, timerProgress])
+
+  useEffect(() => {
+    if (
+      sessionState.status !== 'in_progress' ||
+      sessionState.runtime.phase !== 'idle' ||
+      !timerProgress ||
+      !timerExercise ||
+      timerExercise.holdSeconds === null ||
+      !timerProgress.holdTimerRunning ||
+      timerProgress.holdElapsedSeconds < timerExercise.holdSeconds
+    ) {
+      return
+    }
+
+    dispatch({ type: 'complete_hold_rep', now: new Date().toISOString() })
+  }, [sessionState.runtime.phase, sessionState.status, timerExercise, timerProgress])
 
   useEffect(() => {
     const remainingMs = runtimeRemainingMsRef.current
@@ -461,10 +483,6 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
     (setProgress) => setProgress.completedReps >= setProgress.targetReps,
   )
   const isHoldExercise = currentExercise.holdSeconds !== null
-  const canCompleteHoldRep =
-    isHoldExercise &&
-    currentExercise.holdSeconds !== null &&
-    currentProgress.holdElapsedSeconds >= currentExercise.holdSeconds
   const hasNextSet = currentProgress.activeSetIndex < currentProgress.sets.length - 1
   const exerciseIndex = Math.max(
     0,
@@ -694,38 +712,22 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
           <div className="timer-card" aria-live="polite">
             <p className="eyebrow">Hold</p>
             <p className="timer-text">
-              Hold timer: {currentProgress.holdElapsedSeconds}/{currentExercise.holdSeconds}s
+              Hold timer: {formatSecondsTenths(currentProgress.holdElapsedSeconds)}/
+              {formatSecondsTenths(currentExercise.holdSeconds)}s
             </p>
             <div className="timer-controls">
               <button
                 type="button"
                 className="secondary-button"
-                onClick={() =>
-                  dispatchTimed(
-                    currentProgress.holdTimerRunning ? 'stop_hold_timer' : 'start_hold_timer',
-                  )
-                }
+                onClick={() => dispatchTimed('start_hold_timer')}
                 aria-pressed={currentProgress.holdTimerRunning}
-                disabled={currentProgress.restTimerRunning || isActiveSetComplete}
-              >
-                {currentProgress.holdTimerRunning ? 'Pause Hold' : 'Start Hold'}
-              </button>
-              <button
-                type="button"
-                className="secondary-button"
-                onClick={() => dispatchTimed('reset_hold_timer')}
                 disabled={
-                  currentProgress.holdElapsedSeconds === 0 && !currentProgress.holdTimerRunning
+                  currentProgress.restTimerRunning ||
+                  isActiveSetComplete ||
+                  currentProgress.holdTimerRunning
                 }
               >
-                Reset Hold
-              </button>
-              <button
-                type="button"
-                onClick={() => dispatchTimed('complete_hold_rep')}
-                disabled={!canCompleteHoldRep}
-              >
-                Complete Hold Rep
+                {currentProgress.holdTimerRunning ? 'Hold Running' : 'Start Hold'}
               </button>
             </div>
           </div>

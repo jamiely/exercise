@@ -1132,10 +1132,12 @@ export const reduceSession = (
       }
 
       const seconds =
-        Number.isInteger(action.seconds) && (action.seconds ?? 0) > 0 ? action.seconds! : 1
+        typeof action.seconds === 'number' && Number.isFinite(action.seconds) && action.seconds > 0
+          ? action.seconds
+          : 0.1
       const nextElapsed = Math.min(
         currentExercise.holdSeconds,
-        currentProgress.holdElapsedSeconds + seconds,
+        Math.round((currentProgress.holdElapsedSeconds + seconds) * 10) / 10,
       )
 
       return withUpdatedExerciseProgress(

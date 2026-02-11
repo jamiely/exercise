@@ -559,7 +559,7 @@ describe('session reducer', () => {
     )
     const tick1 = reduceSession(
       started,
-      { type: 'tick_hold_timer', now: '2026-02-10T00:00:04.000Z' },
+      { type: 'tick_hold_timer', now: '2026-02-10T00:00:04.000Z', seconds: 1 },
       testProgram,
     )
     const earlyComplete = reduceSession(
@@ -569,7 +569,7 @@ describe('session reducer', () => {
     )
     const tick2 = reduceSession(
       tick1,
-      { type: 'tick_hold_timer', now: '2026-02-10T00:00:06.000Z' },
+      { type: 'tick_hold_timer', now: '2026-02-10T00:00:06.000Z', seconds: 1 },
       testProgram,
     )
     const tick3 = reduceSession(

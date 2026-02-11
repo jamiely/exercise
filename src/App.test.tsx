@@ -850,26 +850,23 @@ describe('App shell', () => {
     fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
 
     expect(screen.getByRole('heading', { name: /straight leg raise/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /pause hold/i })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: /hold running/i })).toHaveAttribute(
       'aria-pressed',
       'true',
     )
-    expect(screen.getByText('Hold timer: 0/3s')).toBeInTheDocument()
+    expect(screen.getByText('Hold timer: 0.0/3.0s')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /pause hold/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /reset hold/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /complete hold rep/i })).not.toBeInTheDocument()
 
     await act(async () => {
-      vi.advanceTimersByTime(2000)
+      vi.advanceTimersByTime(200)
     })
-    expect(screen.getByText('Hold timer: 2/3s')).toBeInTheDocument()
+    expect(screen.getByText('Hold timer: 0.2/3.0s')).toBeInTheDocument()
   })
 
-  it('increments reps for hold exercises only after hold timer reaches target', async () => {
-    const intervalCallbacks: Array<() => void> = []
-    const setIntervalSpy = vi
-      .spyOn(window, 'setInterval')
-      .mockImplementation((handler: TimerHandler) => {
-        intervalCallbacks.push(handler as () => void)
-        return intervalCallbacks.length
-      })
+  it('auto-completes a hold rep once the hold timer reaches target', async () => {
+    vi.useFakeTimers()
     const program = loadProgram()
     const session = createSessionState(program, {
       now: '2026-02-10T00:00:00.000Z',
@@ -887,91 +884,34 @@ describe('App shell', () => {
     fireEvent.click(screen.getByRole('button', { name: /resume/i }))
 
     expect(screen.getByRole('heading', { name: /wall sit \(shallow\)/i })).toBeInTheDocument()
-    expect(screen.getByText('Hold timer: 0/40s')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /pause hold/i })).toHaveAttribute(
+    expect(screen.getByText('Hold timer: 0.0/40.0s')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /hold running/i })).toHaveAttribute(
       'aria-pressed',
       'true',
     )
 
-    expect(intervalCallbacks.length).toBeGreaterThan(0)
     await act(async () => {
-      intervalCallbacks.at(-1)?.()
-      intervalCallbacks.at(-1)?.()
+      vi.advanceTimersByTime(200)
     })
-    expect(screen.getByText('Hold timer: 2/40s')).toBeInTheDocument()
-
-    const completeHoldButton = screen.getByRole('button', { name: /complete hold rep/i })
-    expect(completeHoldButton).toBeDisabled()
+    expect(screen.getByText('Hold timer: 0.2/40.0s')).toBeInTheDocument()
 
     await act(async () => {
-      for (let tick = 0; tick < 38; tick += 1) {
-        intervalCallbacks.at(-1)?.()
-      }
+      vi.advanceTimersByTime(39_800)
     })
-    expect(screen.getByText('Hold timer: 40/40s')).toBeInTheDocument()
-    expect(completeHoldButton).toBeEnabled()
-
-    fireEvent.click(completeHoldButton)
     expect(screen.getByText('1/5 reps')).toBeInTheDocument()
-    expect(screen.getByText('Hold timer: 0/40s')).toBeInTheDocument()
-    setIntervalSpy.mockRestore()
+    expect(screen.getByText('Hold timer: 0.0/40.0s')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /start hold/i })).toBeInTheDocument()
   })
 
-  it('supports pausing and resetting hold timer without incrementing reps', async () => {
-    const intervalCallbacks: Array<() => void> = []
-    const setIntervalSpy = vi
-      .spyOn(window, 'setInterval')
-      .mockImplementation((handler: TimerHandler) => {
-        intervalCallbacks.push(handler as () => void)
-        return intervalCallbacks.length
-      })
-    const program = loadProgram()
-    const session = createSessionState(program, {
-      now: '2026-02-10T00:00:00.000Z',
-      sessionId: 'session-hold-controls',
-    })
-    const holdExerciseSession = {
-      ...session,
-      primaryCursor: 2,
-      currentExerciseId: program.exercises[2].id,
-      updatedAt: '2026-02-10T00:00:05.000Z',
-    }
-    persistSession(holdExerciseSession)
-
+  it('does not render manual hold pause/reset/complete controls', () => {
     render(<App />)
-    fireEvent.click(screen.getByRole('button', { name: /resume/i }))
+    enterNewSession()
+    clickOptionsAction(/skip exercise/i)
+    fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
 
-    const holdToggle = screen.getByRole('button', { name: /pause hold/i })
-    expect(holdToggle).toHaveAttribute('aria-pressed', 'true')
-    fireEvent.click(holdToggle)
-    expect(screen.getByRole('button', { name: /start hold/i })).toHaveAttribute(
-      'aria-pressed',
-      'false',
-    )
-    fireEvent.click(screen.getByRole('button', { name: /start hold/i }))
-    expect(screen.getByRole('button', { name: /pause hold/i })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    )
-    await act(async () => {
-      intervalCallbacks.at(-1)?.()
-      intervalCallbacks.at(-1)?.()
-      intervalCallbacks.at(-1)?.()
-    })
-    expect(screen.getByText('Hold timer: 3/40s')).toBeInTheDocument()
-
-    fireEvent.click(screen.getByRole('button', { name: /pause hold/i }))
-    expect(screen.getByRole('button', { name: /start hold/i })).toHaveAttribute(
-      'aria-pressed',
-      'false',
-    )
-    await act(async () => {})
-    expect(screen.getByText('Hold timer: 3/40s')).toBeInTheDocument()
-
-    fireEvent.click(screen.getByRole('button', { name: /reset hold/i }))
-    expect(screen.getByText('Hold timer: 0/40s')).toBeInTheDocument()
-    expect(screen.getByText('0/5 reps')).toBeInTheDocument()
-    setIntervalSpy.mockRestore()
+    expect(screen.queryByRole('button', { name: /pause hold/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /reset hold/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /complete hold rep/i })).not.toBeInTheDocument()
   })
 
   it('continues rest timer from resumed in-progress session state', async () => {
