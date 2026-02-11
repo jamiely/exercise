@@ -122,8 +122,55 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
   )
   const runtimeRemainingMsRef = useRef(sessionState.runtime.remainingMs)
   const previousRuntimePhaseRef = useRef(sessionState.runtime.phase)
+  const previousExerciseIdRef = useRef<string | null>(null)
   const wakeLockSentinelRef = useRef<WakeLockSentinelLike | null>(null)
   const wakeLockRequestInFlightRef = useRef(false)
+
+  useEffect(() => {
+    if (!hasEnteredSession) {
+      previousExerciseIdRef.current = null
+      return
+    }
+
+    if (sessionState.status !== 'in_progress' || !sessionState.currentExerciseId) {
+      previousExerciseIdRef.current = sessionState.currentExerciseId
+      return
+    }
+
+    const previousExerciseId = previousExerciseIdRef.current
+    const currentExerciseId = sessionState.currentExerciseId
+    previousExerciseIdRef.current = currentExerciseId
+
+    if (previousExerciseId === currentExerciseId) {
+      return
+    }
+
+    if (sessionState.runtime.phase !== 'idle') {
+      return
+    }
+
+    const currentExercise =
+      program.exercises.find((exercise) => exercise.id === currentExerciseId) ?? null
+    const currentProgress = sessionState.exerciseProgress[currentExerciseId] ?? null
+    if (
+      !currentExercise ||
+      currentExercise.holdSeconds === null ||
+      !currentProgress ||
+      currentProgress.holdTimerRunning ||
+      currentProgress.restTimerRunning
+    ) {
+      return
+    }
+
+    dispatch({ type: 'start_hold_timer', now: new Date().toISOString() })
+  }, [
+    hasEnteredSession,
+    program.exercises,
+    sessionState.currentExerciseId,
+    sessionState.exerciseProgress,
+    sessionState.runtime.phase,
+    sessionState.status,
+  ])
 
   useEffect(() => {
     runtimeRemainingMsRef.current = sessionState.runtime.remainingMs

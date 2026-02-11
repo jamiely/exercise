@@ -150,6 +150,49 @@ const getInitialSessionOptions = (): SessionOptions => ({
   vibrationEnabled: true,
 })
 
+const shouldAutoStartHold = (
+  exercise: Exercise | null,
+  progress: ExerciseProgress | null,
+): boolean => {
+  if (!exercise || exercise.holdSeconds === null || !progress) {
+    return false
+  }
+
+  if (progress.holdTimerRunning || progress.restTimerRunning) {
+    return false
+  }
+
+  const activeSet = progress.sets[progress.activeSetIndex]
+  return Boolean(activeSet && activeSet.completedReps < activeSet.targetReps)
+}
+
+const withAutoStartedHoldForExercise = (
+  state: SessionState,
+  program: Program,
+  exerciseId: string | null,
+): SessionState => {
+  if (!exerciseId) {
+    return state
+  }
+
+  const exercise = program.exercises.find((candidate) => candidate.id === exerciseId) ?? null
+  const progress = state.exerciseProgress[exerciseId] ?? null
+  if (!shouldAutoStartHold(exercise, progress)) {
+    return state
+  }
+
+  return {
+    ...state,
+    exerciseProgress: {
+      ...state.exerciseProgress,
+      [exerciseId]: {
+        ...progress,
+        holdTimerRunning: true,
+      },
+    },
+  }
+}
+
 const withUpdatedExerciseProgress = (
   state: SessionState,
   exerciseId: string,
@@ -217,27 +260,31 @@ const advanceAfterPrimary = (state: SessionState, program: Program, now?: string
   const nextCursor = state.primaryCursor + 1
 
   if (nextCursor < program.exercises.length) {
-    return {
+    const advancedState = {
       ...state,
       primaryCursor: nextCursor,
       currentExerciseId: program.exercises[nextCursor].id,
       updatedAt: getTimestamp(state, now),
     }
+
+    return withAutoStartedHoldForExercise(advancedState, program, advancedState.currentExerciseId)
   }
 
   if (state.skipQueue.length > 0) {
-    return {
+    const advancedState = {
       ...state,
-      currentPhase: 'skip',
+      currentPhase: 'skip' as const,
       currentExerciseId: state.skipQueue[0],
       updatedAt: getTimestamp(state, now),
     }
+
+    return withAutoStartedHoldForExercise(advancedState, program, advancedState.currentExerciseId)
   }
 
   return withTerminalStatus(state, 'completed', now)
 }
 
-const advanceAfterSkip = (state: SessionState, now?: string): SessionState => {
+const advanceAfterSkip = (state: SessionState, program: Program, now?: string): SessionState => {
   const currentExerciseId = state.currentExerciseId
   if (!currentExerciseId || state.skipQueue.length === 0) {
     return withTerminalStatus(state, 'completed', now)
@@ -255,12 +302,14 @@ const advanceAfterSkip = (state: SessionState, now?: string): SessionState => {
     )
   }
 
-  return {
+  const advancedState = {
     ...state,
     skipQueue: nextQueue,
     currentExerciseId: nextQueue[0],
     updatedAt: getTimestamp(state, now),
   }
+
+  return withAutoStartedHoldForExercise(advancedState, program, advancedState.currentExerciseId)
 }
 
 export const createSessionState = (
@@ -717,7 +766,7 @@ export const reduceSession = (
         const advancedState =
           progressedState.currentPhase === 'primary'
             ? advanceAfterPrimary(progressedState, program, action.now)
-            : advanceAfterSkip(progressedState, action.now)
+            : advanceAfterSkip(progressedState, program, action.now)
 
         if (!isInProgress(advancedState) || !advancedState.currentExerciseId) {
           return advancedState
@@ -875,7 +924,7 @@ export const reduceSession = (
 
       return progressedState.currentPhase === 'primary'
         ? advanceAfterPrimary(progressedState, program, action.now)
-        : advanceAfterSkip(progressedState, action.now)
+        : advanceAfterSkip(progressedState, program, action.now)
     }
     case 'decrement_rep': {
       if (!isInProgress(state) || !state.currentExerciseId) {
@@ -1174,7 +1223,7 @@ export const reduceSession = (
 
       return progressedState.currentPhase === 'primary'
         ? advanceAfterPrimary(progressedState, program, action.now)
-        : advanceAfterSkip(progressedState, action.now)
+        : advanceAfterSkip(progressedState, program, action.now)
     }
     case 'skip_exercise': {
       if (!isInProgress(state) || !state.currentExerciseId) {

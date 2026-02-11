@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react'
+import { StrictMode } from 'react'
 import userEvent from '@testing-library/user-event'
 import { vi } from 'vitest'
 import App from './App'
@@ -836,6 +837,31 @@ describe('App shell', () => {
     expect(readPersistedSession()).toBeNull()
   })
 
+  it('auto-starts hold timer when advancing into a hold exercise', async () => {
+    vi.useFakeTimers()
+    render(
+      <StrictMode>
+        <App />
+      </StrictMode>,
+    )
+    enterNewSession()
+
+    clickOptionsAction(/skip exercise/i)
+    fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
+
+    expect(screen.getByRole('heading', { name: /straight leg raise/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /pause hold/i })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    expect(screen.getByText('Hold timer: 0/3s')).toBeInTheDocument()
+
+    await act(async () => {
+      vi.advanceTimersByTime(2000)
+    })
+    expect(screen.getByText('Hold timer: 2/3s')).toBeInTheDocument()
+  })
+
   it('increments reps for hold exercises only after hold timer reaches target', async () => {
     const intervalCallbacks: Array<() => void> = []
     const setIntervalSpy = vi
@@ -862,8 +888,11 @@ describe('App shell', () => {
 
     expect(screen.getByRole('heading', { name: /wall sit \(shallow\)/i })).toBeInTheDocument()
     expect(screen.getByText('Hold timer: 0/40s')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /pause hold/i })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
 
-    fireEvent.click(screen.getByRole('button', { name: /start hold/i }))
     expect(intervalCallbacks.length).toBeGreaterThan(0)
     await act(async () => {
       intervalCallbacks.at(-1)?.()
@@ -912,9 +941,14 @@ describe('App shell', () => {
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: /resume/i }))
 
-    const holdToggle = screen.getByRole('button', { name: /start hold/i })
-    expect(holdToggle).toHaveAttribute('aria-pressed', 'false')
+    const holdToggle = screen.getByRole('button', { name: /pause hold/i })
+    expect(holdToggle).toHaveAttribute('aria-pressed', 'true')
     fireEvent.click(holdToggle)
+    expect(screen.getByRole('button', { name: /start hold/i })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    )
+    fireEvent.click(screen.getByRole('button', { name: /start hold/i }))
     expect(screen.getByRole('button', { name: /pause hold/i })).toHaveAttribute(
       'aria-pressed',
       'true',

@@ -216,13 +216,35 @@ test('one-tap Start auto-completes seeded hold workflow path with no progression
   await expect(page.getByRole('heading', { name: /session completed/i })).toBeVisible()
 })
 
-test('completes a hold rep after hold target duration', async ({ page }) => {
+test('auto-starts hold timer when reaching a hold exercise and completes a rep at target', async ({
+  page,
+}) => {
   await tapOptionsAction(page, /skip exercise/i)
+  const holdTimerRunning = await page.evaluate((sessionStorageKey) => {
+    const raw = window.localStorage.getItem(sessionStorageKey)
+    if (!raw) {
+      throw new Error('expected persisted session payload to exist')
+    }
+
+    const payload = JSON.parse(raw) as {
+      session: {
+        exerciseProgress: Record<
+          string,
+          {
+            holdTimerRunning: boolean
+          }
+        >
+      }
+    }
+    return payload.session.exerciseProgress['straight-leg-raise']?.holdTimerRunning ?? false
+  }, SESSION_STORAGE_KEY)
+
   await tapByRoleName(page, 'button', /back to exercise/i)
   await expect(page.getByRole('heading', { name: /straight leg raise/i })).toBeVisible()
   await expect(page.getByText('Hold timer: 0/3s')).toBeVisible()
+  await expect(holdTimerRunning).toBe(true)
+  await expect(page.getByRole('button', { name: /start hold/i })).toHaveCount(0)
 
-  await tapByRoleName(page, 'button', /start hold/i)
   await page.waitForTimeout(3100)
   await expect(page.getByText('Hold timer: 3/3s')).toBeVisible()
 

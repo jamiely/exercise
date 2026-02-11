@@ -783,6 +783,29 @@ describe('session reducer', () => {
     expect(state.skipQueue).toEqual([])
   })
 
+  it('auto-starts hold timer when skipping into a hold exercise during primary pass', () => {
+    let state = createSessionState(testProgram, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-auto-hold-on-skip',
+    })
+
+    state = reduceSession(
+      state,
+      { type: 'skip_exercise', now: '2026-02-10T00:00:01.000Z' },
+      testProgram,
+    )
+    expect(state.currentExerciseId).toBe('exercise-2')
+    expect(state.exerciseProgress['exercise-2'].holdTimerRunning).toBe(false)
+
+    state = reduceSession(
+      state,
+      { type: 'skip_exercise', now: '2026-02-10T00:00:02.000Z' },
+      testProgram,
+    )
+    expect(state.currentExerciseId).toBe('exercise-3')
+    expect(state.exerciseProgress['exercise-3'].holdTimerRunning).toBe(true)
+  })
+
   it('re-enqueues in skip pass when skipped again', () => {
     let state = createSessionState(testProgram, {
       now: '2026-02-10T00:00:00.000Z',
