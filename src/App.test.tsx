@@ -185,7 +185,7 @@ describe('App shell', () => {
       vi.advanceTimersByTime(700)
     })
     expectOnOptionsScreen(/workflow phase: represt/i)
-    expectOnOptionsScreen(/phase timer: 30.0s/i)
+    expectOnOptionsScreen(/phase timer: 40.0s/i)
     expect(screen.getByText('1/5 reps')).toBeInTheDocument()
   })
 
@@ -561,7 +561,7 @@ describe('App shell', () => {
     fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
 
     expectOnOptionsScreen(/workflow phase: represt/i)
-    expectOnOptionsScreen(/phase timer: 30.0s/i)
+    expectOnOptionsScreen(/phase timer: 40.0s/i)
     expect(screen.getByText('1/5 reps')).toBeInTheDocument()
   })
 
@@ -991,11 +991,11 @@ describe('App shell', () => {
     })
     expect(screen.getByText('1/5 reps')).toBeInTheDocument()
     expect(screen.getByText('Hold timer: 40.0s/40s')).toBeInTheDocument()
-    expect(screen.getByText('Rest timer: 30.0s/30s')).toBeInTheDocument()
+    expect(screen.getByText('Rest timer: 40.0s/40s')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /start hold/i })).not.toBeInTheDocument()
 
     await act(async () => {
-      vi.advanceTimersByTime(30_000)
+      vi.advanceTimersByTime(40_000)
     })
     expect(screen.getByText('Hold Running')).toBeInTheDocument()
   })
