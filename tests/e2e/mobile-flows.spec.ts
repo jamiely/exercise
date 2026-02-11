@@ -167,6 +167,40 @@ test('starts hold timer after auto-progress from quad set to straight leg raise'
   await expect.poll(readRemainingSeconds, { timeout: 4_000 }).toBeLessThan(3)
 })
 
+test('shows rest timer card after hold finishes on straight leg raise', async ({ page }) => {
+  await addReps(page, 24)
+  await expect(page.getByRole('heading', { name: /straight leg raise/i })).toBeVisible()
+  await expect(page.getByText(/hold timer:/i)).toBeVisible()
+
+  await tapByRoleName(page, 'button', /options/i)
+  await expect(page.getByText(/workflow phase: represt/i)).toBeVisible({ timeout: 8_000 })
+  await tapByRoleName(page, 'button', /back to exercise/i)
+
+  const runtimeState = await page.evaluate((sessionStorageKey) => {
+    const raw = window.localStorage.getItem(sessionStorageKey)
+    if (!raw) {
+      throw new Error('expected persisted session payload to exist')
+    }
+
+    const payload = JSON.parse(raw) as {
+      session: {
+        runtime: {
+          phase: string
+          exerciseIndex: number
+          remainingMs: number
+        }
+      }
+    }
+
+    return payload.session.runtime
+  }, SESSION_STORAGE_KEY)
+  expect(runtimeState.phase).toBe('repRest')
+  expect(runtimeState.exerciseIndex).toBe(1)
+  expect(runtimeState.remainingMs).toBeGreaterThan(20_000)
+
+  await expect(page.getByText(/rest timer:/i)).toBeVisible()
+})
+
 test('updates reps and auto-advances set state on the final rep', async ({ page }) => {
   await expect(page.getByText(/target:/i)).toHaveCount(0)
   await expect(page.getByText(/active set:/i)).toHaveCount(0)

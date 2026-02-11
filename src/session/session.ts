@@ -69,8 +69,24 @@ export type SessionAction =
   | { type: 'override_end_exercise'; now?: string }
   | { type: 'set_sound_enabled'; now?: string; enabled: boolean }
   | { type: 'set_vibration_enabled'; now?: string; enabled: boolean }
-  | { type: 'tick_runtime_countdown'; now?: string; remainingMs: number }
-  | { type: 'complete_runtime_countdown'; now?: string }
+  | {
+      type: 'tick_runtime_countdown'
+      now?: string
+      remainingMs: number
+      phase?: SessionRuntimePhase
+      exerciseIndex?: number
+      setIndex?: number
+      repIndex?: number
+    }
+  | {
+      type: 'complete_runtime_countdown'
+      now?: string
+      force?: boolean
+      phase?: SessionRuntimePhase
+      exerciseIndex?: number
+      setIndex?: number
+      repIndex?: number
+    }
   | { type: 'increment_rep'; now?: string }
   | { type: 'decrement_rep'; now?: string }
   | { type: 'complete_set'; now?: string }
@@ -510,7 +526,11 @@ export const reduceSession = (
         return state
       }
 
-      return reduceSession(state, { type: 'complete_runtime_countdown', now: action.now }, program)
+      return reduceSession(
+        state,
+        { type: 'complete_runtime_countdown', now: action.now, force: true },
+        program,
+      )
     }
     case 'override_skip_rest': {
       if (
@@ -522,7 +542,11 @@ export const reduceSession = (
         return state
       }
 
-      return reduceSession(state, { type: 'complete_runtime_countdown', now: action.now }, program)
+      return reduceSession(
+        state,
+        { type: 'complete_runtime_countdown', now: action.now, force: true },
+        program,
+      )
     }
     case 'override_end_set': {
       if (!isInProgress(state) || !state.currentExerciseId) {
@@ -699,6 +723,21 @@ export const reduceSession = (
         return state
       }
 
+      const hasPhaseContext =
+        action.phase !== undefined &&
+        action.exerciseIndex !== undefined &&
+        action.setIndex !== undefined &&
+        action.repIndex !== undefined
+      if (
+        hasPhaseContext &&
+        (action.phase !== state.runtime.phase ||
+          action.exerciseIndex !== state.runtime.exerciseIndex ||
+          action.setIndex !== state.runtime.setIndex ||
+          action.repIndex !== state.runtime.repIndex)
+      ) {
+        return state
+      }
+
       const remainingMs = Math.max(0, Math.round(action.remainingMs))
       if (remainingMs === state.runtime.remainingMs) {
         return state
@@ -715,6 +754,21 @@ export const reduceSession = (
     }
     case 'complete_runtime_countdown': {
       if (!isInProgress(state) || !state.currentExerciseId) {
+        return state
+      }
+
+      const hasPhaseContext =
+        action.phase !== undefined &&
+        action.exerciseIndex !== undefined &&
+        action.setIndex !== undefined &&
+        action.repIndex !== undefined
+      if (
+        hasPhaseContext &&
+        (action.phase !== state.runtime.phase ||
+          action.exerciseIndex !== state.runtime.exerciseIndex ||
+          action.setIndex !== state.runtime.setIndex ||
+          action.repIndex !== state.runtime.repIndex)
+      ) {
         return state
       }
 
@@ -749,6 +803,10 @@ export const reduceSession = (
             [state.currentExerciseId]: {
               ...currentProgress,
               sets: nextSets,
+              holdTimerRunning: false,
+              holdElapsedSeconds: 0,
+              restTimerRunning: true,
+              restElapsedSeconds: 0,
             },
           },
           runtime: {
@@ -806,6 +864,16 @@ export const reduceSession = (
         return {
           ...state,
           updatedAt: getTimestamp(state, action.now),
+          exerciseProgress: {
+            ...state.exerciseProgress,
+            [state.currentExerciseId]: {
+              ...currentProgress,
+              restTimerRunning: false,
+              restElapsedSeconds: 0,
+              holdTimerRunning: nextPhase === 'hold',
+              holdElapsedSeconds: 0,
+            },
+          },
           runtime: {
             ...state.runtime,
             phase: nextPhase,

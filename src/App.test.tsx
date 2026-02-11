@@ -189,6 +189,25 @@ describe('App shell', () => {
     expect(screen.getByText('1/5 reps')).toBeInTheDocument()
   })
 
+  it('shows rest timer card after hold auto-completes on straight leg raise', async () => {
+    vi.useFakeTimers()
+    render(<App />)
+    enterNewSession()
+
+    for (let rep = 0; rep < 24; rep += 1) {
+      fireEvent.click(screen.getByRole('button', { name: /\+1 rep/i }))
+    }
+
+    expect(screen.getByRole('heading', { name: /straight leg raise/i })).toBeInTheDocument()
+    expect(screen.getByText(/hold timer:/i)).toBeInTheDocument()
+
+    await act(async () => {
+      vi.advanceTimersByTime(3500)
+    })
+
+    expect(screen.getByText(/rest timer:/i)).toBeInTheDocument()
+  })
+
   it('pauses and resumes runtime countdown with exact remaining tenths preserved', async () => {
     vi.useFakeTimers()
     const program = loadProgram()
