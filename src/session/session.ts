@@ -1094,20 +1094,32 @@ export const reduceSession = (
         return state
       }
 
+      const currentExercise = getCurrentExercise(state, program)
+      if (!currentExercise) {
+        return state
+      }
+
       const currentProgress = getCurrentProgress(state)
       if (!currentProgress || !currentProgress.restTimerRunning) {
         return state
       }
 
       const seconds =
-        Number.isInteger(action.seconds) && (action.seconds ?? 0) > 0 ? action.seconds! : 1
+        typeof action.seconds === 'number' && Number.isFinite(action.seconds) && action.seconds > 0
+          ? action.seconds
+          : 0.1
+      const restCapSeconds = currentExercise.repRestMs / 1000
+      const nextElapsed = Math.min(
+        restCapSeconds,
+        Math.round((currentProgress.restElapsedSeconds + seconds) * 10) / 10,
+      )
 
       return withUpdatedExerciseProgress(
         state,
         state.currentExerciseId,
         {
           ...currentProgress,
-          restElapsedSeconds: currentProgress.restElapsedSeconds + seconds,
+          restElapsedSeconds: nextElapsed,
         },
         action.now,
       )

@@ -92,9 +92,16 @@ const formatElapsedWorkoutTime = (elapsedSeconds: number): string => {
   return `${minutes}:${String(seconds).padStart(2, '0')}`
 }
 
-const formatSecondsTenths = (seconds: number): string => {
+const formatTimerSeconds = (seconds: number): string => {
   const safeSeconds = Number.isFinite(seconds) ? Math.max(0, seconds) : 0
-  return safeSeconds.toFixed(1)
+  return `${safeSeconds.toFixed(1)}s`
+}
+
+const formatCountdownPair = (elapsedSeconds: number, totalSeconds: number): string => {
+  const safeTotalSeconds = Number.isFinite(totalSeconds) ? Math.max(0, totalSeconds) : 0
+  const safeElapsedSeconds = Number.isFinite(elapsedSeconds) ? Math.max(0, elapsedSeconds) : 0
+  const remainingSeconds = Math.max(0, safeTotalSeconds - safeElapsedSeconds)
+  return `${formatTimerSeconds(remainingSeconds)}/${formatTimerSeconds(safeTotalSeconds)}`
 }
 
 const getSessionSummary = (sessionState: SessionState, totalExercises: number) => {
@@ -290,7 +297,7 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
 
     const intervalId = window.setInterval(() => {
       dispatch({ type: 'tick_rest_timer', now: new Date().toISOString() })
-    }, 1000)
+    }, 100)
 
     return () => window.clearInterval(intervalId)
   }, [sessionState.status, timerExercise, timerProgress])
@@ -308,7 +315,8 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
     }
 
     const repRestSeconds = timerExercise.repRestMs / 1000
-    if (timerProgress.restElapsedSeconds < repRestSeconds) {
+    const repRestRemainingSeconds = Math.max(0, repRestSeconds - timerProgress.restElapsedSeconds)
+    if (repRestRemainingSeconds > 0) {
       return
     }
 
@@ -719,7 +727,13 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
         {currentProgress.restTimerRunning ? (
           <div className="timer-card" aria-live="polite">
             <p className="eyebrow">Rest</p>
-            <p className="timer-text">Rest timer: {currentProgress.restElapsedSeconds}s</p>
+            <p className="timer-text">
+              Rest timer:{' '}
+              {formatCountdownPair(
+                currentProgress.restElapsedSeconds,
+                currentExercise.repRestMs / 1000,
+              )}
+            </p>
             {!isHoldExercise ? (
               <button
                 type="button"
@@ -735,8 +749,8 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
           <div className="timer-card" aria-live="polite">
             <p className="eyebrow">Hold</p>
             <p className="timer-text">
-              Hold timer: {formatSecondsTenths(currentProgress.holdElapsedSeconds)}/
-              {formatSecondsTenths(currentExercise.holdSeconds)}s
+              Hold timer:{' '}
+              {formatCountdownPair(currentProgress.holdElapsedSeconds, currentExercise.holdSeconds)}
             </p>
             <p className="subtitle">
               {currentProgress.holdTimerRunning ? 'Hold Running' : 'Hold Pending'}
