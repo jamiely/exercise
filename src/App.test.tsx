@@ -755,6 +755,29 @@ describe('App shell', () => {
     expect(screen.getByText('Current exercise: 0:00')).toBeInTheDocument()
   })
 
+  it('runs hold timer after auto-progressing from quad set via +1 rep taps', async () => {
+    vi.useFakeTimers()
+
+    render(<App />)
+    enterNewSession()
+
+    for (let rep = 0; rep < 24; rep += 1) {
+      fireEvent.click(screen.getByRole('button', { name: /\+1 rep/i }))
+    }
+
+    expect(screen.getByRole('heading', { name: /straight leg raise/i })).toBeInTheDocument()
+    expect(screen.getByText('Hold Running')).toBeInTheDocument()
+    expect(screen.getByText('Hold timer: 3.0s/3s')).toBeInTheDocument()
+    expect(readPersistedSession()?.runtime.exerciseIndex).toBe(1)
+    expect(readPersistedSession()?.runtime.remainingMs).toBe(3000)
+
+    await act(async () => {
+      vi.advanceTimersByTime(300)
+    })
+
+    expect(screen.getByText(/Hold timer: 2\.\ds\/3s/)).toBeInTheDocument()
+  })
+
   it('auto-advances to the next set after the final rep of the active set', () => {
     render(<App />)
     enterNewSession()

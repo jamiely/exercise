@@ -865,6 +865,159 @@ describe('session reducer', () => {
     expect(state.exerciseProgress['exercise-3'].holdTimerRunning).toBe(true)
   })
 
+  it('realigns runtime hold countdown when auto-advancing into a hold exercise', () => {
+    let state = createSessionState(testProgram, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-runtime-align-on-advance',
+    })
+
+    state = reduceSession(
+      state,
+      { type: 'start_routine', now: '2026-02-10T00:00:01.000Z' },
+      testProgram,
+    )
+    expect(state.runtime.phase).toBe('hold')
+    expect(state.runtime.exerciseIndex).toBe(0)
+    expect(state.runtime.remainingMs).toBe(0)
+
+    state = reduceSession(
+      state,
+      { type: 'increment_rep', now: '2026-02-10T00:00:02.000Z' },
+      testProgram,
+    )
+    state = reduceSession(
+      state,
+      { type: 'increment_rep', now: '2026-02-10T00:00:03.000Z' },
+      testProgram,
+    )
+    expect(state.currentExerciseId).toBe('exercise-2')
+    expect(state.runtime.exerciseIndex).toBe(1)
+    expect(state.runtime.remainingMs).toBe(0)
+
+    state = reduceSession(
+      state,
+      { type: 'increment_rep', now: '2026-02-10T00:00:04.000Z' },
+      testProgram,
+    )
+
+    expect(state.currentExerciseId).toBe('exercise-3')
+    expect(state.runtime.exerciseIndex).toBe(2)
+    expect(state.runtime.phase).toBe('hold')
+    expect(state.runtime.remainingMs).toBe(5_000)
+  })
+
+  it('keeps runtime unchanged when it is already aligned after exercise advance', () => {
+    const initial = createSessionState(testProgram, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-runtime-already-aligned',
+    })
+    const completedFirst = {
+      ...initial,
+      currentExerciseId: 'exercise-1',
+      primaryCursor: 0,
+      exerciseProgress: {
+        ...initial.exerciseProgress,
+        'exercise-1': {
+          ...initial.exerciseProgress['exercise-1'],
+          sets: [{ setNumber: 1, completedReps: 2, targetReps: 2 }],
+        },
+      },
+      runtime: {
+        ...initial.runtime,
+        phase: 'hold' as const,
+        exerciseIndex: 1,
+        setIndex: 0,
+        repIndex: 0,
+        remainingMs: 0,
+        previousPhase: null,
+      },
+    }
+
+    const advanced = reduceSession(
+      completedFirst,
+      { type: 'complete_exercise', now: '2026-02-10T00:00:01.000Z' },
+      testProgram,
+    )
+
+    expect(advanced.currentExerciseId).toBe('exercise-2')
+    expect(advanced.runtime.exerciseIndex).toBe(1)
+    expect(advanced.runtime.phase).toBe('hold')
+    expect(advanced.runtime.remainingMs).toBe(0)
+  })
+
+  it('covers runtime alignment guard with falsy next exercise id in skip queue', () => {
+    const initial = createSessionState(testProgram, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-runtime-align-empty-id',
+    })
+    const completedFirst = {
+      ...initial,
+      currentExerciseId: 'exercise-1',
+      primaryCursor: testProgram.exercises.length - 1,
+      skipQueue: [''],
+      exerciseProgress: {
+        ...initial.exerciseProgress,
+        'exercise-1': {
+          ...initial.exerciseProgress['exercise-1'],
+          sets: [{ setNumber: 1, completedReps: 2, targetReps: 2 }],
+        },
+      },
+      runtime: {
+        ...initial.runtime,
+        phase: 'hold' as const,
+        remainingMs: 0,
+      },
+    }
+
+    const advanced = reduceSession(
+      completedFirst,
+      { type: 'complete_exercise', now: '2026-02-10T00:00:01.000Z' },
+      testProgram,
+    )
+
+    expect(advanced.currentExerciseId).toBe('')
+    expect(advanced.runtime.exerciseIndex).toBe(0)
+  })
+
+  it('covers runtime alignment guard when no exercise exists at computed index', () => {
+    const emptyProgram: Program = {
+      ...testProgram,
+      exercises: [],
+    }
+    const initial = createSessionState(testProgram, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-runtime-align-no-exercise',
+    })
+    const invalidCurrent = {
+      ...initial,
+      currentExerciseId: 'invalid-current',
+      primaryCursor: 0,
+      skipQueue: ['invalid-next'],
+      exerciseProgress: {
+        ...initial.exerciseProgress,
+        'invalid-current': {
+          ...initial.exerciseProgress['exercise-1'],
+          sets: [{ setNumber: 1, completedReps: 2, targetReps: 2 }],
+        },
+      },
+      runtime: {
+        ...initial.runtime,
+        phase: 'hold' as const,
+        remainingMs: 0,
+      },
+    }
+
+    const advanced = reduceSession(
+      invalidCurrent,
+      { type: 'complete_exercise', now: '2026-02-10T00:00:01.000Z' },
+      emptyProgram,
+    )
+
+    expect(advanced.currentExerciseId).toBe('invalid-next')
+    expect(advanced.runtime.exerciseIndex).toBe(0)
+    expect(advanced.runtime.remainingMs).toBe(0)
+  })
+
   it('auto-starts hold timer when skip-pass rotation lands on a hold exercise', () => {
     let state = createSessionState(testProgram, {
       now: '2026-02-10T00:00:00.000Z',

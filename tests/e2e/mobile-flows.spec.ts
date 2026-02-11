@@ -126,6 +126,47 @@ test('progresses in strict order after completing first exercise', async ({ page
   await expectOnOptionsScreen(page, /exercise 2\/3/i)
 })
 
+test('starts hold timer after auto-progress from quad set to straight leg raise', async ({
+  page,
+}) => {
+  await addReps(page, 24)
+  await expect(page.getByRole('heading', { name: /straight leg raise/i })).toBeVisible()
+  await expect(page.getByText(/Hold timer: \d+\.\d+s\/3(?:\.0)?s/i)).toBeVisible()
+  const runtimeState = await page.evaluate((sessionStorageKey) => {
+    const raw = window.localStorage.getItem(sessionStorageKey)
+    if (!raw) {
+      throw new Error('expected persisted session payload to exist')
+    }
+    const payload = JSON.parse(raw) as {
+      session: {
+        runtime: {
+          phase: string
+          exerciseIndex: number
+          remainingMs: number
+        }
+      }
+    }
+    return payload.session.runtime
+  }, SESSION_STORAGE_KEY)
+  expect(runtimeState.phase).toBe('hold')
+  expect(runtimeState.exerciseIndex).toBe(1)
+  expect(runtimeState.remainingMs).toBeGreaterThan(0)
+
+  const readRemainingSeconds = async () => {
+    const timerText = await page
+      .locator('.timer-card .timer-text')
+      .filter({ hasText: /hold timer:/i })
+      .innerText()
+    const match = timerText.match(/hold timer:\s*([0-9]+\.[0-9])s\/3(?:\.0)?s/i)
+    if (!match) {
+      throw new Error(`Unable to parse hold timer text: ${timerText}`)
+    }
+    return Number(match[1])
+  }
+
+  await expect.poll(readRemainingSeconds, { timeout: 4_000 }).toBeLessThan(3)
+})
+
 test('updates reps and auto-advances set state on the final rep', async ({ page }) => {
   await expect(page.getByText(/target:/i)).toHaveCount(0)
   await expect(page.getByText(/active set:/i)).toHaveCount(0)
