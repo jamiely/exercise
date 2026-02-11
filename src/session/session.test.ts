@@ -590,6 +590,55 @@ describe('session reducer', () => {
     expect(completed.exerciseProgress['exercise-3'].sets[0].completedReps).toBe(1)
     expect(completed.exerciseProgress['exercise-3'].holdTimerRunning).toBe(false)
     expect(completed.exerciseProgress['exercise-3'].holdElapsedSeconds).toBe(0)
+    expect(completed.exerciseProgress['exercise-3'].restTimerRunning).toBe(true)
+    expect(completed.exerciseProgress['exercise-3'].restElapsedSeconds).toBe(0)
+  })
+
+  it('completes hold rep rest by auto-completing the hold exercise at boundary', () => {
+    let state = createSessionState(testProgram, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-complete-rep-rest',
+    })
+
+    state = reduceSession(
+      state,
+      { type: 'skip_exercise', now: '2026-02-10T00:00:01.000Z' },
+      testProgram,
+    )
+    state = reduceSession(
+      state,
+      { type: 'skip_exercise', now: '2026-02-10T00:00:02.000Z' },
+      testProgram,
+    )
+    state = reduceSession(
+      state,
+      { type: 'start_hold_timer', now: '2026-02-10T00:00:03.000Z' },
+      testProgram,
+    )
+    state = reduceSession(
+      state,
+      { type: 'tick_hold_timer', now: '2026-02-10T00:00:04.000Z', seconds: 5 },
+      testProgram,
+    )
+    state = reduceSession(
+      state,
+      { type: 'complete_hold_rep', now: '2026-02-10T00:00:05.000Z' },
+      testProgram,
+    )
+
+    const afterRepRest = reduceSession(
+      state,
+      { type: 'complete_rep_rest', now: '2026-02-10T00:00:06.000Z' },
+      testProgram,
+    )
+
+    expect(afterRepRest.status).toBe('in_progress')
+    expect(afterRepRest.currentPhase).toBe('skip')
+    expect(afterRepRest.currentExerciseId).toBe('exercise-1')
+    expect(afterRepRest.exerciseProgress['exercise-3'].completed).toBe(true)
+    expect(afterRepRest.exerciseProgress['exercise-3'].restTimerRunning).toBe(false)
+    expect(afterRepRest.exerciseProgress['exercise-3'].restElapsedSeconds).toBe(0)
+    expect(afterRepRest.exerciseProgress['exercise-3'].holdTimerRunning).toBe(false)
   })
 
   it('does not increment reps while rest or hold timers are running', () => {

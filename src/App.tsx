@@ -296,6 +296,26 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
   }, [sessionState.status, timerExercise, timerProgress])
 
   useEffect(() => {
+    if (
+      sessionState.status !== 'in_progress' ||
+      sessionState.runtime.phase !== 'idle' ||
+      !timerExercise ||
+      timerExercise.holdSeconds === null ||
+      !timerProgress ||
+      !timerProgress.restTimerRunning
+    ) {
+      return
+    }
+
+    const repRestSeconds = timerExercise.repRestMs / 1000
+    if (timerProgress.restElapsedSeconds < repRestSeconds) {
+      return
+    }
+
+    dispatch({ type: 'complete_rep_rest', now: new Date().toISOString() })
+  }, [sessionState.runtime.phase, sessionState.status, timerExercise, timerProgress])
+
+  useEffect(() => {
     if (sessionState.status !== 'in_progress' || !sessionState.workoutTimerRunning) {
       return
     }
@@ -513,6 +533,7 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
       case 'pause_routine':
       case 'resume_routine':
       case 'start_next_set':
+      case 'complete_rep_rest':
       case 'start_hold_timer':
       case 'stop_hold_timer':
       case 'reset_hold_timer':
@@ -699,13 +720,15 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
           <div className="timer-card" aria-live="polite">
             <p className="eyebrow">Rest</p>
             <p className="timer-text">Rest timer: {currentProgress.restElapsedSeconds}s</p>
-            <button
-              type="button"
-              className="secondary-button"
-              onClick={() => dispatchTimed('start_next_set')}
-            >
-              Start Next Set
-            </button>
+            {!isHoldExercise ? (
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => dispatchTimed('start_next_set')}
+              >
+                Start Next Set
+              </button>
+            ) : null}
           </div>
         ) : null}
         {isHoldExercise && currentExercise.holdSeconds !== null ? (
@@ -715,21 +738,9 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
               Hold timer: {formatSecondsTenths(currentProgress.holdElapsedSeconds)}/
               {formatSecondsTenths(currentExercise.holdSeconds)}s
             </p>
-            <div className="timer-controls">
-              <button
-                type="button"
-                className="secondary-button"
-                onClick={() => dispatchTimed('start_hold_timer')}
-                aria-pressed={currentProgress.holdTimerRunning}
-                disabled={
-                  currentProgress.restTimerRunning ||
-                  isActiveSetComplete ||
-                  currentProgress.holdTimerRunning
-                }
-              >
-                {currentProgress.holdTimerRunning ? 'Hold Running' : 'Start Hold'}
-              </button>
-            </div>
+            <p className="subtitle">
+              {currentProgress.holdTimerRunning ? 'Hold Running' : 'Hold Pending'}
+            </p>
           </div>
         ) : null}
       </article>

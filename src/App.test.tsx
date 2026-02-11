@@ -850,10 +850,7 @@ describe('App shell', () => {
     fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
 
     expect(screen.getByRole('heading', { name: /straight leg raise/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /hold running/i })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    )
+    expect(screen.getByText('Hold Running')).toBeInTheDocument()
     expect(screen.getByText('Hold timer: 0.0/3.0s')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /pause hold/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /reset hold/i })).not.toBeInTheDocument()
@@ -885,10 +882,7 @@ describe('App shell', () => {
 
     expect(screen.getByRole('heading', { name: /wall sit \(shallow\)/i })).toBeInTheDocument()
     expect(screen.getByText('Hold timer: 0.0/40.0s')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /hold running/i })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    )
+    expect(screen.getByText('Hold Running')).toBeInTheDocument()
 
     await act(async () => {
       vi.advanceTimersByTime(200)
@@ -900,7 +894,13 @@ describe('App shell', () => {
     })
     expect(screen.getByText('1/5 reps')).toBeInTheDocument()
     expect(screen.getByText('Hold timer: 0.0/40.0s')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /start hold/i })).toBeInTheDocument()
+    expect(screen.getByText('Rest timer: 0s')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /start hold/i })).not.toBeInTheDocument()
+
+    await act(async () => {
+      vi.advanceTimersByTime(30_000)
+    })
+    expect(screen.getByText('Hold Running')).toBeInTheDocument()
   })
 
   it('does not render manual hold pause/reset/complete controls', () => {

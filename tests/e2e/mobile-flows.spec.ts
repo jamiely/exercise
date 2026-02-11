@@ -254,6 +254,7 @@ test('auto-starts hold timer when reaching a hold exercise and completes a rep a
   await page.waitForTimeout(3000)
   await expect(page.getByText('1/10 reps')).toBeVisible()
   await expect(page.getByText('Hold timer: 0.0/3.0s')).toBeVisible()
+  await expect(page.getByText(/Rest timer: \d+s/i)).toBeVisible()
 })
 
 test('cycles through skipped queue after primary pass', async ({ page }) => {

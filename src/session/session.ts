@@ -74,6 +74,7 @@ export type SessionAction =
   | { type: 'decrement_rep'; now?: string }
   | { type: 'complete_set'; now?: string }
   | { type: 'start_next_set'; now?: string }
+  | { type: 'complete_rep_rest'; now?: string }
   | { type: 'tick_rest_timer'; now?: string; seconds?: number }
   | { type: 'start_hold_timer'; now?: string }
   | { type: 'stop_hold_timer'; now?: string }
@@ -1017,6 +1018,77 @@ export const reduceSession = (
         action.now,
       )
     }
+    case 'complete_rep_rest': {
+      if (!isInProgress(state) || !state.currentExerciseId) {
+        return state
+      }
+
+      const currentExercise = getCurrentExercise(state, program)
+      const currentProgress = getCurrentProgress(state)
+      if (
+        !currentExercise ||
+        currentExercise.holdSeconds === null ||
+        !currentProgress ||
+        !currentProgress.restTimerRunning
+      ) {
+        return state
+      }
+
+      const activeSet = currentProgress.sets[currentProgress.activeSetIndex]
+      if (!activeSet) {
+        return state
+      }
+
+      if (activeSet.completedReps < activeSet.targetReps) {
+        return withUpdatedExerciseProgress(
+          state,
+          state.currentExerciseId,
+          {
+            ...currentProgress,
+            restTimerRunning: false,
+            restElapsedSeconds: 0,
+            holdTimerRunning: true,
+            holdElapsedSeconds: 0,
+          },
+          action.now,
+        )
+      }
+
+      const hasNextSet = currentProgress.activeSetIndex < currentProgress.sets.length - 1
+      if (hasNextSet) {
+        return withUpdatedExerciseProgress(
+          state,
+          state.currentExerciseId,
+          {
+            ...currentProgress,
+            activeSetIndex: currentProgress.activeSetIndex + 1,
+            restTimerRunning: false,
+            restElapsedSeconds: 0,
+            holdTimerRunning: true,
+            holdElapsedSeconds: 0,
+          },
+          action.now,
+        )
+      }
+
+      const progressedState = withUpdatedExerciseProgress(
+        state,
+        state.currentExerciseId,
+        {
+          ...currentProgress,
+          completed: true,
+          restTimerRunning: false,
+          restElapsedSeconds: 0,
+          holdTimerRunning: false,
+          holdElapsedSeconds: 0,
+        },
+        action.now,
+      )
+
+      return progressedState.currentPhase === 'primary'
+        ? advanceAfterPrimary(progressedState, program, action.now)
+        : advanceAfterSkip(progressedState, program, action.now)
+    }
     case 'tick_rest_timer': {
       if (!isInProgress(state) || !state.currentExerciseId) {
         return state
@@ -1188,6 +1260,8 @@ export const reduceSession = (
           sets: nextSets,
           holdTimerRunning: false,
           holdElapsedSeconds: 0,
+          restTimerRunning: true,
+          restElapsedSeconds: 0,
         },
         action.now,
       )
