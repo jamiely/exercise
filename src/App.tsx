@@ -565,6 +565,9 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
     currentProgress.restTimerRunning ||
     isRuntimeRepRestForCurrentExercise ||
     shouldShowHoldExerciseRestFallback
+  const isHoldTimerActive =
+    isRuntimeHoldForCurrentExercise ||
+    (sessionState.runtime.phase === 'idle' && currentProgress.holdTimerRunning)
   const isRestTimerActive = currentProgress.restTimerRunning || isRuntimeRepRestForCurrentExercise
 
   const dispatchAction = (action: SessionAction) => {
@@ -783,17 +786,16 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
           ) : null}
         </div>
         {isHoldExercise && currentExercise.holdSeconds !== null ? (
-          <div className="timer-card" aria-live="polite">
+          <div
+            className={`timer-card ${isHoldTimerActive ? 'timer-card-active' : 'timer-card-muted'}`}
+            aria-live="polite"
+          >
             <p className="eyebrow">Hold</p>
             <p className="timer-text">
               Hold timer:{' '}
               {formatCountdownPair(displayedHoldElapsedSeconds, currentExercise.holdSeconds)}
             </p>
-            <p className="subtitle">
-              {isRuntimeHoldForCurrentExercise || currentProgress.holdTimerRunning
-                ? 'Hold Running'
-                : 'Hold Pending'}
-            </p>
+            <p className="subtitle">{isHoldTimerActive ? 'Hold Running' : 'Hold Pending'}</p>
           </div>
         ) : null}
         {shouldShowRestCard ? (

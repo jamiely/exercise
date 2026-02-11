@@ -280,6 +280,9 @@ test('renders muted rest display when rest timer is not active', async ({ page }
   await tapByRoleName(page, 'button', /resume session/i)
   await expect(page.getByRole('heading', { name: /straight leg raise/i })).toBeVisible()
 
+  const holdTimerText = page.locator('.timer-text', { hasText: /hold timer:/i })
+  await expect(holdTimerText.locator('xpath=..')).toHaveClass(/timer-card-muted/)
+
   const restTimerText = page.locator('.timer-text', { hasText: /rest timer:/i })
   await expect(restTimerText).toHaveCSS('color', 'rgb(107, 114, 128)')
 })

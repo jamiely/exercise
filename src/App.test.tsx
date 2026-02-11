@@ -247,6 +247,11 @@ describe('App shell', () => {
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: /resume session/i }))
 
+    const holdTimerText = screen.getByText(/hold timer:/i)
+    const holdCard = holdTimerText.closest('.timer-card')
+    expect(holdCard).not.toBeNull()
+    expect(holdCard).toHaveClass('timer-card-muted')
+
     const restTimerText = screen.getByText(/rest timer:/i)
     const restCard = restTimerText.closest('.timer-card')
     expect(restCard).not.toBeNull()
