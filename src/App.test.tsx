@@ -642,6 +642,7 @@ describe('App shell', () => {
 
     render(<App />)
     enterNewSession()
+    expect(screen.queryByRole('region', { name: /set tracker/i })).not.toBeInTheDocument()
 
     const undoButton = screen.getByRole('button', { name: /undo rep/i })
     expect(undoButton).toBeDisabled()
@@ -655,7 +656,7 @@ describe('App shell', () => {
     expect(undoButton).toBeDisabled()
   })
 
-  it('shows rest timer between sets and advances after start-next-set', async () => {
+  it('shows rest timer between sets and advances set progress after start-next-set', async () => {
     vi.useFakeTimers()
     render(<App />)
     enterNewSession()
@@ -674,11 +675,8 @@ describe('App shell', () => {
     fireEvent.click(screen.getByRole('button', { name: /complete set/i }))
     fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
 
-    const setOneCard = screen.getByText('Set 1').closest('div')
-    const setTwoCard = screen.getByText('Set 2').closest('div')
-    expect(setOneCard).toHaveClass('is-active')
-    expect(setTwoCard).not.toHaveClass('is-active')
-
+    expect(screen.queryByRole('region', { name: /set tracker/i })).not.toBeInTheDocument()
+    expect(screen.getByText('Set 1/2')).toBeInTheDocument()
     expect(screen.getByText('12/12 reps')).toBeInTheDocument()
     expect(screen.getByText('Rest timer: 0s')).toBeInTheDocument()
 
@@ -689,9 +687,8 @@ describe('App shell', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /start next set/i }))
 
+    expect(screen.getByText('Set 2/2')).toBeInTheDocument()
     expect(screen.getByText('0/12 reps')).toBeInTheDocument()
-    expect(setOneCard).toHaveClass('is-complete')
-    expect(setTwoCard).toHaveClass('is-active')
   })
 
   it('keeps complete-exercise disabled until all sets are fully done', async () => {

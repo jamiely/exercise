@@ -133,6 +133,7 @@ test('progresses in strict order after completing first exercise', async ({ page
 test('updates reps, shows rest timer, and advances set state', async ({ page }) => {
   await expect(page.getByText(/target:/i)).toHaveCount(0)
   await expect(page.getByText(/active set:/i)).toHaveCount(0)
+  await expect(page.getByLabel('Set tracker')).toHaveCount(0)
 
   await tapByRoleName(page, 'button', /\+1 rep/i)
   await expect(page.getByText('1/12 reps')).toBeVisible()
@@ -147,7 +148,7 @@ test('updates reps, shows rest timer, and advances set state', async ({ page }) 
 
   await tapByRoleName(page, 'button', /start next set/i)
   await expect(page.getByText('0/12 reps')).toBeVisible()
-  await expect(page.getByLabel('Set tracker').getByText('Set 2', { exact: true })).toBeVisible()
+  await expect(page.getByLabel('Set tracker')).toHaveCount(0)
 })
 
 test('uses one routine button that cycles Start, Pause, Resume, and Pause', async ({ page }) => {

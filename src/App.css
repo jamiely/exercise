@@ -166,35 +166,6 @@ h2 {
   gap: 0.5rem;
 }
 
-.set-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.5rem;
-}
-
-.set-pill {
-  border: 1px solid #d1d5db;
-  border-radius: 0.75rem;
-  padding: 0.625rem 0.75rem;
-  background: #f9fafb;
-  display: grid;
-  gap: 0.125rem;
-}
-
-.set-pill p {
-  margin: 0;
-}
-
-.set-pill.is-active {
-  border-color: #2563eb;
-  background: #eff6ff;
-}
-
-.set-pill.is-complete {
-  border-color: #16a34a;
-  background: #f0fdf4;
-}
-
 .primary-controls {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -279,9 +250,5 @@ button:focus-visible {
 
   h1 {
     font-size: 1.625rem;
-  }
-
-  .set-grid {
-    grid-template-columns: 1fr;
   }
 }

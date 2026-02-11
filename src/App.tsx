@@ -632,26 +632,6 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
         ) : null}
       </article>
 
-      <section className="set-grid" aria-label="Set tracker">
-        {currentProgress.sets.map((setProgress, index) => {
-          const stateClass =
-            index === currentProgress.activeSetIndex
-              ? 'set-pill is-active'
-              : setProgress.completedReps >= setProgress.targetReps
-                ? 'set-pill is-complete'
-                : 'set-pill'
-
-          return (
-            <div key={setProgress.setNumber} className={stateClass}>
-              <p>Set {setProgress.setNumber}</p>
-              <p>
-                {setProgress.completedReps}/{setProgress.targetReps}
-              </p>
-            </div>
-          )
-        })}
-      </section>
-
       <section className="primary-controls" aria-label="Rep controls">
         {isHoldExercise ? (
           <button
