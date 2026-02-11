@@ -130,6 +130,13 @@ test('updates reps and auto-advances set state on the final rep', async ({ page 
   await expect(page.getByText(/target:/i)).toHaveCount(0)
   await expect(page.getByText(/active set:/i)).toHaveCount(0)
   await expect(page.getByLabel('Set tracker')).toHaveCount(0)
+  const activeExerciseCard = page.getByRole('article', { name: /active exercise/i })
+  await expect(
+    activeExerciseCard.getByText(
+      /tighten your thigh with your knee fully straight, hold briefly, then release slowly\./i,
+    ),
+  ).toBeVisible()
+  await expect(activeExerciseCard.getByText(/sets x \d+ reps/i)).toHaveCount(0)
 
   await tapByRoleName(page, 'button', /\+1 rep/i)
   await expect(page.getByText('1/12 reps')).toBeVisible()

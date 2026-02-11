@@ -10,7 +10,7 @@
       "targetRepsPerSet": 12,
       "holdSeconds": null,
       "restHintSeconds": 30,
-      "notes": "Squeeze thigh and keep knee straight.",
+      "notes": "Tighten your thigh with your knee fully straight, hold briefly, then release slowly.",
       "optional": false,
       "availableOnOrAfter": null
     },
@@ -22,7 +22,7 @@
       "targetRepsPerSet": 10,
       "holdSeconds": 3,
       "restHintSeconds": 45,
-      "notes": "Keep core tight.",
+      "notes": "Lift your straight leg to hip height with your core braced, then lower with control.",
       "optional": false,
       "availableOnOrAfter": null
     },
@@ -34,7 +34,7 @@
       "targetRepsPerSet": 5,
       "holdSeconds": 40,
       "restHintSeconds": null,
-      "notes": "Twice daily.",
+      "notes": "Slide into a shallow wall sit, keep knees aligned over feet, and breathe steadily.",
       "optional": false,
       "availableOnOrAfter": null
     }

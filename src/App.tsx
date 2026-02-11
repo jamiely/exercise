@@ -528,6 +528,8 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
   )
   const restPeriodSeconds = Math.max(1, Math.round(currentExercise.repRestMs / 1000))
   const phaseLabel = sessionState.currentPhase === 'primary' ? 'Primary pass' : 'Skipped cycle'
+  const activeExerciseDescription =
+    currentExercise.notes ?? 'Move with control and breathe steadily throughout each rep.'
 
   const dispatchAction = (action: SessionAction) => {
     dispatch(action)
@@ -717,10 +719,7 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
       <article className="exercise-card" aria-label="Active exercise">
         <p className="eyebrow">Current Exercise</p>
         <h2>{currentExercise.name}</h2>
-        <p className="subtitle">
-          {currentExercise.targetSets} sets x {currentExercise.targetRepsPerSet} reps
-          {currentExercise.holdSeconds ? ` · ${currentExercise.holdSeconds}s hold` : ''}
-        </p>
+        <p className="subtitle">{activeExerciseDescription}</p>
         <p className="subtitle">
           Set {currentProgress.activeSetIndex + 1}/{currentProgress.sets.length}
         </p>

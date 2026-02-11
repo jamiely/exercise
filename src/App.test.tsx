@@ -56,6 +56,19 @@ describe('App shell', () => {
     expect(screen.getByRole('checkbox', { name: /vibration cues/i })).toBeChecked()
   })
 
+  it('shows workout description text on the active exercise card', () => {
+    render(<App />)
+    enterNewSession()
+
+    const activeExerciseCard = screen.getByRole('article', { name: /active exercise/i })
+    expect(
+      within(activeExerciseCard).getByText(
+        /tighten your thigh with your knee fully straight, hold briefly, then release slowly\./i,
+      ),
+    ).toBeInTheDocument()
+    expect(within(activeExerciseCard).queryByText(/sets x \d+ reps/i)).not.toBeInTheDocument()
+  })
+
   it('shows override actions inside the options screen', async () => {
     const user = userEvent.setup()
     render(<App />)
