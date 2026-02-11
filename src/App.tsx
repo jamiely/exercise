@@ -530,6 +530,20 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
   const phaseLabel = sessionState.currentPhase === 'primary' ? 'Primary pass' : 'Skipped cycle'
   const activeExerciseDescription =
     currentExercise.notes ?? 'Move with control and breathe steadily throughout each rep.'
+  const isRuntimeHoldForCurrentExercise =
+    sessionState.runtime.phase === 'hold' && sessionState.runtime.exerciseIndex === exerciseIndex
+  const displayedHoldElapsedSeconds =
+    isHoldExercise && currentExercise.holdSeconds !== null && isRuntimeHoldForCurrentExercise
+      ? Math.max(
+          0,
+          Math.min(
+            currentExercise.holdSeconds,
+            Math.round(
+              (currentExercise.holdSeconds - sessionState.runtime.remainingMs / 1000) * 10,
+            ) / 10,
+          ),
+        )
+      : currentProgress.holdElapsedSeconds
 
   const dispatchAction = (action: SessionAction) => {
     dispatch(action)
@@ -717,7 +731,12 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
         Workout time: {formatElapsedWorkoutTime(sessionState.workoutElapsedSeconds)}
       </p>
       <article className="exercise-card" aria-label="Active exercise">
-        <p className="eyebrow">Current Exercise</p>
+        <div className="exercise-header-row">
+          <p className="eyebrow">Current Exercise</p>
+          <p className="eyebrow">
+            Current exercise: {formatElapsedWorkoutTime(sessionState.currentExerciseElapsedSeconds)}
+          </p>
+        </div>
         <h2>{currentExercise.name}</h2>
         <p className="subtitle">{activeExerciseDescription}</p>
         <p className="subtitle">
@@ -742,22 +761,17 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
             </button>
           ) : null}
         </div>
-        <div className="timer-card" aria-live="polite">
-          <p className="eyebrow">Workflow</p>
-          <p className="timer-text">Phase: {sessionState.runtime.phase}</p>
-          <p className="timer-text">
-            Phase timer: {formatCountdownTenths(sessionState.runtime.remainingMs)}s
-          </p>
-        </div>
         {isHoldExercise && currentExercise.holdSeconds !== null ? (
           <div className="timer-card" aria-live="polite">
             <p className="eyebrow">Hold</p>
             <p className="timer-text">
               Hold timer:{' '}
-              {formatCountdownPair(currentProgress.holdElapsedSeconds, currentExercise.holdSeconds)}
+              {formatCountdownPair(displayedHoldElapsedSeconds, currentExercise.holdSeconds)}
             </p>
             <p className="subtitle">
-              {currentProgress.holdTimerRunning ? 'Hold Running' : 'Hold Pending'}
+              {isRuntimeHoldForCurrentExercise || currentProgress.holdTimerRunning
+                ? 'Hold Running'
+                : 'Hold Pending'}
             </p>
           </div>
         ) : null}

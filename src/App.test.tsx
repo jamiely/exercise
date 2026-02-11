@@ -172,11 +172,13 @@ describe('App shell', () => {
 
     expectOnOptionsScreen(/workflow phase: hold/i)
     expectOnOptionsScreen(/phase timer: 1.0s/i)
+    expect(screen.getByText('Hold timer: 1.0s/40s')).toBeInTheDocument()
 
     await act(async () => {
       vi.advanceTimersByTime(300)
     })
     expectOnOptionsScreen(/phase timer: 0.7s/i)
+    expect(screen.getByText('Hold timer: 0.7s/40s')).toBeInTheDocument()
 
     await act(async () => {
       vi.advanceTimersByTime(700)
@@ -713,13 +715,13 @@ describe('App shell', () => {
     expect(screen.getByRole('button', { name: /undo rep/i })).toBeDisabled()
   })
 
-  it('starts routine when +1 rep is tapped and shows the workflow timer on reps exercises', async () => {
+  it('starts routine when +1 rep is tapped and keeps workout/exercise timers running', async () => {
     vi.useFakeTimers()
 
     render(<App />)
     enterNewSession()
     expect(screen.getByRole('button', { name: /^start$/i })).toBeInTheDocument()
-    expect(screen.getByText(/phase timer: 0.0s/i)).toBeInTheDocument()
+    expect(screen.getByText('Current exercise: 0:00')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: /\+1 rep/i }))
 
@@ -730,6 +732,26 @@ describe('App shell', () => {
       vi.advanceTimersByTime(1100)
     })
     expect(screen.getByText('Workout time: 0:01')).toBeInTheDocument()
+    expect(screen.getByText('Current exercise: 0:01')).toBeInTheDocument()
+  })
+
+  it('resets current exercise timer when switching exercises', async () => {
+    vi.useFakeTimers()
+
+    render(<App />)
+    enterNewSession()
+    fireEvent.click(screen.getByRole('button', { name: /^start$/i }))
+
+    await act(async () => {
+      vi.advanceTimersByTime(2100)
+    })
+    expect(screen.getByText('Current exercise: 0:02')).toBeInTheDocument()
+
+    clickOptionsAction(/skip exercise/i)
+    fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
+
+    expect(screen.getByRole('heading', { name: /straight leg raise/i })).toBeInTheDocument()
+    expect(screen.getByText('Current exercise: 0:00')).toBeInTheDocument()
   })
 
   it('auto-advances to the next set after the final rep of the active set', () => {

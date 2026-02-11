@@ -41,6 +41,7 @@ export type SessionState = {
   runtime: SessionRuntimeState
   workoutElapsedSeconds: number
   workoutTimerRunning: boolean
+  currentExerciseElapsedSeconds: number
 }
 
 export type SessionOptions = {
@@ -242,6 +243,7 @@ const withTerminalStatus = (
       previousPhase: null,
     },
     workoutTimerRunning: false,
+    currentExerciseElapsedSeconds: 0,
   }
 }
 
@@ -265,6 +267,7 @@ const advanceAfterPrimary = (state: SessionState, program: Program, now?: string
       ...state,
       primaryCursor: nextCursor,
       currentExerciseId: program.exercises[nextCursor].id,
+      currentExerciseElapsedSeconds: 0,
       updatedAt: getTimestamp(state, now),
     }
 
@@ -276,6 +279,7 @@ const advanceAfterPrimary = (state: SessionState, program: Program, now?: string
       ...state,
       currentPhase: 'skip' as const,
       currentExerciseId: state.skipQueue[0],
+      currentExerciseElapsedSeconds: 0,
       updatedAt: getTimestamp(state, now),
     }
 
@@ -307,6 +311,7 @@ const advanceAfterSkip = (state: SessionState, program: Program, now?: string): 
     ...state,
     skipQueue: nextQueue,
     currentExerciseId: nextQueue[0],
+    currentExerciseElapsedSeconds: 0,
     updatedAt: getTimestamp(state, now),
   }
 
@@ -344,6 +349,7 @@ export const createSessionState = (
     runtime: getInitialRuntimeState(),
     workoutElapsedSeconds: 0,
     workoutTimerRunning: false,
+    currentExerciseElapsedSeconds: 0,
   }
 }
 
@@ -840,6 +846,10 @@ export const reduceSession = (
         ...state,
         updatedAt: getTimestamp(state, action.now),
         workoutElapsedSeconds: state.workoutElapsedSeconds + increment,
+        currentExerciseElapsedSeconds:
+          state.currentExerciseId !== null
+            ? state.currentExerciseElapsedSeconds + increment
+            : state.currentExerciseElapsedSeconds,
       }
     }
     case 'increment_rep': {
@@ -1360,6 +1370,10 @@ export const reduceSession = (
         ...updatedProgressState,
         skipQueue: nextQueue,
         currentExerciseId: nextQueue[0] ?? currentExerciseId,
+        currentExerciseElapsedSeconds:
+          (nextQueue[0] ?? currentExerciseId) === currentExerciseId
+            ? updatedProgressState.currentExerciseElapsedSeconds
+            : 0,
         updatedAt: getTimestamp(updatedProgressState, action.now),
       }
     }

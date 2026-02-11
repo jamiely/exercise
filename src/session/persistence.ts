@@ -1,7 +1,7 @@
 import type { SessionState } from './session'
 
 export const SESSION_STORAGE_KEY = 'exercise-tracker/session'
-export const SESSION_STORAGE_VERSION = 1
+export const SESSION_STORAGE_VERSION = 2
 
 type PersistedSession = {
   version: number
@@ -108,7 +108,8 @@ const isSessionState = (value: unknown): value is SessionState => {
     isSessionOptions(value.options) &&
     isRuntimeState(value.runtime) &&
     typeof value.workoutElapsedSeconds === 'number' &&
-    typeof value.workoutTimerRunning === 'boolean'
+    typeof value.workoutTimerRunning === 'boolean' &&
+    typeof value.currentExerciseElapsedSeconds === 'number'
   )
 }
 

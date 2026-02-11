@@ -243,10 +243,20 @@ describe('session reducer', () => {
       { type: 'tick_workout_timer', now: '2026-02-10T00:00:05.000Z' },
       testProgram,
     )
+    const noCurrentExercise = reduceSession(
+      { ...started, currentExerciseId: null },
+      { type: 'tick_workout_timer', now: '2026-02-10T00:00:06.000Z' },
+      testProgram,
+    )
 
     expect(ignoredBeforeStart.workoutElapsedSeconds).toBe(0)
+    expect(ignoredBeforeStart.currentExerciseElapsedSeconds).toBe(0)
     expect(ticked.workoutElapsedSeconds).toBe(1)
+    expect(ticked.currentExerciseElapsedSeconds).toBe(1)
     expect(ignoredWhilePaused.workoutElapsedSeconds).toBe(1)
+    expect(ignoredWhilePaused.currentExerciseElapsedSeconds).toBe(1)
+    expect(noCurrentExercise.workoutElapsedSeconds).toBe(1)
+    expect(noCurrentExercise.currentExerciseElapsedSeconds).toBe(0)
   })
 
   it('marks final exercise complete after rep rest resolves at routine boundary', () => {
