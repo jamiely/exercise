@@ -212,6 +212,68 @@ describe('session reducer', () => {
     expect(resumed.workoutTimerRunning).toBe(true)
   })
 
+  it('adds runtime rest time for active rest phases with guardrails', () => {
+    const initial = createSessionState(testProgram, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-runtime-rest-plus',
+    })
+    const repRestState = {
+      ...initial,
+      currentExerciseId: 'exercise-1',
+      runtime: {
+        phase: 'repRest' as const,
+        exerciseIndex: 0,
+        setIndex: 0,
+        repIndex: 1,
+        remainingMs: 1200,
+        previousPhase: null,
+      },
+    }
+
+    const added = reduceSession(
+      repRestState,
+      { type: 'add_runtime_rest_time', now: '2026-02-10T00:00:01.000Z', ms: 5000 },
+      testProgram,
+    )
+    expect(added.runtime.remainingMs).toBe(6200)
+
+    const cappedState = {
+      ...repRestState,
+      runtime: {
+        ...repRestState.runtime,
+        remainingMs: 299_000,
+      },
+    }
+    const capped = reduceSession(
+      cappedState,
+      { type: 'add_runtime_rest_time', now: '2026-02-10T00:00:02.000Z', ms: 5_000 },
+      testProgram,
+    )
+    expect(capped.runtime.remainingMs).toBe(300_000)
+
+    const invalidIncrement = reduceSession(
+      repRestState,
+      { type: 'add_runtime_rest_time', now: '2026-02-10T00:00:03.000Z', ms: -1 },
+      testProgram,
+    )
+    expect(invalidIncrement.runtime.remainingMs).toBe(31_200)
+
+    const holdState = {
+      ...repRestState,
+      runtime: {
+        ...repRestState.runtime,
+        phase: 'hold' as const,
+      },
+    }
+    expect(
+      reduceSession(
+        holdState,
+        { type: 'add_runtime_rest_time', now: '2026-02-10T00:00:04.000Z', ms: 5_000 },
+        testProgram,
+      ),
+    ).toEqual(holdState)
+  })
+
   it('ticks elapsed workout time only while the workout timer is running', () => {
     const initial = createSessionState(testProgram, {
       now: '2026-02-10T00:00:00.000Z',

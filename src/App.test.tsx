@@ -421,6 +421,59 @@ describe('App shell', () => {
     expect(screen.queryByText(/wake lock/i)).not.toBeInTheDocument()
   })
 
+  it('emits transition cues when enabled and runtime phase changes', async () => {
+    vi.useFakeTimers()
+    const vibrate = vi.fn()
+    Object.defineProperty(navigator, 'vibrate', {
+      configurable: true,
+      value: vibrate,
+    })
+
+    let audioContextConstructed = 0
+    class AudioContextMock {
+      currentTime = 0
+      destination = {}
+
+      constructor() {
+        audioContextConstructed += 1
+      }
+
+      createGain() {
+        return {
+          connect: vi.fn(),
+          gain: {
+            setValueAtTime: vi.fn(),
+            exponentialRampToValueAtTime: vi.fn(),
+          },
+        }
+      }
+
+      createOscillator() {
+        return {
+          connect: vi.fn(),
+          frequency: { setValueAtTime: vi.fn() },
+          start: vi.fn(),
+          stop: vi.fn(),
+        }
+      }
+
+      async close() {
+        return undefined
+      }
+    }
+    Object.defineProperty(window, 'AudioContext', {
+      configurable: true,
+      value: AudioContextMock,
+    })
+
+    render(<App />)
+    enterNewSession()
+    fireEvent.click(screen.getByRole('button', { name: /^start$/i }))
+
+    expect(audioContextConstructed).toBeGreaterThanOrEqual(1)
+    expect(vibrate).toHaveBeenCalled()
+  })
+
   it('suppresses transition cues when sound and vibration are toggled off', async () => {
     const user = userEvent.setup()
     const vibrate = vi.fn()
@@ -1155,6 +1208,37 @@ describe('App shell', () => {
     fireEvent.click(screen.getByRole('button', { name: /add 40 seconds/i }))
     expect(screen.queryByText(/rest timer:/i)).not.toBeInTheDocument()
     expect(screen.getByText('Hold Running')).toBeInTheDocument()
+  })
+
+  it('adds runtime rest time when tapping the rest plus button during rep rest', async () => {
+    vi.useFakeTimers()
+    const program = loadProgram()
+    const session = createSessionState(program, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-runtime-rest-plus',
+    })
+    const runtimeRestSession = {
+      ...session,
+      primaryCursor: 1,
+      currentExerciseId: program.exercises[1].id,
+      updatedAt: '2026-02-10T00:00:02.000Z',
+      runtime: {
+        phase: 'repRest' as const,
+        exerciseIndex: 1,
+        setIndex: 0,
+        repIndex: 1,
+        remainingMs: 1_000,
+        previousPhase: null,
+      },
+    }
+    persistSession(runtimeRestSession)
+
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: /resume/i }))
+
+    expect(screen.getByText('Rest timer: 1.0s')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /add 3 seconds/i }))
+    expect(screen.getByText('Rest timer: 4.0s')).toBeInTheDocument()
   })
 
   it('does not render manual hold pause/reset/complete controls', () => {

@@ -56,6 +56,7 @@ export type SessionRuntimeState = {
   repIndex: number
   remainingMs: number
   previousPhase: ActiveRuntimePhase | null
+  countdownGeneration?: number
 }
 
 export type SessionAction =
@@ -69,10 +70,12 @@ export type SessionAction =
   | { type: 'override_end_exercise'; now?: string }
   | { type: 'set_sound_enabled'; now?: string; enabled: boolean }
   | { type: 'set_vibration_enabled'; now?: string; enabled: boolean }
+  | { type: 'add_runtime_rest_time'; now?: string; ms?: number }
   | {
       type: 'tick_runtime_countdown'
       now?: string
       remainingMs: number
+      generation?: number
       phase?: SessionRuntimePhase
       exerciseIndex?: number
       setIndex?: number
@@ -82,6 +85,7 @@ export type SessionAction =
       type: 'complete_runtime_countdown'
       now?: string
       force?: boolean
+      generation?: number
       phase?: SessionRuntimePhase
       exerciseIndex?: number
       setIndex?: number
@@ -161,6 +165,7 @@ const getInitialRuntimeState = (): SessionRuntimeState => ({
   repIndex: 0,
   remainingMs: 0,
   previousPhase: null,
+  countdownGeneration: 0,
 })
 
 const getInitialSessionOptions = (): SessionOptions => ({
@@ -712,6 +717,47 @@ export const reduceSession = (
         },
       }
     }
+    case 'add_runtime_rest_time': {
+      if (
+        !isInProgress(state) ||
+        (state.runtime.phase !== 'repRest' &&
+          state.runtime.phase !== 'setRest' &&
+          state.runtime.phase !== 'exerciseRest')
+      ) {
+        return state
+      }
+
+      const runtimeExercise = getRuntimeExercise(state, program)
+      if (!runtimeExercise) {
+        return state
+      }
+
+      const phaseBaseMs =
+        state.runtime.phase === 'repRest'
+          ? runtimeExercise.repRestMs
+          : state.runtime.phase === 'setRest'
+            ? runtimeExercise.setRestMs
+            : runtimeExercise.exerciseRestMs
+      const incrementMs =
+        typeof action.ms === 'number' && Number.isFinite(action.ms) && action.ms > 0
+          ? Math.round(action.ms)
+          : phaseBaseMs
+      const maxRemainingMs = phaseBaseMs * 10
+      const nextRemainingMs = Math.min(maxRemainingMs, state.runtime.remainingMs + incrementMs)
+      if (nextRemainingMs === state.runtime.remainingMs) {
+        return state
+      }
+
+      return {
+        ...state,
+        updatedAt: getTimestamp(state, action.now),
+        runtime: {
+          ...state.runtime,
+          remainingMs: nextRemainingMs,
+          countdownGeneration: (state.runtime.countdownGeneration ?? 0) + 1,
+        },
+      }
+    }
     case 'tick_runtime_countdown': {
       if (
         !isInProgress(state) ||
@@ -734,6 +780,12 @@ export const reduceSession = (
           action.exerciseIndex !== state.runtime.exerciseIndex ||
           action.setIndex !== state.runtime.setIndex ||
           action.repIndex !== state.runtime.repIndex)
+      ) {
+        return state
+      }
+      if (
+        action.generation !== undefined &&
+        action.generation !== (state.runtime.countdownGeneration ?? 0)
       ) {
         return state
       }
@@ -768,6 +820,12 @@ export const reduceSession = (
           action.exerciseIndex !== state.runtime.exerciseIndex ||
           action.setIndex !== state.runtime.setIndex ||
           action.repIndex !== state.runtime.repIndex)
+      ) {
+        return state
+      }
+      if (
+        action.generation !== undefined &&
+        action.generation !== (state.runtime.countdownGeneration ?? 0)
       ) {
         return state
       }

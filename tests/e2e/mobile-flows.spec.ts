@@ -44,6 +44,18 @@ const readPhaseTimerSeconds = async (page: Page): Promise<number> => {
   return Number(match[1])
 }
 
+const readRestTimerSeconds = async (page: Page): Promise<number> => {
+  const restTimerText = await page
+    .locator('.timer-card .timer-text')
+    .filter({ hasText: /rest timer:\s*[0-9]+\.[0-9]s/i })
+    .innerText()
+  const match = restTimerText.match(/rest timer:\s*([0-9]+\.[0-9])s/i)
+  if (!match) {
+    throw new Error(`Unable to parse rest timer text: ${restTimerText}`)
+  }
+  return Number(match[1])
+}
+
 const seedWallSitAutoSession = async (page: Page) => {
   await page.evaluate((sessionStorageKey) => {
     const raw = window.localStorage.getItem(sessionStorageKey)
@@ -187,6 +199,77 @@ const seedStraightLegRaiseMutedRestSession = async (page: Page) => {
   }, SESSION_STORAGE_KEY)
 }
 
+const seedStraightLegRaiseRuntimeRepRestSession = async (page: Page) => {
+  await page.evaluate((sessionStorageKey) => {
+    const raw = window.localStorage.getItem(sessionStorageKey)
+    if (!raw) {
+      throw new Error('expected persisted session payload to exist')
+    }
+
+    const payload = JSON.parse(raw) as {
+      session: {
+        currentPhase: 'primary' | 'skip'
+        primaryCursor: number
+        currentExerciseId: string
+        skipQueue: string[]
+        runtime: {
+          phase: 'idle' | 'hold' | 'repRest' | 'setRest' | 'exerciseRest' | 'paused' | 'complete'
+          exerciseIndex: number
+          setIndex: number
+          repIndex: number
+          remainingMs: number
+          previousPhase: 'hold' | 'repRest' | 'setRest' | 'exerciseRest' | null
+        }
+        exerciseProgress: Record<
+          string,
+          {
+            completed: boolean
+            skippedCount: number
+            activeSetIndex: number
+            sets: Array<{ setNumber: number; completedReps: number; targetReps: number }>
+            holdTimerRunning: boolean
+            holdElapsedSeconds: number
+            restTimerRunning: boolean
+            restElapsedSeconds: number
+          }
+        >
+      }
+    }
+
+    const exerciseId = 'straight-leg-raise'
+    const progress = payload.session.exerciseProgress[exerciseId]
+    if (!progress) {
+      throw new Error('straight leg raise progress missing from persisted session payload')
+    }
+
+    payload.session.currentPhase = 'primary'
+    payload.session.primaryCursor = 1
+    payload.session.currentExerciseId = exerciseId
+    payload.session.skipQueue = []
+    payload.session.runtime = {
+      phase: 'repRest',
+      exerciseIndex: 1,
+      setIndex: 0,
+      repIndex: 1,
+      remainingMs: 1_000,
+      previousPhase: null,
+    }
+    payload.session.exerciseProgress[exerciseId] = {
+      ...progress,
+      completed: false,
+      skippedCount: 0,
+      activeSetIndex: 0,
+      sets: [{ setNumber: 1, completedReps: 1, targetReps: 10 }, progress.sets[1]],
+      holdTimerRunning: false,
+      holdElapsedSeconds: 0,
+      restTimerRunning: true,
+      restElapsedSeconds: 0,
+    }
+
+    window.localStorage.setItem(sessionStorageKey, JSON.stringify(payload))
+  }, SESSION_STORAGE_KEY)
+}
+
 test.beforeEach(async ({ page }) => {
   await page.goto('/')
   await page.evaluate(() => {
@@ -279,6 +362,59 @@ test('shows rest timer card after hold finishes on straight leg raise', async ({
   expect(runtimeState.remainingMs).toBeGreaterThan(1_000)
 
   await expect(page.getByText(/rest timer:/i)).toBeVisible()
+})
+
+test('adds configured rest step with + during runtime rep rest', async ({ page }) => {
+  await seedStraightLegRaiseRuntimeRepRestSession(page)
+  await page.reload()
+  await tapByRoleName(page, 'button', /resume session/i)
+  await expect(page.getByRole('heading', { name: /straight leg raise/i })).toBeVisible()
+  await page.clock.install()
+  await tapByRoleName(page, 'button', /options/i)
+  await expect(page.getByText(/workflow phase: represt/i)).toBeVisible()
+  await tapByRoleName(page, 'button', /back to exercise/i)
+
+  const runtimeBeforePlus = await page.evaluate((sessionStorageKey) => {
+    const raw = window.localStorage.getItem(sessionStorageKey)
+    if (!raw) {
+      throw new Error('expected persisted session payload to exist')
+    }
+    const payload = JSON.parse(raw) as {
+      session: { runtime: { remainingMs: number; phase: string } }
+    }
+    return payload.session.runtime
+  }, SESSION_STORAGE_KEY)
+  expect(runtimeBeforePlus.phase).toBe('repRest')
+  await expect(page.getByRole('button', { name: /add 3 seconds/i })).toBeEnabled()
+  const restBeforePlus = await readRestTimerSeconds(page)
+  await page.evaluate(() => {
+    const button = document.querySelector(
+      'button[aria-label="Add 3 seconds"]',
+    ) as HTMLButtonElement | null
+    if (!button) {
+      throw new Error('Expected Add 3 seconds button to exist')
+    }
+    button.click()
+  })
+  await expect
+    .poll(async () => {
+      const runtime = await page.evaluate((sessionStorageKey) => {
+        const raw = window.localStorage.getItem(sessionStorageKey)
+        if (!raw) {
+          throw new Error('expected persisted session payload to exist')
+        }
+        const payload = JSON.parse(raw) as {
+          session: { runtime: { remainingMs: number; phase: string } }
+        }
+        return payload.session.runtime
+      }, SESSION_STORAGE_KEY)
+      if (runtime.phase !== 'repRest') {
+        return -1
+      }
+      return runtime.remainingMs
+    })
+    .toBeGreaterThan(runtimeBeforePlus.remainingMs + 200)
+  await expect.poll(() => readRestTimerSeconds(page)).toBeGreaterThan(restBeforePlus + 0.2)
 })
 
 test('freezes rep rest countdown while paused and resumes from the same value', async ({
@@ -425,6 +561,23 @@ test('renders overrides in Options and applies end exercise override there', asy
 
   await tapByRoleName(page, 'button', /end exercise/i)
   await expect(page.getByText(/workflow phase: exerciserest/i)).toBeVisible()
+})
+
+test('persists cue settings choices across reload in options flow', async ({ page }) => {
+  await tapByRoleName(page, 'button', /options/i)
+
+  await page.getByRole('checkbox', { name: /sound cues/i }).uncheck()
+  await page.getByRole('checkbox', { name: /vibration cues/i }).uncheck()
+  await expect(page.getByRole('checkbox', { name: /sound cues/i })).not.toBeChecked()
+  await expect(page.getByRole('checkbox', { name: /vibration cues/i })).not.toBeChecked()
+
+  await page.reload()
+  await expect(page.getByRole('button', { name: /resume session/i })).toBeVisible()
+  await tapByRoleName(page, 'button', /resume session/i)
+  await tapByRoleName(page, 'button', /options/i)
+
+  await expect(page.getByRole('checkbox', { name: /sound cues/i })).not.toBeChecked()
+  await expect(page.getByRole('checkbox', { name: /vibration cues/i })).not.toBeChecked()
 })
 
 test('one-tap Start auto-completes seeded hold workflow path with no progression taps', async ({

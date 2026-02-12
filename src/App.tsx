@@ -132,7 +132,6 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
     (state: SessionState, action: SessionAction) => reduceSession(state, action, program),
     bootState.initialSession,
   )
-  const runtimeRemainingMsRef = useRef(sessionState.runtime.remainingMs)
   const previousRuntimePhaseRef = useRef(sessionState.runtime.phase)
   const previousExerciseIdRef = useRef<string | null>(null)
   const wakeLockSentinelRef = useRef<WakeLockSentinelLike | null>(null)
@@ -183,10 +182,6 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
     sessionState.runtime.phase,
     sessionState.status,
   ])
-
-  useEffect(() => {
-    runtimeRemainingMsRef.current = sessionState.runtime.remainingMs
-  }, [sessionState.runtime.remainingMs])
 
   useEffect(() => {
     const previousPhase = previousRuntimePhaseRef.current
@@ -375,7 +370,7 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
   }, [sessionState.runtime.phase, sessionState.status, timerExercise, timerProgress])
 
   useEffect(() => {
-    const remainingMs = runtimeRemainingMsRef.current
+    const remainingMs = sessionState.runtime.remainingMs
     const isRuntimeCountdownPhase =
       sessionState.runtime.phase === 'hold' ||
       sessionState.runtime.phase === 'repRest' ||
@@ -401,6 +396,7 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
           type: 'tick_runtime_countdown',
           now: new Date().toISOString(),
           remainingMs,
+          generation: sessionState.runtime.countdownGeneration ?? 0,
           phase: sessionState.runtime.phase,
           exerciseIndex: sessionState.runtime.exerciseIndex,
           setIndex: sessionState.runtime.setIndex,
@@ -411,6 +407,7 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
         dispatch({
           type: 'complete_runtime_countdown',
           now: new Date().toISOString(),
+          generation: sessionState.runtime.countdownGeneration ?? 0,
           phase: sessionState.runtime.phase,
           exerciseIndex: sessionState.runtime.exerciseIndex,
           setIndex: sessionState.runtime.setIndex,
@@ -427,6 +424,8 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
     sessionState.runtime.exerciseIndex,
     sessionState.runtime.phase,
     sessionState.runtime.repIndex,
+    sessionState.runtime.countdownGeneration,
+    sessionState.runtime.remainingMs,
     sessionState.runtime.setIndex,
     sessionState.status,
   ])
@@ -535,8 +534,7 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
     currentExercise.notes ?? 'Move with control and breathe steadily throughout each rep.'
   const isRuntimeHoldForCurrentExercise =
     sessionState.runtime.phase === 'hold' && sessionState.runtime.exerciseIndex === exerciseIndex
-  const isRuntimeRepRestForCurrentExercise =
-    sessionState.runtime.phase === 'repRest' && sessionState.runtime.exerciseIndex === exerciseIndex
+  const isRuntimeRepRest = sessionState.runtime.phase === 'repRest'
   const displayedHoldElapsedSeconds =
     isHoldExercise && currentExercise.holdSeconds !== null && isRuntimeHoldForCurrentExercise
       ? Math.max(
@@ -550,25 +548,18 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
         )
       : currentProgress.holdElapsedSeconds
   const restTotalSeconds = currentExercise.repRestMs / 1000
-  const displayedRestElapsedSeconds = isRuntimeRepRestForCurrentExercise
-    ? Math.max(
-        0,
-        Math.min(
-          restTotalSeconds,
-          Math.round((restTotalSeconds - sessionState.runtime.remainingMs / 1000) * 10) / 10,
-        ),
-      )
-    : currentProgress.restElapsedSeconds
+  const displayedRestRemainingSeconds = isRuntimeRepRest
+    ? Math.max(0, Math.round((sessionState.runtime.remainingMs / 1000) * 10) / 10)
+    : Math.max(0, restTotalSeconds - currentProgress.restElapsedSeconds)
   const shouldShowHoldExerciseRestFallback =
     isHoldExercise && activeSet.completedReps > 0 && activeSet.completedReps < activeSet.targetReps
   const shouldShowRestCard =
-    currentProgress.restTimerRunning ||
-    isRuntimeRepRestForCurrentExercise ||
-    shouldShowHoldExerciseRestFallback
+    currentProgress.restTimerRunning || isRuntimeRepRest || shouldShowHoldExerciseRestFallback
   const isHoldTimerActive =
     isRuntimeHoldForCurrentExercise ||
     (sessionState.runtime.phase === 'idle' && currentProgress.holdTimerRunning)
-  const isRestTimerActive = currentProgress.restTimerRunning || isRuntimeRepRestForCurrentExercise
+  const isRestTimerActive = currentProgress.restTimerRunning || isRuntimeRepRest
+  const canAddRestTime = currentProgress.restTimerRunning || isRuntimeRepRest
 
   const dispatchAction = (action: SessionAction) => {
     dispatch(action)
@@ -808,21 +799,30 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
               <button
                 type="button"
                 className="timer-plus-button"
-                disabled={!currentProgress.restTimerRunning}
-                onClick={() =>
+                disabled={!canAddRestTime}
+                onClick={() => {
+                  const now = new Date().toISOString()
                   dispatchAction({
-                    type: 'tick_rest_timer',
-                    now: new Date().toISOString(),
-                    seconds: restPeriodSeconds,
+                    type: 'add_runtime_rest_time',
+                    now,
+                    ms: restPeriodSeconds * 1000,
                   })
-                }
+
+                  if (!isRuntimeRepRest) {
+                    dispatchAction({
+                      type: 'tick_rest_timer',
+                      now,
+                      seconds: restPeriodSeconds,
+                    })
+                  }
+                }}
                 aria-label={`Add ${restPeriodSeconds} seconds`}
               >
                 +
               </button>
             </div>
             <p className="timer-text">
-              Rest timer: {formatCountdownPair(displayedRestElapsedSeconds, restTotalSeconds)}
+              Rest timer: {formatTimerSeconds(displayedRestRemainingSeconds)}
             </p>
             {!isHoldExercise ? (
               <button
