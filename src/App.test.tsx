@@ -146,29 +146,36 @@ describe('App shell', () => {
     clickOptionsAction(/skip exercise/i)
     clickOptionsAction(/skip exercise/i)
     clickOptionsAction(/skip exercise/i)
+    clickOptionsAction(/skip exercise/i)
     fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
-    expect(screen.getByRole('heading', { name: /backward step-up/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /sit-to-stand/i })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /^start$/i }))
 
-    fireEvent.click(screen.getByRole('button', { name: /\+1 rep/i }))
-    fireEvent.click(screen.getByRole('button', { name: /\+1 rep/i }))
+    clickOptionsAction(/skip rep/i)
+    clickOptionsAction(/skip rest/i)
+    clickOptionsAction(/skip rep/i)
+    clickOptionsAction(/skip rest/i)
+    fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
     expect(screen.getByText('2/8 reps')).toBeInTheDocument()
 
     clickOptionsAction(/restart current set/i)
     fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
-    expect(screen.getByRole('heading', { name: /backward step-up/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /sit-to-stand/i })).toBeInTheDocument()
     expect(screen.getByText('0/8 reps')).toBeInTheDocument()
 
-    for (let rep = 0; rep < 8; rep += 1) {
-      fireEvent.click(screen.getByRole('button', { name: /\+1 rep/i }))
-    }
-    expect(screen.getByText('Set 2/2')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: /\+1 rep/i }))
+    clickOptionsAction(/end set/i)
+    clickOptionsAction(/skip rest/i)
+    fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
+    expect(screen.getByText('Set 2/3')).toBeInTheDocument()
+    clickOptionsAction(/skip rep/i)
+    clickOptionsAction(/skip rest/i)
+    fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
     expect(screen.getByText('1/8 reps')).toBeInTheDocument()
 
     clickOptionsAction(/restart current exercise/i)
     fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
-    expect(screen.getByRole('heading', { name: /backward step-up/i })).toBeInTheDocument()
-    expect(screen.getByText('Set 1/2')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /sit-to-stand/i })).toBeInTheDocument()
+    expect(screen.getByText('Set 1/3')).toBeInTheDocument()
     expect(screen.getByText('0/8 reps')).toBeInTheDocument()
   })
 
@@ -960,19 +967,20 @@ describe('App shell', () => {
     clickOptionsAction(/skip exercise/i)
     clickOptionsAction(/skip exercise/i)
     clickOptionsAction(/skip exercise/i)
+    clickOptionsAction(/skip exercise/i)
     fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
-    expect(screen.getByRole('heading', { name: /backward step-up/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /sit-to-stand/i })).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: /set tracker/i })).not.toBeInTheDocument()
 
-    const activeExerciseCard = screen.getByRole('article', { name: /active exercise/i })
-    expect(within(activeExerciseCard).getByRole('button', { name: /\+1 rep/i })).toBeInTheDocument()
-
+    fireEvent.click(screen.getByRole('button', { name: /^start$/i }))
     ensureOptionsScreen()
     const undoButton = screen.getByRole('button', { name: /undo rep/i })
     expect(undoButton).toBeDisabled()
     fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
 
-    await user.click(screen.getByRole('button', { name: /\+1 rep/i }))
+    clickOptionsAction(/skip rep/i)
+    clickOptionsAction(/skip rest/i)
+    await user.click(screen.getByRole('button', { name: /back to exercise/i }))
     expect(screen.getByText('1/8 reps')).toBeInTheDocument()
 
     ensureOptionsScreen()
@@ -985,7 +993,7 @@ describe('App shell', () => {
     expect(screen.getByRole('button', { name: /undo rep/i })).toBeDisabled()
   })
 
-  it('starts routine when +1 rep is tapped and keeps workout/exercise timers running', async () => {
+  it('starts routine when Start is tapped and keeps workout/exercise timers running', async () => {
     vi.useFakeTimers()
 
     render(<App />)
@@ -993,14 +1001,14 @@ describe('App shell', () => {
     clickOptionsAction(/skip exercise/i)
     clickOptionsAction(/skip exercise/i)
     clickOptionsAction(/skip exercise/i)
+    clickOptionsAction(/skip exercise/i)
     fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
-    expect(screen.getByRole('heading', { name: /backward step-up/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /sit-to-stand/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /^start$/i })).toBeInTheDocument()
     expect(screen.getByText('Current exercise: 0:00')).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: /\+1 rep/i }))
-
-    expect(screen.getByText('1/8 reps')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /^start$/i }))
+    expect(screen.getByText('0/8 reps')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /^pause$/i })).toBeInTheDocument()
 
     await act(async () => {
@@ -1029,7 +1037,7 @@ describe('App shell', () => {
     expect(screen.getByText('Current exercise: 0:00')).toBeInTheDocument()
   })
 
-  it('shows hold pending after auto-progressing from sit-to-stand and runs after Start', async () => {
+  it('shows hold pending after progressing from sit-to-stand and runs after Start', async () => {
     vi.useFakeTimers()
 
     render(<App />)
@@ -1041,9 +1049,9 @@ describe('App shell', () => {
     fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
     expect(screen.getByRole('heading', { name: /sit-to-stand/i })).toBeInTheDocument()
 
-    for (let rep = 0; rep < 24; rep += 1) {
-      fireEvent.click(screen.getByRole('button', { name: /\+1 rep/i }))
-    }
+    clickOptionsAction(/end exercise/i)
+    clickOptionsAction(/skip rest/i)
+    fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
 
     expect(screen.getByRole('heading', { name: /spanish squat hold/i })).toBeInTheDocument()
     expect(screen.getByText('Hold Pending')).toBeInTheDocument()
@@ -1068,18 +1076,26 @@ describe('App shell', () => {
     clickOptionsAction(/skip exercise/i)
     clickOptionsAction(/skip exercise/i)
     clickOptionsAction(/skip exercise/i)
+    clickOptionsAction(/skip exercise/i)
     fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
-    expect(screen.getByRole('heading', { name: /backward step-up/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /sit-to-stand/i })).toBeInTheDocument()
 
     ensureOptionsScreen()
     expect(screen.getByRole('button', { name: /complete set/i })).toBeDisabled()
     fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^start$/i }))
 
-    for (let rep = 0; rep < 8; rep += 1) {
-      fireEvent.click(screen.getByRole('button', { name: /\+1 rep/i }))
+    for (let rep = 0; rep < 7; rep += 1) {
+      clickOptionsAction(/skip rep/i)
+      clickOptionsAction(/skip rest/i)
     }
+    clickOptionsAction(/skip rep/i)
+    fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
+    clickOptionsAction(/skip rest/i)
+    clickOptionsAction(/skip rest/i)
+    fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
 
-    expect(screen.getByText('Set 2/2')).toBeInTheDocument()
+    expect(screen.getByText('Set 2/3')).toBeInTheDocument()
     expect(screen.getByText('0/8 reps')).toBeInTheDocument()
     expect(screen.queryByText(/rest timer:/i)).not.toBeInTheDocument()
   })
@@ -1100,17 +1116,15 @@ describe('App shell', () => {
     fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
     expect(screen.getByRole('heading', { name: /sit-to-stand/i })).toBeInTheDocument()
 
-    for (let rep = 0; rep < 8; rep += 1) {
-      await user.click(screen.getByRole('button', { name: /\+1 rep/i }))
-    }
+    clickOptionsAction(/end set/i)
+    clickOptionsAction(/skip rest/i)
 
     ensureOptionsScreen()
     expect(screen.getByRole('button', { name: /complete exercise/i })).toBeDisabled()
     await user.click(screen.getByRole('button', { name: /back to exercise/i }))
-
-    for (let rep = 0; rep < 8; rep += 1) {
-      await user.click(screen.getByRole('button', { name: /\+1 rep/i }))
-    }
+    clickOptionsAction(/end set/i)
+    clickOptionsAction(/skip rest/i)
+    await user.click(screen.getByRole('button', { name: /back to exercise/i }))
 
     expect(screen.getByText('Set 3/3')).toBeInTheDocument()
     ensureOptionsScreen()
