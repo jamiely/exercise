@@ -95,6 +95,59 @@ describe('session persistence', () => {
     expect(window.localStorage.getItem(SESSION_STORAGE_KEY)).toBeNull()
   })
 
+  it('rejects completed sessions in persisted payloads', () => {
+    const session = createSessionState(program, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-completed-payload',
+    })
+
+    window.localStorage.setItem(
+      SESSION_STORAGE_KEY,
+      JSON.stringify({
+        version: SESSION_STORAGE_VERSION,
+        session: {
+          ...session,
+          status: 'completed',
+          endedAt: '2026-02-10T00:05:00.000Z',
+          endedEarly: false,
+          currentExerciseId: null,
+          runtime: {
+            ...session.runtime,
+            phase: 'complete',
+            previousPhase: 'exerciseRest',
+          },
+        },
+      }),
+    )
+
+    expect(readPersistedSession()).toBeNull()
+    expect(window.localStorage.getItem(SESSION_STORAGE_KEY)).toBeNull()
+  })
+
+  it('rejects ended-early sessions in persisted payloads', () => {
+    const session = createSessionState(program, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-ended-early-payload',
+    })
+
+    window.localStorage.setItem(
+      SESSION_STORAGE_KEY,
+      JSON.stringify({
+        version: SESSION_STORAGE_VERSION,
+        session: {
+          ...session,
+          status: 'ended_early',
+          endedAt: '2026-02-10T00:02:00.000Z',
+          endedEarly: true,
+          currentExerciseId: null,
+        },
+      }),
+    )
+
+    expect(readPersistedSession()).toBeNull()
+    expect(window.localStorage.getItem(SESSION_STORAGE_KEY)).toBeNull()
+  })
+
   it('swallows storage write failures to keep app interactive', () => {
     const session = createSessionState(program, {
       now: '2026-02-10T00:00:00.000Z',
