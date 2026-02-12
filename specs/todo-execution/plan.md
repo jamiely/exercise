@@ -4,15 +4,15 @@ Source: `todo list.md`
 
 ## Checklist
 
-- [ ] Step 0: Enforce global quality gates for every phase
-- [ ] Step 1: Timer correctness and pause consistency
-- [ ] Step 2: Rest timer controls and cue reliability
-- [ ] Step 3: Explicit start and gesture-based rest dismissal
-- [ ] Step 4: Restart controls for current exercise and set
-- [ ] Step 5: Timer visibility consistency across all timed phases
-- [ ] Step 6: Exercise transition motion polish
-- [ ] Step 7: README polish with CI badges and screenshots
-- [ ] Step 8: Final regression and release readiness
+- [x] Step 0: Enforce global quality gates for every phase
+- [x] Step 1: Timer correctness and pause consistency
+- [x] Step 2: Rest timer controls and cue reliability
+- [x] Step 3: Explicit start and gesture-based rest dismissal
+- [x] Step 4: Restart controls for current exercise and set
+- [x] Step 5: Timer visibility consistency across all timed phases
+- [x] Step 6: Exercise transition motion polish
+- [x] Step 7: README polish with CI badges and screenshots
+- [x] Step 8: Final regression and release readiness
 
 ## Step 0: Enforce global quality gates for every phase
 
