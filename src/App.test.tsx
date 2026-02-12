@@ -1373,8 +1373,8 @@ describe('App shell', () => {
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: /resume/i }))
 
-    expect(screen.getByText('Rest timer: 36.0s')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: /add 40 seconds/i }))
+    expect(screen.getByText('Rest timer: 6.0s')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /add 10 seconds/i }))
     expect(screen.queryByText(/rest timer:/i)).not.toBeInTheDocument()
     expect(screen.getByText('Hold Running')).toBeInTheDocument()
   })
@@ -1456,11 +1456,11 @@ describe('App shell', () => {
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: /resume/i }))
 
-    expect(screen.getByText('Rest timer: 36.0s')).toBeInTheDocument()
+    expect(screen.getByText('Rest timer: 6.0s')).toBeInTheDocument()
     await act(async () => {
       vi.advanceTimersByTime(2000)
     })
-    expect(screen.getByText('Rest timer: 34.0s')).toBeInTheDocument()
+    expect(screen.getByText('Rest timer: 4.0s')).toBeInTheDocument()
   })
 
   it('enables resume when an in-progress session exists', () => {

@@ -16,7 +16,6 @@ vi.mock('./program/program', () => ({
         repRestMs: 1000,
         setRestMs: 30000,
         exerciseRestMs: 30000,
-        restHintSeconds: 30,
         notes: 'Tap +1 rep to progress.',
         optional: false,
         availableOnOrAfter: null,

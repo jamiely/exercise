@@ -9,8 +9,7 @@
       "targetSets": 1,
       "targetRepsPerSet": 5,
       "holdSeconds": 40,
-      "repRestMs": 40000,
-      "restHintSeconds": null,
+      "repRestMs": 10000,
       "notes": "Slide into a shallow wall sit, keep knees aligned over feet, and breathe steadily.",
       "optional": false,
       "availableOnOrAfter": null
@@ -23,7 +22,6 @@
       "targetRepsPerSet": 10,
       "holdSeconds": 3,
       "repRestMs": 3000,
-      "restHintSeconds": 45,
       "notes": "Lift your straight leg to hip height with your core braced, then lower with control.",
       "optional": false,
       "availableOnOrAfter": null
@@ -36,7 +34,6 @@
       "targetRepsPerSet": 15,
       "holdSeconds": 3,
       "repRestMs": 3000,
-      "restHintSeconds": 45,
       "notes": "Extend your knee into terminal extension, hold for 3 seconds, then return with control.",
       "optional": false,
       "availableOnOrAfter": null
@@ -49,7 +46,6 @@
       "targetRepsPerSet": 8,
       "holdSeconds": 6,
       "repRestMs": 6000,
-      "restHintSeconds": 45,
       "notes": "Use a 4-inch step and move slowly, taking about 3 seconds up and 3 seconds down per rep.",
       "optional": false,
       "availableOnOrAfter": null
@@ -62,7 +58,6 @@
       "targetRepsPerSet": 8,
       "holdSeconds": 4,
       "repRestMs": 4000,
-      "restHintSeconds": 45,
       "notes": "Stand up and sit down slowly with controlled form through each rep.",
       "optional": false,
       "availableOnOrAfter": null
@@ -74,8 +69,7 @@
       "targetSets": 1,
       "targetRepsPerSet": 3,
       "holdSeconds": 45,
-      "repRestMs": 45000,
-      "restHintSeconds": null,
+      "repRestMs": 10000,
       "notes": "Maintain the Spanish squat position for 45 seconds each rep while keeping steady tension.",
       "optional": false,
       "availableOnOrAfter": null

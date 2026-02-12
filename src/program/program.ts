@@ -10,7 +10,6 @@ export type Exercise = {
   repRestMs: number
   setRestMs: number
   exerciseRestMs: number
-  restHintSeconds: number | null
   notes: string | null
   optional: boolean
   availableOnOrAfter: string | null
@@ -146,10 +145,6 @@ export const parseProgram = (input: unknown): Program => {
         exercise.exerciseRestMs,
         `exercises[${index}].exerciseRestMs`,
         30000,
-      ),
-      restHintSeconds: asNullableNumber(
-        exercise.restHintSeconds,
-        `exercises[${index}].restHintSeconds`,
       ),
       notes: asNullableString(exercise.notes, `exercises[${index}].notes`),
       optional: (() => {
