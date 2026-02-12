@@ -270,6 +270,93 @@ const seedStraightLegRaiseRuntimeRepRestSession = async (page: Page) => {
   }, SESSION_STORAGE_KEY)
 }
 
+const seedStraightLegRaiseRuntimeRestSession = async (
+  page: Page,
+  phase: 'setRest' | 'exerciseRest',
+) => {
+  await page.evaluate(
+    ({ sessionStorageKey, runtimePhase }) => {
+      const raw = window.localStorage.getItem(sessionStorageKey)
+      if (!raw) {
+        throw new Error('expected persisted session payload to exist')
+      }
+
+      const payload = JSON.parse(raw) as {
+        session: {
+          currentPhase: 'primary' | 'skip'
+          primaryCursor: number
+          currentExerciseId: string
+          skipQueue: string[]
+          runtime: {
+            phase: 'idle' | 'hold' | 'repRest' | 'setRest' | 'exerciseRest' | 'paused' | 'complete'
+            exerciseIndex: number
+            setIndex: number
+            repIndex: number
+            remainingMs: number
+            previousPhase: 'hold' | 'repRest' | 'setRest' | 'exerciseRest' | null
+          }
+          exerciseProgress: Record<
+            string,
+            {
+              completed: boolean
+              skippedCount: number
+              activeSetIndex: number
+              sets: Array<{ setNumber: number; completedReps: number; targetReps: number }>
+              holdTimerRunning: boolean
+              holdElapsedSeconds: number
+              restTimerRunning: boolean
+              restElapsedSeconds: number
+            }
+          >
+        }
+      }
+
+      const exerciseId = 'straight-leg-raise'
+      const progress = payload.session.exerciseProgress[exerciseId]
+      if (!progress) {
+        throw new Error('straight leg raise progress missing from persisted session payload')
+      }
+
+      const setRestSets = [
+        { ...progress.sets[0], completedReps: progress.sets[0].targetReps },
+        progress.sets[1],
+      ]
+      const exerciseRestSets = progress.sets.map((setProgress) => ({
+        ...setProgress,
+        completedReps: setProgress.targetReps,
+      }))
+      const isExerciseRest = runtimePhase === 'exerciseRest'
+
+      payload.session.currentPhase = 'primary'
+      payload.session.primaryCursor = 1
+      payload.session.currentExerciseId = exerciseId
+      payload.session.skipQueue = []
+      payload.session.runtime = {
+        phase: runtimePhase,
+        exerciseIndex: 1,
+        setIndex: isExerciseRest ? 1 : 0,
+        repIndex: 10,
+        remainingMs: 30_000,
+        previousPhase: null,
+      }
+      payload.session.exerciseProgress[exerciseId] = {
+        ...progress,
+        completed: false,
+        skippedCount: 0,
+        activeSetIndex: isExerciseRest ? 1 : 0,
+        sets: isExerciseRest ? exerciseRestSets : setRestSets,
+        holdTimerRunning: false,
+        holdElapsedSeconds: 0,
+        restTimerRunning: false,
+        restElapsedSeconds: 0,
+      }
+
+      window.localStorage.setItem(sessionStorageKey, JSON.stringify(payload))
+    },
+    { sessionStorageKey: SESSION_STORAGE_KEY, runtimePhase: phase },
+  )
+}
+
 test.beforeEach(async ({ page }) => {
   await page.goto('/')
   await page.evaluate(() => {
@@ -363,6 +450,20 @@ test('shows rest timer card after hold finishes on straight leg raise', async ({
 
   await expect(page.getByText(/rest timer:/i)).toBeVisible()
 })
+
+for (const phase of ['setRest', 'exerciseRest'] as const) {
+  test(`shows visible rest countdown during runtime ${phase}`, async ({ page }) => {
+    await seedStraightLegRaiseRuntimeRestSession(page, phase)
+    await page.reload()
+    await tapByRoleName(page, 'button', /resume session/i)
+    await expect(page.getByRole('heading', { name: /straight leg raise/i })).toBeVisible()
+    await tapByRoleName(page, 'button', /options/i)
+    await expect(page.getByText(new RegExp(`workflow phase: ${phase}`, 'i'))).toBeVisible()
+    await tapByRoleName(page, 'button', /back to exercise/i)
+    await expect(page.getByText(/rest timer:/i)).toBeVisible()
+    await expect.poll(() => readRestTimerSeconds(page)).toBeGreaterThan(0.1)
+  })
+}
 
 test('adds configured rest step with + during runtime rep rest', async ({ page }) => {
   await seedStraightLegRaiseRuntimeRepRestSession(page)

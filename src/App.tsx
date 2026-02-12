@@ -490,6 +490,10 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
   const isRuntimeHoldForCurrentExercise =
     sessionState.runtime.phase === 'hold' && sessionState.runtime.exerciseIndex === exerciseIndex
   const isRuntimeRepRest = sessionState.runtime.phase === 'repRest'
+  const isRuntimeTimedRestPhase =
+    sessionState.runtime.phase === 'repRest' ||
+    sessionState.runtime.phase === 'setRest' ||
+    sessionState.runtime.phase === 'exerciseRest'
   const displayedHoldElapsedSeconds =
     isHoldExercise && currentExercise.holdSeconds !== null && isRuntimeHoldForCurrentExercise
       ? Math.max(
@@ -503,17 +507,19 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
         )
       : currentProgress.holdElapsedSeconds
   const restTotalSeconds = currentExercise.repRestMs / 1000
-  const displayedRestRemainingSeconds = isRuntimeRepRest
+  const displayedRestRemainingSeconds = isRuntimeTimedRestPhase
     ? Math.max(0, Math.round((sessionState.runtime.remainingMs / 1000) * 10) / 10)
     : Math.max(0, restTotalSeconds - currentProgress.restElapsedSeconds)
   const shouldShowHoldExerciseRestFallback =
     isHoldExercise && activeSet.completedReps > 0 && activeSet.completedReps < activeSet.targetReps
   const shouldShowRestCard =
-    currentProgress.restTimerRunning || isRuntimeRepRest || shouldShowHoldExerciseRestFallback
+    currentProgress.restTimerRunning ||
+    isRuntimeTimedRestPhase ||
+    shouldShowHoldExerciseRestFallback
   const isHoldTimerActive =
     isRuntimeHoldForCurrentExercise ||
     (sessionState.runtime.phase === 'idle' && currentProgress.holdTimerRunning)
-  const isRestTimerActive = currentProgress.restTimerRunning || isRuntimeRepRest
+  const isRestTimerActive = currentProgress.restTimerRunning || isRuntimeTimedRestPhase
   const canAddRestTime = currentProgress.restTimerRunning || isRuntimeRepRest
 
   const dispatchAction = (action: SessionAction) => {

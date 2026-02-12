@@ -574,6 +574,7 @@ describe('App shell', () => {
 
     expectOnOptionsScreen(/workflow phase: setrest/i)
     expectOnOptionsScreen(/phase timer: 1.0s/i)
+    expect(screen.getByText('Rest timer: 1.0s')).toBeInTheDocument()
 
     await act(async () => {
       vi.advanceTimersByTime(1_000)
@@ -581,6 +582,7 @@ describe('App shell', () => {
 
     expectOnOptionsScreen(/workflow phase: hold/i)
     expectOnOptionsScreen(/phase timer: 3.0s/i)
+    expect(screen.queryByText(/rest timer:/i)).not.toBeInTheDocument()
     expect(screen.getByText('0/10 reps')).toBeInTheDocument()
   })
 
@@ -624,6 +626,7 @@ describe('App shell', () => {
     expectOnOptionsScreen(/workflow phase: exerciserest/i)
     expectOnOptionsScreen(/phase timer: 1.0s/i)
     expect(screen.getByRole('heading', { name: program.exercises[1].name })).toBeInTheDocument()
+    expect(screen.getByText('Rest timer: 1.0s')).toBeInTheDocument()
 
     await act(async () => {
       vi.advanceTimersByTime(1_000)
@@ -632,6 +635,7 @@ describe('App shell', () => {
     expect(screen.getByRole('heading', { name: /terminal knee extension/i })).toBeInTheDocument()
     expectOnOptionsScreen(/workflow phase: idle/i)
     expectOnOptionsScreen(/phase timer: 0.0s/i)
+    expect(screen.queryByText(/rest timer:/i)).not.toBeInTheDocument()
     expect(screen.getByText('Hold Pending')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: /^start$/i }))
