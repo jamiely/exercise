@@ -10,3 +10,4 @@
 - Run Prettier for formatting.
 - Commit after every feature is complete.
 - Ask clarifying questions to improve feature quality before implementation.
+- Exception: for markdown-only planning artifacts under `specs/` (for example `plan.md`, `design.md`, `requirements.md`, `summary.md`), skip lint/test/coverage/e2e unless explicitly requested.
