@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { StrictMode } from 'react'
 import userEvent from '@testing-library/user-event'
 import { vi } from 'vitest'
@@ -8,6 +8,22 @@ import { persistSession, readPersistedSession } from './session/persistence'
 import { createSessionState } from './session/session'
 
 describe('App shell', () => {
+  const setReducedMotionPreference = (matches: boolean) => {
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      writable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        matches: query.includes('prefers-reduced-motion') ? matches : false,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    })
+  }
   const enterNewSession = () => {
     fireEvent.click(screen.getByRole('button', { name: /start new session/i }))
   }
@@ -28,6 +44,7 @@ describe('App shell', () => {
 
   beforeEach(() => {
     window.localStorage.clear()
+    setReducedMotionPreference(false)
   })
 
   afterEach(() => {
@@ -71,6 +88,40 @@ describe('App shell', () => {
       ),
     ).toBeInTheDocument()
     expect(within(activeExerciseCard).queryByText(/sets x \d+ reps/i)).not.toBeInTheDocument()
+  })
+
+  it('applies swipe transition animation class when exercise changes', async () => {
+    render(<App />)
+    enterNewSession()
+
+    const beforeTransitionCard = screen.getByRole('article', { name: /active exercise/i })
+    expect(beforeTransitionCard).toHaveAttribute('data-exercise-transition-active', 'false')
+
+    clickOptionsAction(/skip exercise/i)
+    fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
+
+    expect(screen.getByRole('heading', { name: /straight leg raise/i })).toBeInTheDocument()
+    const afterTransitionCard = screen.getByRole('article', { name: /active exercise/i })
+    await waitFor(() => {
+      expect(afterTransitionCard).toHaveAttribute('data-exercise-transition-active', 'true')
+    })
+    await waitFor(() => {
+      expect(afterTransitionCard).toHaveClass('exercise-card-transition')
+    })
+  })
+
+  it('disables exercise transition animation when reduced-motion is preferred', () => {
+    setReducedMotionPreference(true)
+    render(<App />)
+    enterNewSession()
+
+    clickOptionsAction(/skip exercise/i)
+    fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
+
+    expect(screen.getByRole('heading', { name: /straight leg raise/i })).toBeInTheDocument()
+    const activeExerciseCard = screen.getByRole('article', { name: /active exercise/i })
+    expect(activeExerciseCard).toHaveAttribute('data-exercise-transition-active', 'false')
+    expect(activeExerciseCard).not.toHaveClass('exercise-card-transition')
   })
 
   it('shows override actions inside the options screen', async () => {

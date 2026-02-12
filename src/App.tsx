@@ -135,8 +135,33 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
   const previousRuntimePhaseRef = useRef(sessionState.runtime.phase)
   const restSwipeStartXRef = useRef<number | null>(null)
   const restSwipeDismissedRef = useRef(false)
+  const renderedExerciseIdRef = useRef<string | null>(null)
+  const exerciseTransitionTimeoutRef = useRef<number | null>(null)
+  const exerciseTransitionFrameRef = useRef<number | null>(null)
   const wakeLockSentinelRef = useRef<WakeLockSentinelLike | null>(null)
   const wakeLockRequestInFlightRef = useRef(false)
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+      return false
+    }
+
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  })
+  const [exerciseTransitionActive, setExerciseTransitionActive] = useState(false)
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+      return
+    }
+
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const onChange = (event: MediaQueryListEvent) => {
+      setPrefersReducedMotion(event.matches)
+    }
+
+    mediaQuery.addEventListener('change', onChange)
+    return () => mediaQuery.removeEventListener('change', onChange)
+  }, [])
 
   useEffect(() => {
     const previousPhase = previousRuntimePhaseRef.current
@@ -238,6 +263,71 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
     sessionState.currentExerciseId === null
       ? null
       : (sessionState.exerciseProgress[sessionState.currentExerciseId] ?? null)
+
+  useEffect(() => {
+    return () => {
+      if (exerciseTransitionFrameRef.current !== null) {
+        window.cancelAnimationFrame(exerciseTransitionFrameRef.current)
+      }
+      if (exerciseTransitionTimeoutRef.current !== null) {
+        window.clearTimeout(exerciseTransitionTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    if (
+      sessionState.status !== 'in_progress' ||
+      !sessionState.currentExerciseId ||
+      isSessionOptionsOpen
+    ) {
+      return
+    }
+
+    const currentExerciseId = sessionState.currentExerciseId
+    const previousRenderedExerciseId = renderedExerciseIdRef.current
+    renderedExerciseIdRef.current = currentExerciseId
+
+    if (exerciseTransitionFrameRef.current !== null) {
+      window.cancelAnimationFrame(exerciseTransitionFrameRef.current)
+      exerciseTransitionFrameRef.current = null
+    }
+    if (exerciseTransitionTimeoutRef.current !== null) {
+      window.clearTimeout(exerciseTransitionTimeoutRef.current)
+      exerciseTransitionTimeoutRef.current = null
+    }
+
+    if (
+      previousRenderedExerciseId === null ||
+      previousRenderedExerciseId === currentExerciseId ||
+      prefersReducedMotion
+    ) {
+      exerciseTransitionFrameRef.current = window.requestAnimationFrame(() => {
+        setExerciseTransitionActive(false)
+        exerciseTransitionFrameRef.current = null
+      })
+      return
+    }
+
+    exerciseTransitionFrameRef.current = window.requestAnimationFrame(() => {
+      setExerciseTransitionActive(false)
+      exerciseTransitionFrameRef.current = window.requestAnimationFrame(() => {
+        setExerciseTransitionActive(true)
+        exerciseTransitionFrameRef.current = null
+        exerciseTransitionTimeoutRef.current = window.setTimeout(() => {
+          window.requestAnimationFrame(() => {
+            setExerciseTransitionActive(false)
+          })
+          exerciseTransitionTimeoutRef.current = null
+        }, 320)
+      })
+    })
+  }, [
+    isSessionOptionsOpen,
+    prefersReducedMotion,
+    sessionState.currentExerciseId,
+    sessionState.status,
+  ])
 
   useEffect(() => {
     if (
@@ -760,7 +850,11 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
       <p className="workout-timer">
         Workout time: {formatElapsedWorkoutTime(sessionState.workoutElapsedSeconds)}
       </p>
-      <article className="exercise-card" aria-label="Active exercise">
+      <article
+        className={`exercise-card ${exerciseTransitionActive ? 'exercise-card-transition' : ''}`}
+        aria-label="Active exercise"
+        data-exercise-transition-active={exerciseTransitionActive ? 'true' : 'false'}
+      >
         <div className="exercise-header-row">
           <p className="eyebrow">
             Current exercise: {formatElapsedWorkoutTime(sessionState.currentExerciseElapsedSeconds)}

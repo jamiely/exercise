@@ -376,6 +376,31 @@ test('progresses in strict order after completing first exercise', async ({ page
   await expectOnOptionsScreen(page, /exercise 2\/6/i)
 })
 
+test('animates exercise transition and keeps exercise controls responsive', async ({ page }) => {
+  await tapOptionsAction(page, /skip exercise/i)
+  await tapByRoleName(page, 'button', /back to exercise/i)
+
+  await expect(page.getByRole('heading', { name: /straight leg raise/i })).toBeVisible()
+  const activeExerciseCard = page.getByRole('article', { name: /active exercise/i })
+  await expect(activeExerciseCard).toHaveAttribute('data-exercise-transition-active', 'true')
+  await tapByRoleName(page, 'button', /^start$/i)
+  await expect(page.getByRole('button', { name: /^pause$/i })).toBeVisible()
+})
+
+test('respects reduced-motion preference by disabling exercise transition animation', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await tapOptionsAction(page, /skip exercise/i)
+  await tapByRoleName(page, 'button', /back to exercise/i)
+
+  await expect(page.getByRole('heading', { name: /straight leg raise/i })).toBeVisible()
+  await expect(page.getByRole('article', { name: /active exercise/i })).toHaveAttribute(
+    'data-exercise-transition-active',
+    'false',
+  )
+})
+
 test('starts hold timer when routine starts on wall sit', async ({ page }) => {
   await tapByRoleName(page, 'button', /^start$/i)
   await expect(page.getByRole('heading', { name: /wall sit \(shallow\)/i })).toBeVisible()
