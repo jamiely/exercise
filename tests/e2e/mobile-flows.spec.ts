@@ -31,6 +31,19 @@ const tapOptionsAction = async (page: Page, name: RegExp | string) => {
   await tapByRoleName(page, 'button', name)
 }
 
+const readPhaseTimerSeconds = async (page: Page): Promise<number> => {
+  const phaseTimerText = await page
+    .locator('.session-meta')
+    .getByText(/phase timer:\s*[0-9]+\.[0-9]s/i)
+    .first()
+    .innerText()
+  const match = phaseTimerText.match(/phase timer:\s*([0-9]+\.[0-9])s/i)
+  if (!match) {
+    throw new Error(`Unable to parse phase timer text: ${phaseTimerText}`)
+  }
+  return Number(match[1])
+}
+
 const seedWallSitAutoSession = async (page: Page) => {
   await page.evaluate((sessionStorageKey) => {
     const raw = window.localStorage.getItem(sessionStorageKey)
@@ -266,6 +279,38 @@ test('shows rest timer card after hold finishes on straight leg raise', async ({
   expect(runtimeState.remainingMs).toBeGreaterThan(1_000)
 
   await expect(page.getByText(/rest timer:/i)).toBeVisible()
+})
+
+test('freezes rep rest countdown while paused and resumes from the same value', async ({
+  page,
+}) => {
+  await tapOptionsAction(page, /skip exercise/i)
+  await tapByRoleName(page, 'button', /back to exercise/i)
+  await expect(page.getByRole('heading', { name: /straight leg raise/i })).toBeVisible()
+
+  await tapByRoleName(page, 'button', /^start$/i)
+  await tapByRoleName(page, 'button', /options/i)
+  await expect(page.getByText(/workflow phase: represt/i)).toBeVisible({ timeout: 8_000 })
+
+  const pausedValueBeforeWait = await readPhaseTimerSeconds(page)
+  await tapByRoleName(page, 'button', /back to exercise/i)
+  await tapByRoleName(page, 'button', /^pause$/i)
+  await tapByRoleName(page, 'button', /options/i)
+  await expect(page.getByText(/workflow phase: paused/i)).toBeVisible()
+
+  const pausedValueAtStart = await readPhaseTimerSeconds(page)
+  await page.waitForTimeout(1_500)
+  const pausedValueAfterWait = await readPhaseTimerSeconds(page)
+  expect(pausedValueAtStart).toBe(pausedValueAfterWait)
+
+  await tapByRoleName(page, 'button', /back to exercise/i)
+  await tapByRoleName(page, 'button', /^resume$/i)
+  await page.waitForTimeout(1_100)
+  await tapByRoleName(page, 'button', /options/i)
+  await expect(page.getByText(/workflow phase: represt/i)).toBeVisible()
+  const resumedValue = await readPhaseTimerSeconds(page)
+  expect(resumedValue).toBeLessThanOrEqual(pausedValueBeforeWait)
+  expect(resumedValue).toBeLessThan(pausedValueAtStart)
 })
 
 test('renders muted rest display when rest timer is not active', async ({ page }) => {
