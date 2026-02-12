@@ -2,6 +2,9 @@
 
 Mobile-first React app for running an exercise session from a JSON prescription.
 
+[![CI](https://github.com/jamiely/exercise/actions/workflows/ci.yml/badge.svg)](https://github.com/jamiely/exercise/actions/workflows/ci.yml)
+[![Deploy To GitHub Pages](https://github.com/jamiely/exercise/actions/workflows/deploy-pages.yml/badge.svg)](https://github.com/jamiely/exercise/actions/workflows/deploy-pages.yml)
+
 ## Stack
 
 - `pnpm`
@@ -16,10 +19,26 @@ Mobile-first React app for running an exercise session from a JSON prescription.
 - Supports skipping exercises and automatic skipped-cycle revisit.
 - Tracks reps per set (`x/target reps`) and supports undo.
 - Supports hold-based exercises where a completed hold counts as one rep.
-- Shows between-set rest timer and explicit `Start Next Set` transition.
+- Includes runtime hold/rest phase timers with pause/resume consistency.
+- Supports rest controls (`+`) and swipe-to-dismiss for active rest phases.
+- Supports `Restart Current Set` and `Restart Current Exercise` from session options.
 - Persists in-progress session state in `localStorage`.
 - Prompts `Resume` vs `Start New` on reload when an active session exists.
 - Supports de-emphasized `End Session Early` with terminal summary.
+
+## Screenshots
+
+### Session Start
+
+![Session start screen](public/screenshots/session-start.png)
+
+### Active Exercise
+
+![Active exercise screen](public/screenshots/session-active.png)
+
+### Session Options
+
+![Session options screen](public/screenshots/session-options.png)
 
 ## Accessibility and Hardening Notes
 
@@ -48,8 +67,10 @@ corepack pnpm dev
 - `corepack pnpm prettier --write .` (when Prettier is added/configured)
 - `corepack pnpm lint`
 - `corepack pnpm test`
+- `corepack pnpm test:coverage`
 - `corepack pnpm build`
 - `corepack pnpm test:e2e`
+- `corepack pnpm screenshots:readme`
 
 ## Final Verification Pipeline
 
