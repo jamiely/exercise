@@ -664,6 +664,39 @@ test('renders overrides in Options and applies end exercise override there', asy
   await expect(page.getByText(/workflow phase: exerciserest/i)).toBeVisible()
 })
 
+test('restarts current set and current exercise from Options with scoped resets', async ({
+  page,
+}) => {
+  await tapOptionsAction(page, /skip exercise/i)
+  await tapOptionsAction(page, /skip exercise/i)
+  await tapOptionsAction(page, /skip exercise/i)
+  await tapByRoleName(page, 'button', /back to exercise/i)
+  await expect(page.getByRole('heading', { name: /backward step-up/i })).toBeVisible()
+
+  await addReps(page, 3)
+  await expect(page.getByText('3/8 reps')).toBeVisible()
+
+  await tapByRoleName(page, 'button', /options/i)
+  await expect(page.getByRole('button', { name: /restart current set/i })).toBeVisible()
+  await expect(page.getByRole('button', { name: /restart current exercise/i })).toBeVisible()
+  await tapByRoleName(page, 'button', /restart current set/i)
+  await tapByRoleName(page, 'button', /back to exercise/i)
+  await expect(page.getByRole('heading', { name: /backward step-up/i })).toBeVisible()
+  await expect(page.getByText('0/8 reps')).toBeVisible()
+
+  await addReps(page, 8)
+  await expect(page.getByText('Set 2/2')).toBeVisible()
+  await tapByRoleName(page, 'button', /\+1 rep/i)
+  await expect(page.getByText('1/8 reps')).toBeVisible()
+
+  await tapByRoleName(page, 'button', /options/i)
+  await tapByRoleName(page, 'button', /restart current exercise/i)
+  await tapByRoleName(page, 'button', /back to exercise/i)
+  await expect(page.getByRole('heading', { name: /backward step-up/i })).toBeVisible()
+  await expect(page.getByText('Set 1/2')).toBeVisible()
+  await expect(page.getByText('0/8 reps')).toBeVisible()
+})
+
 test('persists cue settings choices across reload in options flow', async ({ page }) => {
   await tapByRoleName(page, 'button', /options/i)
 

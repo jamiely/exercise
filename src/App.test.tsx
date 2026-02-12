@@ -88,6 +88,39 @@ describe('App shell', () => {
     expect(screen.getByRole('button', { name: /end exercise/i })).toBeInTheDocument()
   })
 
+  it('restarts the current set and current exercise from Options without affecting scope', () => {
+    render(<App />)
+    enterNewSession()
+
+    clickOptionsAction(/skip exercise/i)
+    clickOptionsAction(/skip exercise/i)
+    clickOptionsAction(/skip exercise/i)
+    fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
+    expect(screen.getByRole('heading', { name: /backward step-up/i })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /\+1 rep/i }))
+    fireEvent.click(screen.getByRole('button', { name: /\+1 rep/i }))
+    expect(screen.getByText('2/8 reps')).toBeInTheDocument()
+
+    clickOptionsAction(/restart current set/i)
+    fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
+    expect(screen.getByRole('heading', { name: /backward step-up/i })).toBeInTheDocument()
+    expect(screen.getByText('0/8 reps')).toBeInTheDocument()
+
+    for (let rep = 0; rep < 8; rep += 1) {
+      fireEvent.click(screen.getByRole('button', { name: /\+1 rep/i }))
+    }
+    expect(screen.getByText('Set 2/2')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /\+1 rep/i }))
+    expect(screen.getByText('1/8 reps')).toBeInTheDocument()
+
+    clickOptionsAction(/restart current exercise/i)
+    fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
+    expect(screen.getByRole('heading', { name: /backward step-up/i })).toBeInTheDocument()
+    expect(screen.getByText('Set 1/2')).toBeInTheDocument()
+    expect(screen.getByText('0/8 reps')).toBeInTheDocument()
+  })
+
   it('enters hold workflow phase when Start is pressed', async () => {
     const user = userEvent.setup()
     render(<App />)

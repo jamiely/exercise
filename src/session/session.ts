@@ -72,6 +72,8 @@ export type SessionAction =
   | { type: 'set_sound_enabled'; now?: string; enabled: boolean }
   | { type: 'set_vibration_enabled'; now?: string; enabled: boolean }
   | { type: 'add_runtime_rest_time'; now?: string; ms?: number }
+  | { type: 'restart_current_exercise'; now?: string }
+  | { type: 'restart_current_set'; now?: string }
   | {
       type: 'tick_runtime_countdown'
       now?: string
@@ -711,6 +713,99 @@ export const reduceSession = (
           remainingMs: nextRemainingMs,
           countdownGeneration: (state.runtime.countdownGeneration ?? 0) + 1,
         },
+      }
+    }
+    case 'restart_current_exercise': {
+      if (!isInProgress(state) || !state.currentExerciseId) {
+        return state
+      }
+
+      const currentProgress = getCurrentProgress(state)
+      if (!currentProgress) {
+        return state
+      }
+
+      const exerciseIndex = getCurrentExerciseIndex(state, program)
+      const resetSets = currentProgress.sets.map((setProgress) => ({
+        ...setProgress,
+        completedReps: 0,
+      }))
+
+      return {
+        ...state,
+        updatedAt: getTimestamp(state, action.now),
+        currentExerciseElapsedSeconds: 0,
+        exerciseProgress: {
+          ...state.exerciseProgress,
+          [state.currentExerciseId]: {
+            ...currentProgress,
+            completed: false,
+            activeSetIndex: 0,
+            sets: resetSets,
+            holdTimerRunning: false,
+            holdElapsedSeconds: 0,
+            restTimerRunning: false,
+            restElapsedSeconds: 0,
+          },
+        },
+        runtime: {
+          ...state.runtime,
+          phase: 'idle',
+          exerciseIndex,
+          setIndex: 0,
+          repIndex: 0,
+          remainingMs: 0,
+          previousPhase: null,
+        },
+        workoutTimerRunning: false,
+      }
+    }
+    case 'restart_current_set': {
+      if (!isInProgress(state) || !state.currentExerciseId) {
+        return state
+      }
+
+      const currentProgress = getCurrentProgress(state)
+      if (!currentProgress) {
+        return state
+      }
+
+      const setIndex = Math.max(0, currentProgress.activeSetIndex)
+      const targetSet = currentProgress.sets[setIndex]
+      if (!targetSet) {
+        return state
+      }
+
+      const exerciseIndex = getCurrentExerciseIndex(state, program)
+      const resetSets = currentProgress.sets.map((setProgress, index) =>
+        index === setIndex ? { ...setProgress, completedReps: 0 } : setProgress,
+      )
+
+      return {
+        ...state,
+        updatedAt: getTimestamp(state, action.now),
+        exerciseProgress: {
+          ...state.exerciseProgress,
+          [state.currentExerciseId]: {
+            ...currentProgress,
+            completed: false,
+            sets: resetSets,
+            holdTimerRunning: false,
+            holdElapsedSeconds: 0,
+            restTimerRunning: false,
+            restElapsedSeconds: 0,
+          },
+        },
+        runtime: {
+          ...state.runtime,
+          phase: 'idle',
+          exerciseIndex,
+          setIndex,
+          repIndex: 0,
+          remainingMs: 0,
+          previousPhase: null,
+        },
+        workoutTimerRunning: false,
       }
     }
     case 'tick_runtime_countdown': {

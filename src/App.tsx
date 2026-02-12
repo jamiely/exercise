@@ -541,6 +541,8 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
       case 'skip_exercise':
       case 'end_session_early':
       case 'finish_session':
+      case 'restart_current_exercise':
+      case 'restart_current_set':
       case 'start_routine':
       case 'pause_routine':
       case 'resume_routine':
@@ -690,6 +692,23 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
             </button>
             <button type="button" onClick={() => dispatchOverride('override_end_exercise')}>
               End Exercise
+            </button>
+          </div>
+          <p className="eyebrow">Restart</p>
+          <div className="options-session-actions">
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => dispatchTimed('restart_current_set')}
+            >
+              Restart Current Set
+            </button>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => dispatchTimed('restart_current_exercise')}
+            >
+              Restart Current Exercise
             </button>
           </div>
           <p className="eyebrow">Session Actions</p>

@@ -143,6 +143,130 @@ describe('session reducer', () => {
     expect(vibrationOff.options.vibrationEnabled).toBe(false)
   })
 
+  it('restarts only the current exercise and keeps unrelated exercise progress intact', () => {
+    const initial = createSessionState(filledSetProgram, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-restart-exercise',
+    })
+    const currentExercise = initial.exerciseProgress['exercise-1']
+    const unrelatedExercise = initial.exerciseProgress['exercise-2']
+    const progressed = {
+      ...initial,
+      currentExerciseElapsedSeconds: 42,
+      workoutTimerRunning: true,
+      runtime: {
+        phase: 'repRest' as const,
+        exerciseIndex: 0,
+        setIndex: 1,
+        repIndex: 1,
+        remainingMs: 2_500,
+        previousPhase: null,
+      },
+      exerciseProgress: {
+        ...initial.exerciseProgress,
+        'exercise-1': {
+          ...currentExercise,
+          activeSetIndex: 1,
+          sets: [
+            { ...currentExercise.sets[0], completedReps: 1 },
+            { ...currentExercise.sets[1], completedReps: 1 },
+          ],
+          holdTimerRunning: true,
+          holdElapsedSeconds: 1.2,
+          restTimerRunning: true,
+          restElapsedSeconds: 0.8,
+        },
+        'exercise-2': {
+          ...unrelatedExercise,
+          sets: [{ ...unrelatedExercise.sets[0], completedReps: 1 }],
+        },
+      },
+    }
+
+    const restarted = reduceSession(
+      progressed,
+      { type: 'restart_current_exercise', now: '2026-02-10T00:00:01.000Z' },
+      filledSetProgram,
+    )
+
+    expect(restarted.exerciseProgress['exercise-1'].activeSetIndex).toBe(0)
+    expect(
+      restarted.exerciseProgress['exercise-1'].sets.map((setProgress) => setProgress.completedReps),
+    ).toEqual([0, 0])
+    expect(restarted.exerciseProgress['exercise-1'].holdTimerRunning).toBe(false)
+    expect(restarted.exerciseProgress['exercise-1'].holdElapsedSeconds).toBe(0)
+    expect(restarted.exerciseProgress['exercise-1'].restTimerRunning).toBe(false)
+    expect(restarted.exerciseProgress['exercise-1'].restElapsedSeconds).toBe(0)
+    expect(restarted.currentExerciseElapsedSeconds).toBe(0)
+    expect(restarted.workoutTimerRunning).toBe(false)
+    expect(restarted.runtime.phase).toBe('idle')
+    expect(restarted.runtime.exerciseIndex).toBe(0)
+    expect(restarted.runtime.setIndex).toBe(0)
+    expect(restarted.runtime.repIndex).toBe(0)
+    expect(restarted.runtime.remainingMs).toBe(0)
+    expect(restarted.exerciseProgress['exercise-2']).toEqual(
+      progressed.exerciseProgress['exercise-2'],
+    )
+  })
+
+  it('restarts only the current set and preserves other set progress', () => {
+    const initial = createSessionState(filledSetProgram, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-restart-set',
+    })
+    const currentExercise = initial.exerciseProgress['exercise-1']
+    const progressed = {
+      ...initial,
+      currentExerciseElapsedSeconds: 27,
+      workoutTimerRunning: true,
+      runtime: {
+        phase: 'hold' as const,
+        exerciseIndex: 0,
+        setIndex: 1,
+        repIndex: 1,
+        remainingMs: 900,
+        previousPhase: null,
+      },
+      exerciseProgress: {
+        ...initial.exerciseProgress,
+        'exercise-1': {
+          ...currentExercise,
+          activeSetIndex: 1,
+          sets: [
+            { ...currentExercise.sets[0], completedReps: 1 },
+            { ...currentExercise.sets[1], completedReps: 1 },
+          ],
+          holdTimerRunning: true,
+          holdElapsedSeconds: 0.7,
+          restTimerRunning: false,
+          restElapsedSeconds: 0,
+        },
+      },
+    }
+
+    const restarted = reduceSession(
+      progressed,
+      { type: 'restart_current_set', now: '2026-02-10T00:00:01.000Z' },
+      filledSetProgram,
+    )
+
+    expect(restarted.exerciseProgress['exercise-1'].activeSetIndex).toBe(1)
+    expect(
+      restarted.exerciseProgress['exercise-1'].sets.map((setProgress) => setProgress.completedReps),
+    ).toEqual([1, 0])
+    expect(restarted.exerciseProgress['exercise-1'].holdTimerRunning).toBe(false)
+    expect(restarted.exerciseProgress['exercise-1'].holdElapsedSeconds).toBe(0)
+    expect(restarted.exerciseProgress['exercise-1'].restTimerRunning).toBe(false)
+    expect(restarted.exerciseProgress['exercise-1'].restElapsedSeconds).toBe(0)
+    expect(restarted.currentExerciseElapsedSeconds).toBe(27)
+    expect(restarted.workoutTimerRunning).toBe(false)
+    expect(restarted.runtime.phase).toBe('idle')
+    expect(restarted.runtime.exerciseIndex).toBe(0)
+    expect(restarted.runtime.setIndex).toBe(1)
+    expect(restarted.runtime.repIndex).toBe(0)
+    expect(restarted.runtime.remainingMs).toBe(0)
+  })
+
   it('starts the runtime workflow in hold phase from idle', () => {
     const initial = createSessionState(testProgram, {
       now: '2026-02-10T00:00:00.000Z',
