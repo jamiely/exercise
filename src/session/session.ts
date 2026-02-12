@@ -64,6 +64,7 @@ export type SessionAction =
   | { type: 'start_routine'; now?: string }
   | { type: 'pause_routine'; now?: string }
   | { type: 'resume_routine'; now?: string }
+  | { type: 'dismiss_runtime_rest'; now?: string }
   | { type: 'override_skip_rep'; now?: string }
   | { type: 'override_skip_rest'; now?: string }
   | { type: 'override_end_set'; now?: string }
@@ -173,49 +174,6 @@ const getInitialSessionOptions = (): SessionOptions => ({
   vibrationEnabled: true,
 })
 
-const shouldAutoStartHold = (
-  exercise: Exercise | null,
-  progress: ExerciseProgress | null,
-): boolean => {
-  if (!exercise || exercise.holdSeconds === null || !progress) {
-    return false
-  }
-
-  if (progress.holdTimerRunning || progress.restTimerRunning) {
-    return false
-  }
-
-  const activeSet = progress.sets[progress.activeSetIndex]
-  return Boolean(activeSet && activeSet.completedReps < activeSet.targetReps)
-}
-
-const withAutoStartedHoldForExercise = (
-  state: SessionState,
-  program: Program,
-  exerciseId: string | null,
-): SessionState => {
-  if (!exerciseId) {
-    return state
-  }
-
-  const exercise = program.exercises.find((candidate) => candidate.id === exerciseId) ?? null
-  const progress = state.exerciseProgress[exerciseId] ?? null
-  if (!shouldAutoStartHold(exercise, progress)) {
-    return state
-  }
-
-  return {
-    ...state,
-    exerciseProgress: {
-      ...state.exerciseProgress,
-      [exerciseId]: {
-        ...progress,
-        holdTimerRunning: true,
-      },
-    },
-  }
-}
-
 const withUpdatedExerciseProgress = (
   state: SessionState,
   exerciseId: string,
@@ -268,33 +226,21 @@ const withTerminalStatus = (
   }
 }
 
-const withAlignedRuntimeAfterExerciseSwitch = (
-  state: SessionState,
-  program: Program,
-): SessionState => {
-  if (!isInProgress(state) || !state.currentExerciseId) {
-    return state
-  }
-
-  if (state.runtime.phase !== 'hold' || state.runtime.remainingMs > 0) {
+const withIdleRuntimeForCurrentExercise = (state: SessionState, program: Program): SessionState => {
+  if (!isInProgress(state) || state.currentExerciseId === null) {
     return state
   }
 
   const exerciseIndex = getCurrentExerciseIndex(state, program)
-  const exercise = program.exercises[exerciseIndex]
-  if (!exercise) {
-    return state
-  }
-
   const { setIndex, repIndex } = getCurrentSetAndRepIndex(state)
-  const remainingMs = exercise.holdSeconds !== null ? exercise.holdSeconds * 1000 : 0
-
   if (
+    state.runtime.phase === 'idle' &&
     state.runtime.exerciseIndex === exerciseIndex &&
     state.runtime.setIndex === setIndex &&
     state.runtime.repIndex === repIndex &&
-    state.runtime.remainingMs === remainingMs &&
-    state.runtime.previousPhase === null
+    state.runtime.remainingMs === 0 &&
+    state.runtime.previousPhase === null &&
+    !state.workoutTimerRunning
   ) {
     return state
   }
@@ -303,12 +249,14 @@ const withAlignedRuntimeAfterExerciseSwitch = (
     ...state,
     runtime: {
       ...state.runtime,
+      phase: 'idle',
       exerciseIndex,
       setIndex,
       repIndex,
-      remainingMs,
+      remainingMs: 0,
       previousPhase: null,
     },
+    workoutTimerRunning: false,
   }
 }
 
@@ -335,13 +283,7 @@ const advanceAfterPrimary = (state: SessionState, program: Program, now?: string
       currentExerciseElapsedSeconds: 0,
       updatedAt: getTimestamp(state, now),
     }
-
-    const withAutoHold = withAutoStartedHoldForExercise(
-      advancedState,
-      program,
-      advancedState.currentExerciseId,
-    )
-    return withAlignedRuntimeAfterExerciseSwitch(withAutoHold, program)
+    return withIdleRuntimeForCurrentExercise(advancedState, program)
   }
 
   if (state.skipQueue.length > 0) {
@@ -352,13 +294,7 @@ const advanceAfterPrimary = (state: SessionState, program: Program, now?: string
       currentExerciseElapsedSeconds: 0,
       updatedAt: getTimestamp(state, now),
     }
-
-    const withAutoHold = withAutoStartedHoldForExercise(
-      advancedState,
-      program,
-      advancedState.currentExerciseId,
-    )
-    return withAlignedRuntimeAfterExerciseSwitch(withAutoHold, program)
+    return withIdleRuntimeForCurrentExercise(advancedState, program)
   }
 
   return withTerminalStatus(state, 'completed', now)
@@ -389,13 +325,7 @@ const advanceAfterSkip = (state: SessionState, program: Program, now?: string): 
     currentExerciseElapsedSeconds: 0,
     updatedAt: getTimestamp(state, now),
   }
-
-  const withAutoHold = withAutoStartedHoldForExercise(
-    advancedState,
-    program,
-    advancedState.currentExerciseId,
-  )
-  return withAlignedRuntimeAfterExerciseSwitch(withAutoHold, program)
+  return withIdleRuntimeForCurrentExercise(advancedState, program)
 }
 
 export const createSessionState = (
@@ -550,6 +480,31 @@ export const reduceSession = (
       return reduceSession(
         state,
         { type: 'complete_runtime_countdown', now: action.now, force: true },
+        program,
+      )
+    }
+    case 'dismiss_runtime_rest': {
+      if (
+        !isInProgress(state) ||
+        (state.runtime.phase !== 'repRest' &&
+          state.runtime.phase !== 'setRest' &&
+          state.runtime.phase !== 'exerciseRest')
+      ) {
+        return state
+      }
+
+      return reduceSession(
+        state,
+        {
+          type: 'complete_runtime_countdown',
+          now: action.now,
+          force: true,
+          generation: state.runtime.countdownGeneration ?? 0,
+          phase: state.runtime.phase,
+          exerciseIndex: state.runtime.exerciseIndex,
+          setIndex: state.runtime.setIndex,
+          repIndex: state.runtime.repIndex,
+        },
         program,
       )
     }
@@ -972,13 +927,14 @@ export const reduceSession = (
 
         return {
           ...advancedState,
+          workoutTimerRunning: false,
           runtime: {
             ...advancedState.runtime,
-            phase: 'hold',
+            phase: 'idle',
             exerciseIndex: nextExerciseIndex,
             setIndex: 0,
             repIndex: 0,
-            remainingMs: nextExercise.holdSeconds !== null ? nextExercise.holdSeconds * 1000 : 0,
+            remainingMs: 0,
             previousPhase: null,
           },
         }
@@ -1561,13 +1517,7 @@ export const reduceSession = (
             : 0,
         updatedAt: getTimestamp(updatedProgressState, action.now),
       }
-
-      const withAutoHold = withAutoStartedHoldForExercise(
-        advancedState,
-        program,
-        advancedState.currentExerciseId,
-      )
-      return withAlignedRuntimeAfterExerciseSwitch(withAutoHold, program)
+      return withIdleRuntimeForCurrentExercise(advancedState, program)
     }
     case 'end_session_early':
       return isInProgress(state) ? withTerminalStatus(state, 'ended_early', action.now) : state

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useReducer, useRef, useState } from 'react'
+import { useEffect, useMemo, useReducer, useRef, useState, type PointerEvent } from 'react'
 import './App.css'
 import { ProgramLoadError, loadProgram } from './program/program'
 import { createCountdownController, formatCountdownTenths } from './session/countdown'
@@ -133,55 +133,10 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
     bootState.initialSession,
   )
   const previousRuntimePhaseRef = useRef(sessionState.runtime.phase)
-  const previousExerciseIdRef = useRef<string | null>(null)
+  const restSwipeStartXRef = useRef<number | null>(null)
+  const restSwipeDismissedRef = useRef(false)
   const wakeLockSentinelRef = useRef<WakeLockSentinelLike | null>(null)
   const wakeLockRequestInFlightRef = useRef(false)
-
-  useEffect(() => {
-    if (!hasEnteredSession) {
-      previousExerciseIdRef.current = null
-      return
-    }
-
-    if (sessionState.status !== 'in_progress' || !sessionState.currentExerciseId) {
-      previousExerciseIdRef.current = sessionState.currentExerciseId
-      return
-    }
-
-    const previousExerciseId = previousExerciseIdRef.current
-    const currentExerciseId = sessionState.currentExerciseId
-    previousExerciseIdRef.current = currentExerciseId
-
-    if (previousExerciseId === currentExerciseId) {
-      return
-    }
-
-    if (sessionState.runtime.phase !== 'idle') {
-      return
-    }
-
-    const currentExercise =
-      program.exercises.find((exercise) => exercise.id === currentExerciseId) ?? null
-    const currentProgress = sessionState.exerciseProgress[currentExerciseId] ?? null
-    if (
-      !currentExercise ||
-      currentExercise.holdSeconds === null ||
-      !currentProgress ||
-      currentProgress.holdTimerRunning ||
-      currentProgress.restTimerRunning
-    ) {
-      return
-    }
-
-    dispatch({ type: 'start_hold_timer', now: new Date().toISOString() })
-  }, [
-    hasEnteredSession,
-    program.exercises,
-    sessionState.currentExerciseId,
-    sessionState.exerciseProgress,
-    sessionState.runtime.phase,
-    sessionState.status,
-  ])
 
   useEffect(() => {
     const previousPhase = previousRuntimePhaseRef.current
@@ -615,6 +570,40 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
         ? { label: 'Pause', actionType: 'pause_routine' as const, disabled: false }
         : { label: 'Start', actionType: 'start_routine' as const, disabled: false }
   const shouldAutoStartRoutineOnRepTap = routineControl.label === 'Start'
+  const isRuntimeRestPhase = canSkipRest
+  const handleRestSwipeDismiss = () => {
+    dispatchAction({ type: 'dismiss_runtime_rest', now: new Date().toISOString() })
+  }
+  const handleRestPointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    if (!isRuntimeRestPhase) {
+      return
+    }
+
+    restSwipeStartXRef.current = event.clientX
+    restSwipeDismissedRef.current = false
+  }
+  const handleRestPointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    if (
+      !isRuntimeRestPhase ||
+      restSwipeDismissedRef.current ||
+      restSwipeStartXRef.current === null
+    ) {
+      return
+    }
+
+    const distanceX = event.clientX - restSwipeStartXRef.current
+    if (Math.abs(distanceX) < 72) {
+      return
+    }
+
+    restSwipeDismissedRef.current = true
+    restSwipeStartXRef.current = null
+    handleRestSwipeDismiss()
+  }
+  const handleRestPointerEnd = () => {
+    restSwipeStartXRef.current = null
+    restSwipeDismissedRef.current = false
+  }
 
   if (isSessionOptionsOpen) {
     return (
@@ -793,6 +782,11 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
           <div
             className={`timer-card ${isRestTimerActive ? 'timer-card-active' : 'timer-card-muted'}`}
             aria-live="polite"
+            onPointerDown={handleRestPointerDown}
+            onPointerMove={handleRestPointerMove}
+            onPointerUp={handleRestPointerEnd}
+            onPointerCancel={handleRestPointerEnd}
+            data-runtime-rest-card={isRuntimeRestPhase ? 'true' : 'false'}
           >
             <div className="timer-header-row">
               <p className="eyebrow">Rest</p>
@@ -824,6 +818,7 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
             <p className="timer-text">
               Rest timer: {formatTimerSeconds(displayedRestRemainingSeconds)}
             </p>
+            {isRuntimeRestPhase ? <p className="subtitle">Swipe to dismiss rest</p> : null}
             {!isHoldExercise ? (
               <button
                 type="button"

@@ -201,6 +201,7 @@ describe('App shell', () => {
 
     expect(screen.getByRole('heading', { name: /straight leg raise/i })).toBeInTheDocument()
     expect(screen.getByText(/hold timer:/i)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /^start$/i }))
 
     await act(async () => {
       vi.advanceTimersByTime(3500)
@@ -583,7 +584,7 @@ describe('App shell', () => {
     expect(screen.getByText('0/10 reps')).toBeInTheDocument()
   })
 
-  it('counts down exercise rest runtime phase and auto-starts next exercise hold', async () => {
+  it('counts down exercise rest runtime phase and keeps next exercise idle until Start', async () => {
     vi.useFakeTimers()
     const program = loadProgram()
     const session = createSessionState(program, {
@@ -629,6 +630,11 @@ describe('App shell', () => {
     })
 
     expect(screen.getByRole('heading', { name: /terminal knee extension/i })).toBeInTheDocument()
+    expectOnOptionsScreen(/workflow phase: idle/i)
+    expectOnOptionsScreen(/phase timer: 0.0s/i)
+    expect(screen.getByText('Hold Pending')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /^start$/i }))
     expectOnOptionsScreen(/workflow phase: hold/i)
     expectOnOptionsScreen(/phase timer: 3.0s/i)
     expect(screen.getByText('0/15 reps')).toBeInTheDocument()
@@ -709,6 +715,55 @@ describe('App shell', () => {
 
     expectOnOptionsScreen(/workflow phase: hold/i)
     expectOnOptionsScreen(/phase timer: 3.0s/i)
+    expect(screen.getByText('1/15 reps')).toBeInTheDocument()
+  })
+
+  it('dismisses runtime rest with a swipe gesture and transitions once', () => {
+    const program = loadProgram()
+    const session = createSessionState(program, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-swipe-dismiss-rest',
+    })
+    const repRestSession = {
+      ...session,
+      primaryCursor: 2,
+      currentExerciseId: program.exercises[2].id,
+      updatedAt: '2026-02-10T00:00:02.000Z',
+      exerciseProgress: {
+        ...session.exerciseProgress,
+        [program.exercises[2].id]: {
+          ...session.exerciseProgress[program.exercises[2].id],
+          sets: [
+            {
+              ...session.exerciseProgress[program.exercises[2].id].sets[0],
+              completedReps: 1,
+            },
+          ],
+        },
+      },
+      runtime: {
+        phase: 'repRest' as const,
+        exerciseIndex: 2,
+        setIndex: 0,
+        repIndex: 1,
+        remainingMs: 25_000,
+        previousPhase: null,
+      },
+    }
+    persistSession(repRestSession)
+
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: /resume/i }))
+
+    const restTimer = screen.getByText(/rest timer: 25\.0s/i)
+    const restCard = restTimer.closest('.timer-card')
+    expect(restCard).not.toBeNull()
+
+    fireEvent.pointerDown(restCard as Element, { clientX: 260 })
+    fireEvent.pointerMove(restCard as Element, { clientX: 120 })
+    fireEvent.pointerUp(restCard as Element, { clientX: 120 })
+
+    expectOnOptionsScreen(/workflow phase: hold/i)
     expect(screen.getByText('1/15 reps')).toBeInTheDocument()
   })
 
@@ -886,7 +941,7 @@ describe('App shell', () => {
     expect(screen.getByText('Current exercise: 0:00')).toBeInTheDocument()
   })
 
-  it('runs hold timer after auto-progressing from sit-to-stand via +1 rep taps', async () => {
+  it('shows hold pending after auto-progressing from sit-to-stand and runs after Start', async () => {
     vi.useFakeTimers()
 
     render(<App />)
@@ -903,9 +958,13 @@ describe('App shell', () => {
     }
 
     expect(screen.getByRole('heading', { name: /spanish squat hold/i })).toBeInTheDocument()
-    expect(screen.getByText('Hold Running')).toBeInTheDocument()
+    expect(screen.getByText('Hold Pending')).toBeInTheDocument()
     expect(screen.getByText('Hold timer: 45.0s')).toBeInTheDocument()
     expect(readPersistedSession()?.runtime.exerciseIndex).toBe(5)
+    expect(readPersistedSession()?.runtime.remainingMs).toBe(0)
+
+    fireEvent.click(screen.getByRole('button', { name: /^start$/i }))
+    expect(screen.getByText('Hold Running')).toBeInTheDocument()
     expect(readPersistedSession()?.runtime.remainingMs).toBe(45000)
 
     await act(async () => {
@@ -1073,7 +1132,7 @@ describe('App shell', () => {
     expect(readPersistedSession()).toBeNull()
   })
 
-  it('auto-starts hold timer when advancing into a hold exercise', async () => {
+  it('keeps hold timer pending when advancing into a hold exercise until Start is tapped', async () => {
     vi.useFakeTimers()
     render(
       <StrictMode>
@@ -1086,11 +1145,16 @@ describe('App shell', () => {
     fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
 
     expect(screen.getByRole('heading', { name: /straight leg raise/i })).toBeInTheDocument()
-    expect(screen.getByText('Hold Running')).toBeInTheDocument()
+    expect(screen.getByText('Hold Pending')).toBeInTheDocument()
     expect(screen.getByText('Hold timer: 3.0s')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /pause hold/i })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /reset hold/i })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /complete hold rep/i })).not.toBeInTheDocument()
+
+    await act(async () => {
+      vi.advanceTimersByTime(200)
+    })
+    expect(screen.getByText('Hold timer: 3.0s')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /^start$/i }))
+    expect(screen.getByText('Hold Running')).toBeInTheDocument()
 
     await act(async () => {
       vi.advanceTimersByTime(200)
@@ -1098,7 +1162,7 @@ describe('App shell', () => {
     expect(screen.getByText('Hold timer: 2.8s')).toBeInTheDocument()
   })
 
-  it('auto-completes a hold rep once the hold timer reaches target', async () => {
+  it('completes a hold rep after explicit start when hold timer reaches target', async () => {
     vi.useFakeTimers()
     const program = loadProgram()
     const session = createSessionState(program, {
@@ -1118,6 +1182,9 @@ describe('App shell', () => {
 
     expect(screen.getByRole('heading', { name: /terminal knee extension/i })).toBeInTheDocument()
     expect(screen.getByText('Hold timer: 3.0s')).toBeInTheDocument()
+    expect(screen.getByText('Hold Pending')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /^start$/i }))
     expect(screen.getByText('Hold Running')).toBeInTheDocument()
 
     await act(async () => {

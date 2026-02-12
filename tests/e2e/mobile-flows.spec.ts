@@ -602,43 +602,60 @@ test('one-tap Start auto-completes seeded hold workflow path with no progression
   await expect(page.getByRole('heading', { name: /session completed/i })).toBeVisible()
 })
 
-test('auto-starts hold timer when reaching a hold exercise and completes a rep at target', async ({
+test('keeps hold timer idle on entry until Start is tapped, then completes a rep at target', async ({
   page,
 }) => {
   await tapOptionsAction(page, /skip exercise/i)
-  const holdTimerRunning = await page.evaluate((sessionStorageKey) => {
-    const raw = window.localStorage.getItem(sessionStorageKey)
-    if (!raw) {
-      throw new Error('expected persisted session payload to exist')
-    }
-
-    const payload = JSON.parse(raw) as {
-      session: {
-        exerciseProgress: Record<
-          string,
-          {
-            holdTimerRunning: boolean
-          }
-        >
-      }
-    }
-    return payload.session.exerciseProgress['straight-leg-raise']?.holdTimerRunning ?? false
-  }, SESSION_STORAGE_KEY)
-
   await tapByRoleName(page, 'button', /back to exercise/i)
   await expect(page.getByRole('heading', { name: /straight leg raise/i })).toBeVisible()
   await expect(page.getByText(/Hold timer: \d+\.\d+s/i)).toBeVisible()
-  await expect(holdTimerRunning).toBe(true)
+  await expect(page.getByText(/Hold Pending/i)).toBeVisible()
   await expect(page.getByRole('button', { name: /start hold/i })).toHaveCount(0)
   await expect(page.getByRole('button', { name: /pause hold/i })).toHaveCount(0)
   await expect(page.getByRole('button', { name: /reset hold/i })).toHaveCount(0)
   await expect(page.getByRole('button', { name: /complete hold rep/i })).toHaveCount(0)
 
   await page.waitForTimeout(350)
-  await expect(page.getByText(/Hold timer: \d+\.\d+s/i)).toBeVisible()
+  await expect(page.getByText(/Hold timer: 3\.0s/i)).toBeVisible()
 
-  await page.waitForTimeout(3000)
-  await expect(page.getByText('1/10 reps')).toBeVisible()
+  await tapByRoleName(page, 'button', /^start$/i)
+  await expect(page.getByText(/Hold Running/i)).toBeVisible()
+  await page.waitForTimeout(350)
+  await expect(page.getByText(/Hold timer: 2\.[0-9]s/i)).toBeVisible()
+
+  await page.waitForTimeout(4000)
+  await expect(page.getByText(/[1-9]\/10 reps/i)).toBeVisible()
+  await expect(page.getByText(/Hold timer: 3\.0s/i)).toBeVisible()
+})
+
+test('dismisses runtime rest with a horizontal swipe and transitions once', async ({ page }) => {
+  await seedStraightLegRaiseRuntimeRepRestSession(page)
+  await page.reload()
+
+  await expect(page.getByRole('button', { name: /resume session/i })).toBeVisible()
+  await tapByRoleName(page, 'button', /resume session/i)
+  await expect(page.getByRole('heading', { name: /straight leg raise/i })).toBeVisible()
+  await expect(page.getByText(/Rest timer: 1\.0s/i)).toBeVisible()
+  await expectOnOptionsScreen(page, /workflow phase: represt/i)
+
+  const restCard = page
+    .locator('.timer-card')
+    .filter({ has: page.getByText(/rest timer:\s*[0-9]+\.[0-9]s/i) })
+    .first()
+  const bounds = await restCard.boundingBox()
+  if (!bounds) {
+    throw new Error('rest timer card bounds were not available for swipe gesture')
+  }
+
+  const y = bounds.y + bounds.height / 2
+  const startX = bounds.x + bounds.width * 0.8
+  const endX = bounds.x + bounds.width * 0.3
+  await page.mouse.move(startX, y)
+  await page.mouse.down()
+  await page.mouse.move(endX, y, { steps: 8 })
+  await page.mouse.up()
+
+  await expectOnOptionsScreen(page, /workflow phase: hold/i)
   await expect(page.getByText(/Hold timer: 3\.0s/i)).toBeVisible()
 })
 

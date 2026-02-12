@@ -179,6 +179,10 @@ h2 {
   gap: 0.5rem;
 }
 
+.timer-card[data-runtime-rest-card='true'] {
+  touch-action: pan-y;
+}
+
 .timer-card-muted {
   background: #f3f4f6;
 }

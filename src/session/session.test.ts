@@ -368,7 +368,7 @@ describe('session reducer', () => {
     expect(finalized.exerciseProgress['exercise-3'].completed).toBe(true)
   })
 
-  it('enters exercise rest at exercise boundary and starts next exercise hold', () => {
+  it('enters exercise rest at exercise boundary and waits for explicit start on next exercise', () => {
     const exerciseBoundaryProgram: Program = {
       ...testProgram,
       exercises: [
@@ -422,11 +422,12 @@ describe('session reducer', () => {
     expect(afterHold.runtime.remainingMs).toBe(2000)
     expect(afterRepRest.runtime.phase).toBe('exerciseRest')
     expect(afterRepRest.runtime.remainingMs).toBe(6000)
-    expect(afterExerciseRest.runtime.phase).toBe('hold')
+    expect(afterExerciseRest.runtime.phase).toBe('idle')
     expect(afterExerciseRest.runtime.exerciseIndex).toBe(1)
     expect(afterExerciseRest.runtime.setIndex).toBe(0)
     expect(afterExerciseRest.runtime.repIndex).toBe(0)
-    expect(afterExerciseRest.runtime.remainingMs).toBe(5000)
+    expect(afterExerciseRest.runtime.remainingMs).toBe(0)
+    expect(afterExerciseRest.workoutTimerRunning).toBe(false)
     expect(afterExerciseRest.currentExerciseId).toBe(exerciseBoundaryProgram.exercises[1].id)
     expect(
       afterExerciseRest.exerciseProgress[exerciseBoundaryProgram.exercises[0].id].completed,
@@ -904,7 +905,7 @@ describe('session reducer', () => {
     expect(state.skipQueue).toEqual([])
   })
 
-  it('auto-starts hold timer when skipping into a hold exercise during primary pass', () => {
+  it('keeps timed hold entry idle when skipping into a hold exercise during primary pass', () => {
     let state = createSessionState(testProgram, {
       now: '2026-02-10T00:00:00.000Z',
       sessionId: 'session-auto-hold-on-skip',
@@ -924,10 +925,12 @@ describe('session reducer', () => {
       testProgram,
     )
     expect(state.currentExerciseId).toBe('exercise-3')
-    expect(state.exerciseProgress['exercise-3'].holdTimerRunning).toBe(true)
+    expect(state.exerciseProgress['exercise-3'].holdTimerRunning).toBe(false)
+    expect(state.runtime.phase).toBe('idle')
+    expect(state.workoutTimerRunning).toBe(false)
   })
 
-  it('realigns runtime hold countdown when auto-advancing into a hold exercise', () => {
+  it('requires explicit runtime start after advancing into a hold exercise', () => {
     let state = createSessionState(testProgram, {
       now: '2026-02-10T00:00:00.000Z',
       sessionId: 'session-runtime-align-on-advance',
@@ -964,11 +967,21 @@ describe('session reducer', () => {
 
     expect(state.currentExerciseId).toBe('exercise-3')
     expect(state.runtime.exerciseIndex).toBe(2)
+    expect(state.runtime.phase).toBe('idle')
+    expect(state.runtime.remainingMs).toBe(0)
+    expect(state.workoutTimerRunning).toBe(false)
+
+    state = reduceSession(
+      state,
+      { type: 'start_routine', now: '2026-02-10T00:00:05.000Z' },
+      testProgram,
+    )
     expect(state.runtime.phase).toBe('hold')
     expect(state.runtime.remainingMs).toBe(5_000)
+    expect(state.workoutTimerRunning).toBe(true)
   })
 
-  it('keeps runtime unchanged when it is already aligned after exercise advance', () => {
+  it('resets runtime to idle after exercise advance', () => {
     const initial = createSessionState(testProgram, {
       now: '2026-02-10T00:00:00.000Z',
       sessionId: 'session-runtime-already-aligned',
@@ -1003,11 +1016,12 @@ describe('session reducer', () => {
 
     expect(advanced.currentExerciseId).toBe('exercise-2')
     expect(advanced.runtime.exerciseIndex).toBe(1)
-    expect(advanced.runtime.phase).toBe('hold')
+    expect(advanced.runtime.phase).toBe('idle')
     expect(advanced.runtime.remainingMs).toBe(0)
+    expect(advanced.workoutTimerRunning).toBe(false)
   })
 
-  it('covers runtime alignment guard with falsy next exercise id in skip queue', () => {
+  it('keeps runtime idle when next exercise id is falsy in skip queue', () => {
     const initial = createSessionState(testProgram, {
       now: '2026-02-10T00:00:00.000Z',
       sessionId: 'session-runtime-align-empty-id',
@@ -1039,9 +1053,10 @@ describe('session reducer', () => {
 
     expect(advanced.currentExerciseId).toBe('')
     expect(advanced.runtime.exerciseIndex).toBe(0)
+    expect(advanced.runtime.phase).toBe('idle')
   })
 
-  it('covers runtime alignment guard when no exercise exists at computed index', () => {
+  it('keeps runtime idle when no exercise exists at computed index', () => {
     const emptyProgram: Program = {
       ...testProgram,
       exercises: [],
@@ -1077,10 +1092,11 @@ describe('session reducer', () => {
 
     expect(advanced.currentExerciseId).toBe('invalid-next')
     expect(advanced.runtime.exerciseIndex).toBe(0)
+    expect(advanced.runtime.phase).toBe('idle')
     expect(advanced.runtime.remainingMs).toBe(0)
   })
 
-  it('auto-starts hold timer when skip-pass rotation lands on a hold exercise', () => {
+  it('keeps timed hold entry idle when skip-pass rotation lands on a hold exercise', () => {
     let state = createSessionState(testProgram, {
       now: '2026-02-10T00:00:00.000Z',
       sessionId: 'session-auto-hold-on-skip-pass',
@@ -1119,7 +1135,8 @@ describe('session reducer', () => {
       testProgram,
     )
     expect(state.currentExerciseId).toBe('exercise-3')
-    expect(state.exerciseProgress['exercise-3'].holdTimerRunning).toBe(true)
+    expect(state.exerciseProgress['exercise-3'].holdTimerRunning).toBe(false)
+    expect(state.runtime.phase).toBe('idle')
   })
 
   it('re-enqueues in skip pass when skipped again', () => {
@@ -1332,6 +1349,11 @@ describe('session reducer', () => {
       { type: 'override_skip_rest', now: '2026-02-10T00:00:07.000Z' },
       testProgram,
     )
+    const dismissRestWhenIdle = reduceSession(
+      initial,
+      { type: 'dismiss_runtime_rest', now: '2026-02-10T00:00:07.500Z' },
+      testProgram,
+    )
     const startAfterComplete = reduceSession(
       completed,
       { type: 'start_routine', now: '2026-02-10T00:00:08.000Z' },
@@ -1350,6 +1372,7 @@ describe('session reducer', () => {
     })
     expect(overrideHoldWhenIdle).toEqual(initial)
     expect(overrideRestWhenIdle).toEqual(initial)
+    expect(dismissRestWhenIdle).toEqual(initial)
     expect(startAfterComplete).toEqual(completed)
   })
 
@@ -1534,6 +1557,45 @@ describe('session reducer', () => {
       emptyProgram,
     )
     expect(noNextExercise.runtime.phase).toBe('exerciseRest')
+  })
+
+  it('dismisses runtime rest once and ignores duplicate dismiss near boundary', () => {
+    let state = createSessionState(testProgram, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-dismiss-rest-boundary',
+    })
+    state = reduceSession(
+      state,
+      { type: 'start_routine', now: '2026-02-10T00:00:01.000Z' },
+      testProgram,
+    )
+    state = reduceSession(
+      state,
+      {
+        type: 'complete_runtime_countdown',
+        now: '2026-02-10T00:00:02.000Z',
+        phase: 'hold',
+        exerciseIndex: 0,
+        setIndex: 0,
+        repIndex: 0,
+      },
+      testProgram,
+    )
+    expect(state.runtime.phase).toBe('repRest')
+
+    const dismissed = reduceSession(
+      state,
+      { type: 'dismiss_runtime_rest', now: '2026-02-10T00:00:03.000Z' },
+      testProgram,
+    )
+    expect(dismissed.runtime.phase).toBe('hold')
+
+    const duplicateDismiss = reduceSession(
+      dismissed,
+      { type: 'dismiss_runtime_rest', now: '2026-02-10T00:00:04.000Z' },
+      testProgram,
+    )
+    expect(duplicateDismiss).toEqual(dismissed)
   })
 
   it('covers action guards across manual and hold timers', () => {
