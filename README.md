@@ -59,6 +59,20 @@ Run the full regression check:
 mkdir -p test-results && corepack pnpm prettier --check . && corepack pnpm lint && corepack pnpm test && corepack pnpm build && corepack pnpm test:e2e
 ```
 
+## GitHub Pages Deployment
+
+This repo includes `.github/workflows/deploy-pages.yml` to deploy `dist/` to GitHub Pages on every push to `main` (or via manual workflow dispatch).
+
+One-time repo setup in GitHub:
+
+1. Open repo `Settings` -> `Pages`.
+2. Set `Source` to `GitHub Actions`.
+3. Ensure default branch is `main`.
+
+After your next push to `main`, the site will publish at:
+
+- `https://jamiely.github.io/exercise/`
+
 ## Known Limitations
 
 - The app assumes a single active local session in browser `localStorage` (no multi-user/session switching UI).

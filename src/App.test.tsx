@@ -43,9 +43,12 @@ describe('App shell', () => {
     expect(screen.queryByRole('button', { name: /resume session/i })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: /start new session/i })).toBeInTheDocument()
     expect(screen.getByRole('region', { name: /exercise list/i })).toBeInTheDocument()
-    expect(screen.getByText(/quad set/i)).toBeInTheDocument()
-    expect(screen.getByText(/straight leg raise/i)).toBeInTheDocument()
     expect(screen.getByText(/wall sit \(shallow\)/i)).toBeInTheDocument()
+    expect(screen.getByText(/straight leg raise/i)).toBeInTheDocument()
+    expect(screen.getByText(/terminal knee extension/i)).toBeInTheDocument()
+    expect(screen.getByText(/backward step-up/i)).toBeInTheDocument()
+    expect(screen.getByText(/sit-to-stand/i)).toBeInTheDocument()
+    expect(screen.getByText(/spanish squat hold/i)).toBeInTheDocument()
   })
 
   it('shows sound and vibration options enabled by default', () => {
@@ -64,7 +67,7 @@ describe('App shell', () => {
     const activeExerciseCard = screen.getByRole('article', { name: /active exercise/i })
     expect(
       within(activeExerciseCard).getByText(
-        /tighten your thigh with your knee fully straight, hold briefly, then release slowly\./i,
+        /slide into a shallow wall sit, keep knees aligned over feet, and breathe steadily\./i,
       ),
     ).toBeInTheDocument()
     expect(within(activeExerciseCard).queryByText(/sets x \d+ reps/i)).not.toBeInTheDocument()
@@ -93,7 +96,7 @@ describe('App shell', () => {
     await user.click(screen.getByRole('button', { name: /^start$/i }))
 
     expectOnOptionsScreen(/workflow phase: hold/i)
-    expectOnOptionsScreen(/phase timer: 0.0s/i)
+    expectOnOptionsScreen(/phase timer: 40.0s/i)
     expect(screen.getByRole('button', { name: /^pause$/i })).toBeEnabled()
   })
 
@@ -185,18 +188,16 @@ describe('App shell', () => {
       vi.advanceTimersByTime(700)
     })
     expectOnOptionsScreen(/workflow phase: represt/i)
-    expectOnOptionsScreen(/phase timer: 40.0s/i)
-    expect(screen.getByText('1/5 reps')).toBeInTheDocument()
+    expectOnOptionsScreen(/phase timer: 3.0s/i)
+    expect(screen.getByText('1/15 reps')).toBeInTheDocument()
   })
 
   it('shows rest timer card after hold auto-completes on straight leg raise', async () => {
     vi.useFakeTimers()
     render(<App />)
     enterNewSession()
-
-    for (let rep = 0; rep < 24; rep += 1) {
-      fireEvent.click(screen.getByRole('button', { name: /\+1 rep/i }))
-    }
+    clickOptionsAction(/skip exercise/i)
+    fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
 
     expect(screen.getByRole('heading', { name: /straight leg raise/i })).toBeInTheDocument()
     expect(screen.getByText(/hold timer:/i)).toBeInTheDocument()
@@ -568,18 +569,16 @@ describe('App shell', () => {
 
     expectOnOptionsScreen(/workflow phase: exerciserest/i)
     expectOnOptionsScreen(/phase timer: 1.0s/i)
-    expect(
-      screen.getByRole('heading', { name: new RegExp(program.exercises[1].name, 'i') }),
-    ).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: program.exercises[1].name })).toBeInTheDocument()
 
     await act(async () => {
       vi.advanceTimersByTime(1_000)
     })
 
-    expect(screen.getByRole('heading', { name: /wall sit \(shallow\)/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /terminal knee extension/i })).toBeInTheDocument()
     expectOnOptionsScreen(/workflow phase: hold/i)
-    expectOnOptionsScreen(/phase timer: 40.0s/i)
-    expect(screen.getByText('0/5 reps')).toBeInTheDocument()
+    expectOnOptionsScreen(/phase timer: 3.0s/i)
+    expect(screen.getByText('0/15 reps')).toBeInTheDocument()
   })
 
   it('skips rep from options overrides and transitions hold to rep rest', async () => {
@@ -611,8 +610,8 @@ describe('App shell', () => {
     fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
 
     expectOnOptionsScreen(/workflow phase: represt/i)
-    expectOnOptionsScreen(/phase timer: 40.0s/i)
-    expect(screen.getByText('1/5 reps')).toBeInTheDocument()
+    expectOnOptionsScreen(/phase timer: 3.0s/i)
+    expect(screen.getByText('1/15 reps')).toBeInTheDocument()
   })
 
   it('skips rest from options overrides and transitions rep rest to hold', () => {
@@ -656,8 +655,8 @@ describe('App shell', () => {
     fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
 
     expectOnOptionsScreen(/workflow phase: hold/i)
-    expectOnOptionsScreen(/phase timer: 40.0s/i)
-    expect(screen.getByText('1/5 reps')).toBeInTheDocument()
+    expectOnOptionsScreen(/phase timer: 3.0s/i)
+    expect(screen.getByText('1/15 reps')).toBeInTheDocument()
   })
 
   it('ends set from options overrides and transitions to set rest', () => {
@@ -762,6 +761,11 @@ describe('App shell', () => {
 
     render(<App />)
     enterNewSession()
+    clickOptionsAction(/skip exercise/i)
+    clickOptionsAction(/skip exercise/i)
+    clickOptionsAction(/skip exercise/i)
+    fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
+    expect(screen.getByRole('heading', { name: /backward step-up/i })).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: /set tracker/i })).not.toBeInTheDocument()
 
     const activeExerciseCard = screen.getByRole('article', { name: /active exercise/i })
@@ -773,14 +777,14 @@ describe('App shell', () => {
     fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
 
     await user.click(screen.getByRole('button', { name: /\+1 rep/i }))
-    expect(screen.getByText('1/12 reps')).toBeInTheDocument()
+    expect(screen.getByText('1/8 reps')).toBeInTheDocument()
 
     ensureOptionsScreen()
     expect(screen.getByRole('button', { name: /undo rep/i })).toBeEnabled()
     await user.click(screen.getByRole('button', { name: /undo rep/i }))
     fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
 
-    expect(screen.getByText('0/12 reps')).toBeInTheDocument()
+    expect(screen.getByText('0/8 reps')).toBeInTheDocument()
     ensureOptionsScreen()
     expect(screen.getByRole('button', { name: /undo rep/i })).toBeDisabled()
   })
@@ -790,12 +794,17 @@ describe('App shell', () => {
 
     render(<App />)
     enterNewSession()
+    clickOptionsAction(/skip exercise/i)
+    clickOptionsAction(/skip exercise/i)
+    clickOptionsAction(/skip exercise/i)
+    fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
+    expect(screen.getByRole('heading', { name: /backward step-up/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /^start$/i })).toBeInTheDocument()
     expect(screen.getByText('Current exercise: 0:00')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: /\+1 rep/i }))
 
-    expect(screen.getByText('1/12 reps')).toBeInTheDocument()
+    expect(screen.getByText('1/8 reps')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /^pause$/i })).toBeInTheDocument()
 
     await act(async () => {
@@ -824,43 +833,54 @@ describe('App shell', () => {
     expect(screen.getByText('Current exercise: 0:00')).toBeInTheDocument()
   })
 
-  it('runs hold timer after auto-progressing from quad set via +1 rep taps', async () => {
+  it('runs hold timer after auto-progressing from sit-to-stand via +1 rep taps', async () => {
     vi.useFakeTimers()
 
     render(<App />)
     enterNewSession()
+    clickOptionsAction(/skip exercise/i)
+    clickOptionsAction(/skip exercise/i)
+    clickOptionsAction(/skip exercise/i)
+    clickOptionsAction(/skip exercise/i)
+    fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
+    expect(screen.getByRole('heading', { name: /sit-to-stand/i })).toBeInTheDocument()
 
     for (let rep = 0; rep < 24; rep += 1) {
       fireEvent.click(screen.getByRole('button', { name: /\+1 rep/i }))
     }
 
-    expect(screen.getByRole('heading', { name: /straight leg raise/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /spanish squat hold/i })).toBeInTheDocument()
     expect(screen.getByText('Hold Running')).toBeInTheDocument()
-    expect(screen.getByText('Hold timer: 3.0s')).toBeInTheDocument()
-    expect(readPersistedSession()?.runtime.exerciseIndex).toBe(1)
-    expect(readPersistedSession()?.runtime.remainingMs).toBe(3000)
+    expect(screen.getByText('Hold timer: 45.0s')).toBeInTheDocument()
+    expect(readPersistedSession()?.runtime.exerciseIndex).toBe(5)
+    expect(readPersistedSession()?.runtime.remainingMs).toBe(45000)
 
     await act(async () => {
       vi.advanceTimersByTime(300)
     })
 
-    expect(screen.getByText(/Hold timer: 2\.\ds/)).toBeInTheDocument()
+    expect(screen.getByText(/Hold timer: 44\.\ds/)).toBeInTheDocument()
   })
 
   it('auto-advances to the next set after the final rep of the active set', () => {
     render(<App />)
     enterNewSession()
+    clickOptionsAction(/skip exercise/i)
+    clickOptionsAction(/skip exercise/i)
+    clickOptionsAction(/skip exercise/i)
+    fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
+    expect(screen.getByRole('heading', { name: /backward step-up/i })).toBeInTheDocument()
 
     ensureOptionsScreen()
     expect(screen.getByRole('button', { name: /complete set/i })).toBeDisabled()
     fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
 
-    for (let rep = 0; rep < 12; rep += 1) {
+    for (let rep = 0; rep < 8; rep += 1) {
       fireEvent.click(screen.getByRole('button', { name: /\+1 rep/i }))
     }
 
     expect(screen.getByText('Set 2/2')).toBeInTheDocument()
-    expect(screen.getByText('0/12 reps')).toBeInTheDocument()
+    expect(screen.getByText('0/8 reps')).toBeInTheDocument()
     expect(screen.queryByText(/rest timer:/i)).not.toBeInTheDocument()
   })
 
@@ -873,8 +893,14 @@ describe('App shell', () => {
     ensureOptionsScreen()
     expect(screen.getByRole('button', { name: /complete exercise/i })).toBeDisabled()
     fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
+    clickOptionsAction(/skip exercise/i)
+    clickOptionsAction(/skip exercise/i)
+    clickOptionsAction(/skip exercise/i)
+    clickOptionsAction(/skip exercise/i)
+    fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
+    expect(screen.getByRole('heading', { name: /sit-to-stand/i })).toBeInTheDocument()
 
-    for (let rep = 0; rep < 12; rep += 1) {
+    for (let rep = 0; rep < 8; rep += 1) {
       await user.click(screen.getByRole('button', { name: /\+1 rep/i }))
     }
 
@@ -882,11 +908,11 @@ describe('App shell', () => {
     expect(screen.getByRole('button', { name: /complete exercise/i })).toBeDisabled()
     await user.click(screen.getByRole('button', { name: /back to exercise/i }))
 
-    for (let rep = 0; rep < 12; rep += 1) {
+    for (let rep = 0; rep < 8; rep += 1) {
       await user.click(screen.getByRole('button', { name: /\+1 rep/i }))
     }
 
-    expect(screen.getByRole('heading', { name: /straight leg raise/i })).toBeInTheDocument()
+    expect(screen.getByText('Set 3/3')).toBeInTheDocument()
     ensureOptionsScreen()
     expect(screen.getByRole('button', { name: /complete exercise/i })).toBeDisabled()
   })
@@ -913,18 +939,28 @@ describe('App shell', () => {
 
     clickOptionsAction(/skip exercise/i)
     fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
-    expect(screen.getByRole('heading', { name: /wall sit \(shallow\)/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /terminal knee extension/i })).toBeInTheDocument()
     expectOnOptionsScreen(/primary pass · 2 skipped queued/i)
 
     clickOptionsAction(/skip exercise/i)
     fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
-    expect(screen.getByRole('heading', { name: /quad set/i })).toBeInTheDocument()
-    expectOnOptionsScreen(/skipped cycle · 3 skipped queued/i)
+    expect(screen.getByRole('heading', { name: /backward step-up/i })).toBeInTheDocument()
+    expectOnOptionsScreen(/primary pass · 3 skipped queued/i)
 
     clickOptionsAction(/skip exercise/i)
     fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
-    expect(screen.getByRole('heading', { name: /straight leg raise/i })).toBeInTheDocument()
-    expectOnOptionsScreen(/skipped cycle · 3 skipped queued/i)
+    expect(screen.getByRole('heading', { name: /sit-to-stand/i })).toBeInTheDocument()
+    expectOnOptionsScreen(/primary pass · 4 skipped queued/i)
+
+    clickOptionsAction(/skip exercise/i)
+    fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
+    expect(screen.getByRole('heading', { name: /spanish squat hold/i })).toBeInTheDocument()
+    expectOnOptionsScreen(/primary pass · 5 skipped queued/i)
+
+    clickOptionsAction(/skip exercise/i)
+    fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
+    expect(screen.getByRole('heading', { name: /wall sit \(shallow\)/i })).toBeInTheDocument()
+    expectOnOptionsScreen(/skipped cycle · 6 skipped queued/i)
   })
 
   it('marks session complete when last queued skipped exercise is completed', async () => {
@@ -935,20 +971,20 @@ describe('App shell', () => {
       sessionId: 'session-skip-complete',
     })
 
-    const quadSetId = program.exercises[0].id
-    const quadSetProgress = session.exerciseProgress[quadSetId]
+    const firstExerciseId = program.exercises[0].id
+    const firstExerciseProgress = session.exerciseProgress[firstExerciseId]
     const queuedCompletionSession = {
       ...session,
       currentPhase: 'skip' as const,
       primaryCursor: program.exercises.length - 1,
-      currentExerciseId: quadSetId,
-      skipQueue: [quadSetId],
+      currentExerciseId: firstExerciseId,
+      skipQueue: [firstExerciseId],
       updatedAt: '2026-02-10T00:00:10.000Z',
       exerciseProgress: {
         ...session.exerciseProgress,
-        [quadSetId]: {
-          ...quadSetProgress,
-          sets: quadSetProgress.sets.map((setProgress) => ({
+        [firstExerciseId]: {
+          ...firstExerciseProgress,
+          sets: firstExerciseProgress.sets.map((setProgress) => ({
             ...setProgress,
             completedReps: setProgress.targetReps,
           })),
@@ -963,7 +999,7 @@ describe('App shell', () => {
 
     expect(screen.getByRole('heading', { name: /session completed/i })).toBeInTheDocument()
     expect(screen.getByText(/completed exercises/i)).toBeInTheDocument()
-    expect(screen.getByText('1/3')).toBeInTheDocument()
+    expect(screen.getByText('1/6')).toBeInTheDocument()
     expect(screen.getByText(/skipped unresolved/i)).toBeInTheDocument()
     expect(screen.getByText('0')).toBeInTheDocument()
     expect(readPersistedSession()).toBeNull()
@@ -977,7 +1013,7 @@ describe('App shell', () => {
 
     expect(screen.getByRole('heading', { name: /session ended early/i })).toBeInTheDocument()
     expect(screen.getByText(/completed exercises/i)).toBeInTheDocument()
-    expect(screen.getByText('0/3')).toBeInTheDocument()
+    expect(screen.getByText('0/6')).toBeInTheDocument()
     expect(screen.getByText(/skipped unresolved/i)).toBeInTheDocument()
     expect(screen.getByText('1')).toBeInTheDocument()
     expect(screen.getByText(/duration snapshot/i)).toBeInTheDocument()
@@ -1027,25 +1063,25 @@ describe('App shell', () => {
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: /resume/i }))
 
-    expect(screen.getByRole('heading', { name: /wall sit \(shallow\)/i })).toBeInTheDocument()
-    expect(screen.getByText('Hold timer: 40.0s')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /terminal knee extension/i })).toBeInTheDocument()
+    expect(screen.getByText('Hold timer: 3.0s')).toBeInTheDocument()
     expect(screen.getByText('Hold Running')).toBeInTheDocument()
 
     await act(async () => {
       vi.advanceTimersByTime(200)
     })
-    expect(screen.getByText('Hold timer: 39.8s')).toBeInTheDocument()
+    expect(screen.getByText('Hold timer: 2.8s')).toBeInTheDocument()
 
     await act(async () => {
-      vi.advanceTimersByTime(39_800)
+      vi.advanceTimersByTime(2_800)
     })
-    expect(screen.getByText('1/5 reps')).toBeInTheDocument()
-    expect(screen.getByText('Hold timer: 40.0s')).toBeInTheDocument()
-    expect(screen.getByText('Rest timer: 40.0s')).toBeInTheDocument()
+    expect(screen.getByText('1/15 reps')).toBeInTheDocument()
+    expect(screen.getByText('Hold timer: 3.0s')).toBeInTheDocument()
+    expect(screen.getByText('Rest timer: 3.0s')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /start hold/i })).not.toBeInTheDocument()
 
     await act(async () => {
-      vi.advanceTimersByTime(40_000)
+      vi.advanceTimersByTime(3_000)
     })
     expect(screen.getByText('Hold Running')).toBeInTheDocument()
   })
@@ -1115,9 +1151,10 @@ describe('App shell', () => {
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: /resume/i }))
 
-    expect(screen.getByText('Rest timer: 26.0s')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: /add 30 seconds/i }))
-    expect(screen.getByText('Rest timer: 0.0s')).toBeInTheDocument()
+    expect(screen.getByText('Rest timer: 36.0s')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /add 40 seconds/i }))
+    expect(screen.queryByText(/rest timer:/i)).not.toBeInTheDocument()
+    expect(screen.getByText('Hold Running')).toBeInTheDocument()
   })
 
   it('does not render manual hold pause/reset/complete controls', () => {
@@ -1166,11 +1203,11 @@ describe('App shell', () => {
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: /resume/i }))
 
-    expect(screen.getByText('Rest timer: 26.0s')).toBeInTheDocument()
+    expect(screen.getByText('Rest timer: 36.0s')).toBeInTheDocument()
     await act(async () => {
       vi.advanceTimersByTime(2000)
     })
-    expect(screen.getByText('Rest timer: 24.0s')).toBeInTheDocument()
+    expect(screen.getByText('Rest timer: 34.0s')).toBeInTheDocument()
   })
 
   it('enables resume when an in-progress session exists', () => {
@@ -1206,9 +1243,7 @@ describe('App shell', () => {
     render(<App />)
     await user.click(screen.getByRole('button', { name: /resume/i }))
 
-    expect(
-      screen.getByRole('heading', { name: new RegExp(program.exercises[1].name, 'i') }),
-    ).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: program.exercises[1].name })).toBeInTheDocument()
     ensureOptionsScreen()
     expect(screen.getByRole('heading', { name: /knee pain/i })).toBeInTheDocument()
   })
@@ -1231,9 +1266,7 @@ describe('App shell', () => {
     render(<App />)
     await user.click(screen.getByRole('button', { name: /start new/i }))
 
-    expect(
-      screen.getByRole('heading', { name: new RegExp(program.exercises[0].name, 'i') }),
-    ).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: program.exercises[0].name })).toBeInTheDocument()
     ensureOptionsScreen()
     expect(screen.getByRole('heading', { name: /knee pain/i })).toBeInTheDocument()
 

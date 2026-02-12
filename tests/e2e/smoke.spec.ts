@@ -11,9 +11,12 @@ test('loads app shell on mobile viewport', async ({ page }) => {
   await expect(page.getByRole('button', { name: /resume session/i })).toHaveCount(0)
   await expect(page.getByRole('button', { name: /start new session/i })).toBeVisible()
   await expect(page.getByText(/exercise list/i)).toBeVisible()
-  await expect(page.getByText(/quad set/i)).toBeVisible()
-  await expect(page.getByText(/straight leg raise/i)).toBeVisible()
   await expect(page.getByText(/wall sit \(shallow\)/i)).toBeVisible()
+  await expect(page.getByText(/straight leg raise/i)).toBeVisible()
+  await expect(page.getByText(/terminal knee extension/i)).toBeVisible()
+  await expect(page.getByText(/backward step-up/i)).toBeVisible()
+  await expect(page.getByText(/sit-to-stand/i)).toBeVisible()
+  await expect(page.getByText(/spanish squat hold/i)).toBeVisible()
 })
 
 test('opens and closes in-session options screen', async ({ page }) => {
@@ -25,7 +28,7 @@ test('opens and closes in-session options screen', async ({ page }) => {
   await expect(page.getByRole('region', { name: /cue options/i })).toBeVisible()
 
   await page.getByRole('button', { name: /back to exercise/i }).click()
-  await expect(page.getByRole('heading', { name: /quad set/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /wall sit \(shallow\)/i })).toBeVisible()
 })
 
 test('renders workout timer with muted styling', async ({ page }) => {
