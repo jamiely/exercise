@@ -1,280 +1,284 @@
-## 2026-02-10T22:25:00Z - Step 4 execution plan
+# Scratchpad
 
-Picked task `task-1770761246-5231` (Hands-free Step 4: Set progression + set rest).
+## 2026-02-12T00:00Z
+Reviewed `specs/todo-execution/PROMPT.md` and supporting requirements/design/plan. Objective is full phased backlog delivery, but loop policy requires one atomic task this iteration.
 
-Current runtime behavior already introduces `setRestMs` defaults and a `setRest` phase in reducer, but two gaps remain for Step 4 acceptance:
-1. UI runtime countdown effect does not run during `setRest`, so automatic progression stalls.
-2. Set-boundary transition currently jumps directly from `hold` to `setRest` on final rep of a set. Per workflow design, final hold should still enter `repRest`, then resolve to `setRest` on completion.
+Plan for this loop:
+1. Create runtime tasks for each implementation phase (Step 1-8) so future iterations can continue deterministically.
+2. Implement one atomic task now: Step 1 timer correctness and pause consistency, with emphasis on missing high-value e2e coverage for paused rest-phase freeze/resume continuity.
+3. Run required gates (`format`, `prettier:check`, `lint`, `test`, `test:coverage`, `test:e2e`), commit atomically, close the completed runtime task, and emit a brief event.
 
-Plan:
-- Update reducer `complete_runtime_countdown` flow so `hold` completion always goes to `repRest` (unless last rep of final set where runtime ends for Step 5 to handle exercise progression).
-- In `repRest` completion branch, detect set boundary and transition to `setRest` with `setRestMs`; otherwise return to `hold` for next rep.
-- Ensure app runtime countdown effect includes `setRest` phase.
-- Add/adjust unit + app integration tests for set boundary: repRest -> setRest -> hold on next set with tenths timer behavior.
+Confidence: 92/100 (high confidence existing code already handles most Step 1 domain logic; likely gap is e2e acceptance depth).
 
-Confidence: 92/100 (localized reducer/effect change with existing runtime model).
+## 2026-02-12T01:45Z
+Completed one atomic implementation task: Step 1 pause consistency coverage hardening.
 
-## 2026-02-10T22:27:40Z - Step 4 result
+What changed:
+- Added Playwright helper `readPhaseTimerSeconds` in `tests/e2e/mobile-flows.spec.ts`.
+- Added E2E case that reaches `repRest`, pauses, asserts phase timer remains constant while paused, resumes, and verifies countdown continues downward.
 
-Implemented `task-1770761246-5231` with reducer/runtime countdown alignment for automatic set progression:
-- `hold` completion now routes through `repRest` for non-terminal cases.
-- `repRest` completion now detects set boundary and enters `setRest` when another set exists.
-- App countdown effect now runs for `setRest` so next-set transition happens hands-free.
-- Added reducer and app tests covering `repRest -> setRest -> hold(next set)` behavior.
-
-Validation:
-- `corepack pnpm prettier --write .`
-- `corepack pnpm prettier --check .`
-- `corepack pnpm lint`
+Verification run (all passed):
+- `corepack pnpm format`
+- `corepack pnpm prettier:check`
+- `corepack pnpm lint` (warnings only from generated coverage JS files)
 - `corepack pnpm test`
-- `corepack pnpm test:e2e`
-All passed.
-
-## 2026-02-10T22:28:08Z - Step 5 execution plan
-
-Picked task `task-1770761246-6851` (Hands-free Step 5: Exercise progression + exercise rest).
-
-Current runtime behavior supports `exerciseRest` in phase types but does not yet use it in countdown completion transitions. At final set completion, hold completion sets runtime directly to `complete`, so routine cannot auto-progress to next exercise. Program schema also lacks `exerciseRestMs` defaults/config.
-
-Plan:
-- Extend program model/parser with `exerciseRestMs` default `30000` and tests for default + explicit override.
-- Update reducer `complete_runtime_countdown` transitions:
-  - On hold completion at last rep of last set, enter `repRest` (as in Step 4) and preserve set completion update.
-  - On repRest completion at exercise boundary, enter `exerciseRest` when another exercise exists; otherwise finish runtime as `complete` and mark current exercise completed/session status completed.
-  - On exerciseRest completion, mark just-finished exercise completed, advance to next exercise, reset runtime indexes, and enter `hold` for next exercise.
-- Extend runtime ticking/effect gating to include `exerciseRest` so countdown executes in App.
-- Add reducer and App tests for `repRest -> exerciseRest -> next exercise hold` and end-of-routine completion after final exercise.
-
-Confidence: 90/100 (localized to reducer/program/app runtime loop with existing pattern from Step 4).
-
-## 2026-02-10T22:32:00Z - Step 5 result
-
-Implemented `task-1770761246-6851` with automatic exercise progression in runtime flow:
-- Added `exerciseRestMs` to exercise config parsing with default `30000` and independent override support.
-- Updated runtime countdown reducer transitions to support:
-  - `hold -> repRest` at all rep completions.
-  - `repRest -> exerciseRest` at exercise boundary when another exercise exists.
-  - `repRest -> complete` at final exercise boundary, including marking final exercise complete.
-  - `exerciseRest -> hold(next exercise)` with cursor/current exercise advancement and index reset.
-- Extended countdown ticking and App runtime countdown effect to include `exerciseRest` phase.
-- Added tests for parser defaults/override, reducer exercise-rest progression, reducer final session completion, and App integration for exercise-rest auto-transition.
-
-Validation run (all passing):
-- `corepack pnpm prettier --write .`
-- `corepack pnpm prettier --check .`
-- `corepack pnpm lint`
-- `corepack pnpm test`
+- `corepack pnpm test:coverage` (Statements 94.57, Branches 92.13, Functions 95.94, Lines 94.75)
 - `corepack pnpm test:e2e`
 
 Commit:
-- `093de02` feat(session): automate exercise rest progression
+- `115d3c3 test(e2e): assert rest timer freeze on pause and exact resume`
 
-## 2026-02-10T22:34:45Z - Step 6 result
+## 2026-02-12T02:15Z
+Selected task: `task-1770860501-dbb1` (Step 2: rest + control and cue reliability).
 
-Implemented `task-1770761246-7f13` (Hands-free Step 6: Pause/resume exact remaining time).
+Findings:
+- Runtime `repRest` is the active rest flow, but the UI `+` control is disabled unless legacy `restTimerRunning` is true.
+- The `+` handler currently dispatches `tick_rest_timer`, which advances elapsed rest (effectively shortens/finishes rest), opposite of intended increment behavior.
+- Cue suppression when toggled off is tested, but explicit reliability coverage for enabled transitions and Playwright settings flow is incomplete.
 
-Changes:
-- Added runtime reducer actions `pause_routine` and `resume_routine`.
-- Pause now transitions active runtime phases (`hold`, `repRest`, `setRest`, `exerciseRest`) to `paused` while preserving exact `remainingMs` and recording `previousPhase`.
-- Resume restores the recorded active phase and continues countdown from preserved remaining time.
-- Added session UI controls for runtime `Pause` and `Resume`.
-- Added reducer and App tests asserting pause freeze behavior and resume continuation from the exact same tenths reading.
+Implementation plan (atomic for this loop):
+1. Add a reducer action to add runtime rest time in active runtime rest phases with guardrails.
+2. Rewire rest `+` button to the new runtime action when runtime rep rest is active; keep legacy path intact for non-runtime rest.
+3. Add unit tests for rest increment behavior and boundaries.
+4. Add cue reliability unit coverage (enabled transition triggers).
+5. Add Playwright tests for rest `+` behavior and cue settings persistence flow.
+6. Run gates: format, prettier:check, lint, test, test:coverage, test:e2e; commit; close task; emit brief event.
 
-Validation (all passing):
-- `corepack pnpm prettier --write .`
-- `corepack pnpm prettier --check .`
-- `corepack pnpm lint`
+Confidence: 88/100.
+
+## 2026-02-12T03:05Z
+Completed `task-1770860501-dbb1` (Step 2: rest + control and cue reliability).
+
+Implemented:
+- Added reducer action `add_runtime_rest_time` to extend runtime rest phases with guardrails and capped bounds.
+- Rewired rest `+` control to always attempt runtime rest extension first, with legacy fallback only outside runtime rep rest.
+- Updated rest timer display for runtime rep rest to read directly from runtime remaining time so extension is visible immediately.
+- Added runtime countdown generation guard to reject stale timer callbacks after manual rest extension.
+- Added unit tests:
+  - runtime rest extension behavior and boundaries in `src/session/session.test.ts`
+  - cue emission when enabled and runtime transitions occur in `src/App.test.tsx`
+  - runtime rep-rest `+` behavior in `src/App.test.tsx`
+- Added Playwright tests:
+  - rest `+` behavior in runtime rep rest
+  - cue settings persistence flow across reload
+
+Verification (all passing):
+- `corepack pnpm format`
+- `corepack pnpm prettier:check`
+- `corepack pnpm lint` (warnings only from generated coverage files)
 - `corepack pnpm test`
+- `corepack pnpm test:coverage`
 - `corepack pnpm test:e2e`
+
+Coverage snapshot:
+- Statements: 94.23%
+- Branches: 91.72%
+- Functions: 95.91%
+- Lines: 94.40%
+
+Confidence: 90/100.
+
+## 2026-02-12T21:07Z
+Selected task: `task-1770860501-f215` (Step 3: explicit start and swipe dismiss rest).
+
+Implemented:
+- Enforced explicit-start behavior on timed exercise entry by resetting runtime to `idle` when advancing to a new exercise and requiring `start_routine` before hold countdown begins.
+- Added reducer action `dismiss_runtime_rest` to safely dismiss active runtime rest phases through guarded `complete_runtime_countdown` dispatch with current runtime context.
+- Removed hold auto-start-on-entry side effect from `App.tsx` and wired swipe-to-dismiss gesture handling on the rest card via pointer events.
+- Added UI affordance text (`Swipe to dismiss rest`) for active runtime rest phases.
+- Updated unit tests in `src/session/session.test.ts` and `src/App.test.tsx` for explicit-start invariants, runtime idle transitions, and swipe-dismiss behavior.
+- Added Playwright coverage for explicit start on hold-entry and swipe-to-dismiss rest in `tests/e2e/mobile-flows.spec.ts`.
+
+Verification (all passing):
+- `corepack pnpm format`
+- `corepack pnpm prettier:check`
+- `corepack pnpm lint` (warnings only from coverage artifacts)
+- `corepack pnpm test`
+- `corepack pnpm test:coverage`
+- `corepack pnpm test:e2e`
+
+Coverage snapshot:
+- Statements: 93.29%
+- Branches: 90.40%
+- Functions: 95.20%
+- Lines: 93.45%
+
+Confidence: 89/100.
+
+## 2026-02-12T22:05Z
+Selected task: `task-1770860501-2209` (Step 5: timed-phase timer visibility invariant).
+
+Findings:
+- Main exercise UI currently renders a rest countdown card for runtime `repRest`, but not for runtime `setRest` or `exerciseRest`.
+- Options screen always shows `Phase timer`, but Step 5 requires visible timer feedback for any active timed phase in the main user flow.
+- Existing tests validate runtime transitions for set/exercise rest mostly via options-screen phase timer, leaving main-screen timer visibility invariant under-specified.
+
+Implementation plan (single atomic task):
+1. Update main timer card visibility mapping in `src/App.tsx` to render runtime rest countdown for `repRest`, `setRest`, and `exerciseRest`.
+2. Keep existing hold/rest behavior and controls intact, while ensuring timed rest phases remain visually explicit.
+3. Add/adjust unit tests in `src/App.test.tsx` to assert rest timer visibility during `setRest` and `exerciseRest`.
+4. Add Playwright coverage in `tests/e2e/mobile-flows.spec.ts` for timer visibility across runtime rest phases.
+5. Run full gates: `format`, `prettier:check`, `lint`, `test`, `test:coverage`, `test:e2e`; commit; close task; emit brief event.
+
+Confidence: 90/100.
+
+## 2026-02-12T22:22Z
+Completed `task-1770860501-2209` (Step 5: timed-phase timer visibility invariant).
+
+Implemented:
+- Updated runtime timer visibility mapping in `src/App.tsx` so the rest countdown card is treated as active/visible for runtime `repRest`, `setRest`, and `exerciseRest` phases.
+- Kept existing hold-card and manual rest fallback behavior intact.
+- Strengthened unit coverage in `src/App.test.tsx`:
+  - `setRest` shows `Rest timer` while active and clears after transition.
+  - `exerciseRest` shows `Rest timer` while active and clears after transition.
+- Added Playwright coverage matrix in `tests/e2e/mobile-flows.spec.ts` for runtime `setRest` and `exerciseRest` visible countdown states.
+- Added deterministic seeding helper for runtime rest phases in mobile e2e tests.
+
+Verification:
+- `corepack pnpm format`
+- `corepack pnpm prettier:check`
+- `mkdir -p test-results && corepack pnpm lint` (warnings only from generated coverage JS files)
+- `corepack pnpm test`
+- `corepack pnpm test:coverage`
+- `pkill -f "vite preview --host 127.0.0.1 --port 4173" || true && corepack pnpm build && corepack pnpm test:e2e`
+
+Coverage snapshot:
+- Statements: 93.30%
+- Branches: 90.43%
+- Functions: 95.20%
+- Lines: 93.45%
 
 Commit:
-- `66c6d92` feat(session): add runtime pause and resume countdown
+- `07228f5 feat(ui): enforce visible countdown for all runtime rest phases`
 
-## 2026-02-10T22:40:30Z - Step 7 execution plan
+Notes:
+- Recorded fix memories for e2e timing and stale preview-server reuse pitfalls.
 
-Picked task `task-1770761246-972d` (Hands-free Step 7: Lifecycle suspend + wake lock).
+Confidence: 91/100.
 
-Current runtime already supports `pause_routine`/`resume_routine`, but there is no app-lifecycle listener and no wake-lock integration. This means active timers can continue while app is backgrounded and screen lock prevention is not attempted.
+## 2026-02-12T21:22Z
+Completed `task-1770860501-0b44` (Step 4: restart current exercise/set controls).
 
-Plan:
-- Add app lifecycle effect for `visibilitychange`; when document becomes hidden during active runtime countdown phase, dispatch `pause_routine` to suspend immediately.
-- Add wake-lock adapter/effect:
-  - Request `navigator.wakeLock.request('screen')` while runtime phase is active (`hold|repRest|setRest|exerciseRest`).
-  - Release on inactive phases (`paused|idle|complete`) and component cleanup.
-  - Handle unsupported/denied wake lock silently without user-facing warning.
-- Add App integration tests:
-  - Background event transitions active runtime to `paused` and freezes timer.
-  - Wake-lock supported path requests on active phase and releases on pause.
-  - Wake-lock unsupported path continues without warning/errors.
+Implemented:
+- Added reducer actions `restart_current_exercise` and `restart_current_set` in `src/session/session.ts`.
+- Scoped restart semantics:
+  - Exercise restart resets only the current exercise progress (all sets/timers), resets current exercise elapsed timer, returns runtime to `idle` for that exercise, and pauses workout timer.
+  - Set restart resets only the active set reps (preserving other sets), clears local timers, returns runtime to `idle` at the same exercise/set, and pauses workout timer.
+- Added Options UI controls in `src/App.tsx`:
+  - `Restart Current Set`
+  - `Restart Current Exercise`
+- Extended dispatch handling for both restart actions.
+- Added unit tests:
+  - reducer scoping invariants in `src/session/session.test.ts`
+  - UI flow coverage in `src/App.test.tsx`
+- Added Playwright coverage in `tests/e2e/mobile-flows.spec.ts` validating both restart paths in one end-to-end flow.
 
-Confidence: 89/100 (App-only effects + mocked browser APIs; low risk to reducer semantics).
-
-## 2026-02-10T22:50:40Z - Step 7 result
-
-Implemented `task-1770761246-972d` (Hands-free Step 7: Lifecycle suspend + wake lock).
-
-Changes:
-- Added lifecycle listener in `App` for `visibilitychange`; when `document.hidden` while runtime phase is active (`hold`, `repRest`, `setRest`, `exerciseRest`), dispatches `pause_routine` to suspend countdown immediately.
-- Added wake-lock integration in `App`:
-  - Requests `navigator.wakeLock.request('screen')` during active runtime phases.
-  - Releases wake lock on non-active phases (including `paused`/`complete`) and on component unmount.
-  - Handles unsupported/denied wake lock silently (no warning UI).
-- Added App integration tests for:
-  - Lifecycle auto-pause on background visibility.
-  - Wake-lock request on active phase and release when paused.
-  - Unsupported wake-lock behavior continuing without warning text.
-
-Validation (all passing):
-- `corepack pnpm prettier --write .`
-- `corepack pnpm prettier --check .`
-- `corepack pnpm lint`
+Verification (all passed):
+- `corepack pnpm format`
+- `corepack pnpm prettier:check`
+- `mkdir -p test-results && corepack pnpm lint` (warnings only from generated coverage files)
 - `corepack pnpm test`
-- `corepack pnpm test:e2e`
+- `corepack pnpm test:coverage`
+- `pkill -f "vite preview --host 127.0.0.1 --port 4173" || true && corepack pnpm build && corepack pnpm test:e2e`
+
+Coverage snapshot:
+- Statements: 92.92%
+- Branches: 90.10%
+- Functions: 95.33%
+- Lines: 93.06%
 
 Commit:
-- `9cc2aaa` feat(session): suspend on lifecycle hide and manage wake lock
+- `3b591aa feat(session): add scoped restart controls for set and exercise`
 
-## 2026-02-10T23:05:00Z - Step 8 execution plan
+Notes:
+- Emitted pending event for prior completed task (`task.done` for `task-1770860501-2209`) before closing this loop.
+- Recorded a tooling fix memory for incorrect program fixture path lookup.
 
-Picked task `task-1770761246-adb9` (Hands-free Step 8: Options sound/vibration toggles).
+Confidence: 92/100.
 
-Current runtime flow has no options state and no cue emission path, so Step 8 acceptance is unmet:
-1. No options UI/toggles exist, defaults cannot be read/changed.
-2. No sound/vibration cue effect exists, so toggle gating cannot be validated.
+## 2026-02-12T22:40Z
+Completed `task-1770860501-520b` (Step 7: README badges and screenshots).
 
-Plan:
-- Extend `SessionState` with `options: { soundEnabled: true, vibrationEnabled: true }` plus reducer actions to update each toggle.
-- Extend persistence schema validation to include options state.
-- Add options UI section in `App` with two checkbox toggles wired to reducer actions.
-- Add cue emission utility and App phase-transition effect that triggers cue attempts on runtime phase entry, gated by current options.
-- Add/adjust tests:
-  - unit/default coverage for options defaults in session reducer tests.
-  - App integration coverage for default toggle ON state and cue suppression when toggles are OFF.
+Implemented:
+- Added GitHub Actions CI workflow at `.github/workflows/ci.yml` covering `prettier:check`, `lint`, `test`, `test:coverage`, and `build`.
+- Updated `README.md` with valid workflow badges for CI and Pages deploy.
+- Refreshed README feature bullets to align with shipped runtime pause/rest/restart behaviors.
+- Added `scripts/capture-readme-screenshots.mjs` and npm script `screenshots:readme` to capture current mobile UI screenshots via Playwright.
+- Captured and committed screenshots:
+  - `public/screenshots/session-start.png`
+  - `public/screenshots/session-active.png`
+  - `public/screenshots/session-options.png`
 
-Confidence: 88/100 (localized state/effect/UI/test updates with existing persistence architecture).
-
-## 2026-02-10T23:20:00Z - Step 8 result
-
-Implemented `task-1770761246-adb9` (Hands-free Step 8: Options sound/vibration toggles).
-
-Changes:
-- Added `SessionState.options` with defaults:
-  - `soundEnabled: true`
-  - `vibrationEnabled: true`
-- Added reducer actions:
-  - `set_sound_enabled`
-  - `set_vibration_enabled`
-  Each updates option state independently with timestamped updates.
-- Extended persistence validation to require valid options payload in the persisted session envelope.
-- Added options UI in `App` with accessible checkboxes:
-  - `Sound cues`
-  - `Vibration cues`
-  Changes apply immediately to current session.
-- Added cue utility (`src/session/cues.ts`) that attempts:
-  - short audio beep via AudioContext when enabled
-  - device vibration via `navigator.vibrate` when enabled
-  Both paths fail silently to preserve session flow.
-- Added runtime phase-transition cue effect in `App` that emits transition cues on entry to:
-  - `hold`, `repRest`, `setRest`, `exerciseRest`, `complete`
-  Cue emission is gated by current options values.
-
-Test coverage added:
-- Session reducer: options default ON and independent toggle updates.
-- App integration:
-  - options defaults render checked on first load
-  - cues are suppressed when both toggles are OFF
-
-Validation (all passing):
-- `corepack pnpm prettier --check .`
-- `corepack pnpm lint`
+Verification (all passing):
+- `corepack pnpm format`
+- `corepack pnpm prettier:check`
+- `mkdir -p test-results && corepack pnpm lint` (warnings only from generated coverage JS files)
 - `corepack pnpm test`
-- `corepack pnpm test:e2e`
+- `corepack pnpm test:coverage`
+- `pkill -f "vite preview --host 127.0.0.1 --port 4173" || true && corepack pnpm build && corepack pnpm test:e2e`
+
+Coverage snapshot:
+- Statements: 92.92%
+- Branches: 90.10%
+- Functions: 95.33%
+- Lines: 93.06%
 
 Commit:
-- `7a9c2bf` feat(session): add cue options and transition gating
+- `fc8730c docs(readme): add CI badges and Playwright screenshots`
 
-## 2026-02-10T23:46:00Z - Step 9 execution plan
+Confidence: 91/100.
 
-Picked task `task-1770761246-c43d` (Hands-free Step 9: Override modal actions).
+## 2026-02-12T21:33Z
+Completed `task-1770860501-385d` (Step 6: exercise transition animation polish).
 
-Current app has runtime controls but no override affordance or explicit override transitions. Step 9 acceptance requires a bottom launcher, modal actions (`Skip rep`, `Skip rest`, `End set`, `End exercise`), and tested transition correctness.
+Implemented:
+- Added visible exercise-card transition state in `src/App.tsx` that activates on exercise changes while the exercise screen is visible.
+- Added reduced-motion preference handling via `matchMedia('(prefers-reduced-motion: reduce)')` and disabled transition when enabled.
+- Added DOM hook `data-exercise-transition-active` and transition class `exercise-card-transition` for deterministic assertions.
+- Added swipe-style transition keyframes and reduced-motion CSS fallback in `src/App.css`.
+- Added unit coverage in `src/App.test.tsx` for transition trigger and reduced-motion suppression.
+- Added Playwright coverage in `tests/e2e/mobile-flows.spec.ts` for transition trigger + interaction continuity and reduced-motion behavior.
 
-Plan:
-- Add explicit reducer actions for overrides to keep transitions deterministic and testable.
-- Reuse `complete_runtime_countdown` transition logic for skip actions where applicable.
-- Add bottom overrides launcher + modal UI in `App` and wire buttons to override actions.
-- Add App integration tests for modal opening and each override action transition.
-
-Confidence: 90/100 (localized reducer/UI/tests, low cross-feature risk).
-
-## 2026-02-10T23:49:30Z - Step 9 result
-
-Implemented `task-1770761246-c43d` (Hands-free Step 9: Override modal actions).
-
-Changes:
-- Added explicit runtime override reducer actions:
-  - `override_skip_rep`
-  - `override_skip_rest`
-  - `override_end_set`
-  - `override_end_exercise`
-- `skip` overrides route through runtime countdown completion transitions for deterministic behavior.
-- `end` overrides fast-forward current set/exercise state and move runtime to `setRest`/`exerciseRest` or terminal complete when at routine end.
-- Added small bottom `Overrides` launcher and modal with required actions:
-  - `Skip Rep`
-  - `Skip Rest`
-  - `End Set`
-  - `End Exercise`
-- Added App integration coverage for:
-  - modal opening/visibility
-  - each override action resulting runtime phase transition.
-
-Validation (all passing):
-- `corepack pnpm prettier --write .`
-- `corepack pnpm prettier --check .`
-- `corepack pnpm lint`
+Verification (all passing):
+- `corepack pnpm format`
+- `corepack pnpm prettier:check`
+- `mkdir -p test-results && corepack pnpm lint` (warnings only from generated coverage files)
 - `corepack pnpm test`
-- `corepack pnpm test:e2e`
+- `corepack pnpm test:coverage`
+- `pkill -f "vite preview --host 127.0.0.1 --port 4173" || true && corepack pnpm build && corepack pnpm test:e2e`
 
-Commit:
-- `5217adc` feat(session): add override modal actions for runtime flow
+Coverage snapshot:
+- Statements: 92.97%
+- Branches: 90.20%
+- Functions: 95.06%
+- Lines: 93.09%
 
-## 2026-02-10T23:56:30Z - Step 10 execution plan
+Confidence: 90/100.
 
-Picked task `task-1770761246-dacf` (Hands-free Step 10: UI cleanup + acceptance regression).
+## 2026-02-12T21:36Z
+Completed `task-1770860501-685a` (Step 8: final regression + release readiness).
 
-Observed remaining gaps:
-1. Session UI still renders `Target:` and `Active set:` labels (requirement says remove these labels).
-2. No E2E acceptance coverage for a one-tap hands-free runtime path completing automatically without progression taps.
-3. Need explicit regression checks that existing non-runtime/manual session behavior remains intact.
+Implemented:
+- Marked `specs/todo-execution/plan.md` checklist complete for Steps 0-8.
+- Re-verified all planned acceptance coverage via full regression suite.
 
-Plan:
-- Update `src/App.tsx` session subtitle text to remove `Target:` and `Active set:` labels while keeping exercise metadata content.
-- Update `src/App.test.tsx` initial render assertions to enforce label removal.
-- Add Playwright E2E acceptance test that seeds a valid in-progress hold exercise session with short hold/rest durations, taps `Start` once, and asserts automatic completion with no manual progression actions.
-- Add a compact E2E regression test ensuring legacy manual rep/rest flow remains functional for non-hold exercise controls.
-
-Confidence: 86/100 (localized UI text + additive test coverage; low behavioral risk).
-
-## 2026-02-10T23:59:40Z - Step 10 result
-
-Implemented `task-1770761246-dacf` (Hands-free Step 10: UI cleanup + acceptance regression).
-
-Changes:
-- Removed `Target:` and `Active set:` labels from session exercise metadata UI while preserving values.
-- Updated App integration expectations to assert label removal (`target:`/`active set:` absent).
-- Added E2E acceptance test for one-tap `Start` automatic completion on a seeded hold-workflow path:
-  - seeds an in-progress wall-sit session in `idle`
-  - resumes session
-  - taps `Start` once
-  - uses Playwright clock emulation to run full hold+rep-rest completion path
-  - asserts terminal `Session completed` with no manual progression taps.
-- Added E2E regression assertion that label cleanup is present during manual rep/rest flow.
-- Updated a set-tracker assertion to avoid strict-text ambiguity after UI subtitle changes.
-
-Validation (all passing):
-- `corepack pnpm prettier --write .`
-- `corepack pnpm prettier --check .`
-- `corepack pnpm lint`
+Verification (all passing):
+- `corepack pnpm format`
+- `corepack pnpm prettier:check`
+- `mkdir -p test-results && corepack pnpm lint` (warnings only from generated coverage JS files)
 - `corepack pnpm test`
-- `corepack pnpm build`
-- `corepack pnpm test:e2e`
+- `corepack pnpm test:coverage`
+- `pkill -f "vite preview --host 127.0.0.1 --port 4173" || true && corepack pnpm build && corepack pnpm test:e2e`
+
+Coverage snapshot:
+- Statements: 92.97%
+- Branches: 90.20%
+- Functions: 95.06%
+- Lines: 93.09%
+
+Release readiness:
+- Full unit/e2e/lint/format/build gates pass.
+- Coverage remains >=90% in all required categories.
+- Todo execution phase checklist is fully closed.
+
+Confidence: 94/100.

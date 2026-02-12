@@ -2,6 +2,22 @@
 
 ## Patterns
 
+### mem-1770863156-6dbb
+> README screenshot capture is stable via scripts/capture-readme-screenshots.mjs using a dedicated preview port and session controls (Start New Session -> Options) instead of brittle heading cardinality.
+<!-- tags: testing, playwright, documentation | created: 2026-02-12 -->
+
+### mem-1770862038-fbe0
+> Timed exercise entry should reset runtime to idle and stop workoutTimerRunning; hold countdown begins only after explicit start_routine, while intra-exercise rep/set loops remain hands-free.
+<!-- tags: session, timers, state-machine, testing | created: 2026-02-12 -->
+
+### mem-1770861462-9e50
+> Runtime rest extension needs stale-tick protection: increment runtime countdown generation on add-runtime-rest action and gate tick/complete actions by generation to prevent old countdown callbacks from clobbering added time.
+<!-- tags: session, timers, state-machine, testing | created: 2026-02-12 -->
+
+### mem-1770860591-2079
+> Step 1 pause acceptance is best covered by a Playwright repRest flow that parses 'Phase timer' from Options, asserts unchanged during paused wait, then verifies decrement after resume.
+<!-- tags: testing, playwright, session, timers | created: 2026-02-12 -->
+
 ### mem-1770763840-debd
 > Step 10 acceptance uses Playwright clock emulation with seeded persisted session state to validate one-tap Start automatic completion paths quickly, while regression assertions enforce removal of target/active-set labels.
 <!-- tags: testing, playwright, session, ui | created: 2026-02-10 -->
@@ -77,6 +93,66 @@
 ## Decisions
 
 ## Fixes
+
+### mem-1770863553-dce6
+> failure: cmd=corepack pnpm test:e2e, exit=1, error=new transition e2e test tried clicking +1 Rep on a hold-only exercise and timed out, next=assert interaction continuity using universal Start->Pause routine control instead
+<!-- tags: testing, playwright, error-handling | created: 2026-02-12 -->
+
+### mem-1770863553-bcf3
+> failure: cmd=pkill -f "vite preview --host 127.0.0.1 --port 4173" || true && corepack pnpm build && corepack pnpm test:e2e, exit=2, error=TypeScript narrowed legacy matchMedia fallback branch to never for addListener/removeListener, next=use addEventListener/removeEventListener only for media query change subscription
+<!-- tags: tooling, error-handling, typescript, react | created: 2026-02-12 -->
+
+### mem-1770863553-9550
+> failure: cmd=mkdir -p test-results && corepack pnpm lint, exit=1, error=react-hooks/set-state-in-effect flagged synchronous setState calls inside new transition effects, next=initialize reduced-motion state lazily and move effect state writes into requestAnimationFrame/timer callbacks
+<!-- tags: testing, lint, error-handling, react | created: 2026-02-12 -->
+
+### mem-1770862929-8c28
+> failure: cmd=corepack pnpm screenshots:readme, exit=143, error=hardcoded heading 'Exercise 1 of 8' timeout due dynamic total count/state, next=use regex selector for exercise heading and avoid fixed cardinality
+<!-- tags: testing, playwright, error-handling | created: 2026-02-12 -->
+
+### mem-1770862876-0d1e
+> failure: cmd=pkill -f 'vite preview --host 127.0.0.1 --port 4173' || true && corepack pnpm build && corepack pnpm screenshots:readme, exit=143, error=screenshot script timed out waiting for heading and preview auto-switched to port 4174 when 4173 already in use, next=ensure port is freed before launch and make script wait on stable session entry selector
+<!-- tags: testing, playwright, error-handling, tooling | created: 2026-02-12 -->
+
+### mem-1770862749-6a86
+> failure: cmd=rg -n 'screenshot|toHaveScreenshot|page\.screenshot|screenshots' tests src README.md .github -g '!node_modules/**', exit=1, error=no matches found, next=add a dedicated Playwright screenshot capture script and assets directory
+<!-- tags: tooling, error-handling, playwright | created: 2026-02-12 -->
+
+### mem-1770862733-f2b1
+> failure: cmd=sed -n '1,260p' .github/workflows/ci.yml, exit=1, error=No such file or directory, next=inspect existing workflow filenames first and use deploy-pages.yml or add a CI workflow if needed
+<!-- tags: tooling, error-handling, github-actions | created: 2026-02-12 -->
+
+### mem-1770862506-7338
+> failure: cmd=sed -n '1,260p' src/program/program.json, exit=1, error=No such file or directory, next=read exercise fixture from src/data/knee-program.json used by loadProgram
+<!-- tags: tooling, error-handling | created: 2026-02-12 -->
+
+### mem-1770862384-d72c
+> failure: cmd=corepack pnpm test:e2e, exit=1, error=playwright reused existing vite preview server and served stale dist after source edits, next=kill preview server or run build before e2e so fresh assets include latest UI changes
+<!-- tags: testing, playwright, error-handling, tooling | created: 2026-02-12 -->
+
+### mem-1770862241-5fbd
+> failure: cmd=corepack pnpm test:e2e, exit=1, error=Step5 runtime setRest/exerciseRest timer-visibility e2e used 2.5s remaining and transitioned before assertion, next=seed a longer remainingMs window for deterministic visibility checks
+<!-- tags: testing, playwright, error-handling | created: 2026-02-12 -->
+
+### mem-1770861946-3bc6
+> failure: cmd=corepack pnpm test:e2e, exit=1, error=explicit-start hold-entry e2e expected exactly 1/10 reps but runtime loop progressed to 3/10 by assertion, next=assert non-zero rep progress instead of exact rep count to avoid timing flake
+<!-- tags: testing, playwright, error-handling | created: 2026-02-12 -->
+
+### mem-1770861892-da1e
+> failure: cmd=corepack pnpm test:e2e, exit=1, error=explicit-start hold-entry e2e asserted 1/10 reps too soon after start and timed out, next=stabilize by extending post-start wait before rep assertion
+<!-- tags: testing, playwright, error-handling | created: 2026-02-12 -->
+
+### mem-1770860978-612f
+> failure: cmd=corepack pnpm playwright test tests/e2e/mobile-flows.spec.ts --grep "adds configured rest step with \+ during runtime rep rest", exit=1, error=runtime-derived repRest flow stayed at 2.9s after plus in e2e, next=seed deterministic repRest runtime session before assertion to remove phase-timing race
+<!-- tags: testing, playwright, error-handling | created: 2026-02-12 -->
+
+### mem-1770860853-1e72
+> failure: cmd=corepack pnpm test:e2e, exit=1, error=rest plus e2e polled during runtime transition and observed 3.0s fallback instead of increased value, next=stabilize test with page.clock.install and controlled runFor before asserting post-plus timer
+<!-- tags: testing, playwright, error-handling | created: 2026-02-12 -->
+
+### mem-1770860651-22ed
+> failure: cmd=sed -n '1,280p' src/session/cues.test.ts, exit=1, error=No such file or directory, next=locate cue coverage in existing App/session tests and add dedicated tests only if needed
+<!-- tags: testing, error-handling, tooling | created: 2026-02-12 -->
 
 ### mem-1770763777-ccf2
 > failure: cmd=corepack pnpm build && corepack pnpm test:e2e tests/e2e/mobile-flows.spec.ts, exit=1, error=Playwright strict locator conflict on getByText('Set 2') after UI subtitle now includes 'Set 2/2', next=use exact set-grid locator (e.g., getByLabel('Set tracker').getByText('Set 2', { exact: true }))

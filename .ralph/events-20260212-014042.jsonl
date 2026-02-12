@@ -1,0 +1,21 @@
+{"ts":"2026-02-12T01:40:42.204338+00:00","iteration":0,"hat":"loop","topic":"task.start","triggered":"planner","payload":"specs/todo-execution/PROMPT.md"}
+{"payload":"completed task-1770860501-c149: added repRest pause/resume freeze e2e regression and passed format/lint/test/coverage/e2e; commit 115d3c3","topic":"task.done","ts":"2026-02-12T01:43:21.025873+00:00"}
+{"payload":"completed task-1770860501-dbb1: runtime rest plus control fixed with cue reliability coverage; format/prettier/lint/test/coverage/e2e passed; commit 1bfc93e","topic":"task.done","ts":"2026-02-12T01:57:58.696148+00:00"}
+{"payload":"handled pending task-1770860501-dbb1; completed task-1770860501-f215 with explicit start + swipe rest dismiss; format/prettier/lint/test/coverage/e2e pass; commit e382fc9","topic":"task.done","ts":"2026-02-12T02:07:46.262181+00:00"}
+{"payload":"completed task-1770860501-2209; timer visibility now covers repRest/setRest/exerciseRest with unit+e2e coverage; gates pass; commit 07228f5","topic":"task.done","ts":"2026-02-12T02:13:32.020512+00:00"}
+{"payload":"completed task-1770860501-2209; timer visibility now covers repRest/setRest/exerciseRest with unit+e2e coverage; gates pass; commit 07228f5","topic":"task.done","ts":"2026-02-12T02:17:49.955806+00:00"}
+{"payload":"completed task-1770860501-0b44; added scoped restart current set/exercise controls with reducer+UI+unit+e2e coverage; gates pass; commit 3b591aa","topic":"task.done","ts":"2026-02-12T02:18:17.723598+00:00"}
+{"payload":"task-1770860501-2209 complete: timer visibility covers repRest/setRest/exerciseRest with unit+e2e; commit 07228f5","topic":"task.done","ts":"2026-02-12T02:25:53.808324+00:00"}
+{"payload":"task-1770860501-520b complete: README CI badges + Playwright-generated screenshots; workflow and docs updated; commit fc8730c","topic":"task.done","ts":"2026-02-12T02:25:53.826546+00:00"}
+{"payload":"task-1770860501-0b44 complete: scoped restart current set/exercise controls with reducer+UI+unit+e2e; commit 3b591aa","topic":"task.done","ts":"2026-02-12T02:25:53.826529+00:00"}
+{"payload":"task-1770860501-2209 complete: timer visibility covers repRest/setRest/exerciseRest with unit+e2e; commit 07228f5","topic":"task.done","ts":"2026-02-12T02:32:57.145999+00:00"}
+{"payload":"task-1770860501-520b complete: README CI badges + Playwright-generated screenshots; workflow and docs updated; commit fc8730c","topic":"task.done","ts":"2026-02-12T02:32:57.155784+00:00"}
+{"payload":"task-1770860501-0b44 complete: scoped restart current set/exercise controls with reducer+UI+unit+e2e; commit 3b591aa","topic":"task.done","ts":"2026-02-12T02:32:57.164263+00:00"}
+{"payload":"task-1770860501-385d complete: exercise transition swipe animation with reduced-motion fallback, plus unit+e2e coverage; commit 674e27e","topic":"task.done","ts":"2026-02-12T02:32:57.171683+00:00"}
+{"payload":"task-1770860501-2209 complete: timer visibility covers repRest/setRest/exerciseRest with unit+e2e; commit 07228f5","topic":"task.done","ts":"2026-02-12T02:34:39.559756+00:00"}
+{"payload":"task-1770860501-520b complete: README CI badges + Playwright-generated screenshots; workflow and docs updated; commit fc8730c","topic":"task.done","ts":"2026-02-12T02:34:39.570731+00:00"}
+{"payload":"task-1770860501-0b44 complete: scoped restart current set/exercise controls with reducer+UI+unit+e2e; commit 3b591aa","topic":"task.done","ts":"2026-02-12T02:34:39.579628+00:00"}
+{"payload":"task-1770860501-385d complete: exercise transition swipe animation with reduced-motion fallback, plus unit+e2e coverage; commit 674e27e","topic":"task.done","ts":"2026-02-12T02:34:39.586973+00:00"}
+{"payload":"completed task-1770860501-685a: full regression gates pass, coverage >=90 all categories, checklist closed; commit 60a4896","topic":"task.done","ts":"2026-02-12T02:34:56.274513+00:00"}
+{"payload":"objective complete: specs/todo-execution delivered; final regression/build/e2e/coverage gates passing and all runtime tasks closed","topic":"LOOP_COMPLETE","ts":"2026-02-12T02:35:04.299224+00:00"}
+{"ts":"2026-02-12T02:35:10.661284+00:00","iteration":8,"hat":"loop","topic":"loop.terminate","payload":"## Reason\ncompleted\n\n## Status\nAll tasks completed successfully.\n\n## Summary\n- Iterations: 8\n- Duration: 54m 28s\n- Exit code: 0"}
