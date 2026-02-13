@@ -610,9 +610,10 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
     activeSet.completedReps > 0 &&
     activeSet.completedReps < activeSet.targetReps
   const shouldShowRestCard =
-    currentProgress.restTimerRunning ||
-    isRuntimeTimedRestPhase ||
-    shouldShowHoldExerciseRestFallback
+    (isHoldExercise && isRuntimeHoldForCurrentExercise
+      ? false
+      : currentProgress.restTimerRunning || shouldShowHoldExerciseRestFallback) ||
+    isRuntimeTimedRestPhase
   const holdRestPreviewThresholdSeconds =
     isHoldExercise && currentExercise.holdSeconds !== null
       ? Math.max(0.8, Math.min(2, currentExercise.holdSeconds * 0.35))
@@ -621,18 +622,17 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
     isRuntimeHoldForCurrentExercise &&
     displayedHoldRemainingSeconds > 0 &&
     displayedHoldRemainingSeconds <= holdRestPreviewThresholdSeconds
-  const shouldRenderHoldRestLayer =
-    isHoldExercise && (shouldShowRestCard || shouldPreviewIncomingRest)
+  const shouldRenderHoldRestLayer = isHoldExercise
   const restSlideOutThresholdSeconds = 0.6
   const isRestNearingCompletion =
     isRuntimeTimedRestPhase && displayedRestRemainingSeconds <= restSlideOutThresholdSeconds
-  const holdRestLayerState = !shouldRenderHoldRestLayer
-    ? 'hidden'
-    : shouldPreviewIncomingRest
-      ? 'entering'
-      : isRestNearingCompletion
-        ? 'exiting'
-        : 'visible'
+  const holdRestLayerState = isRestNearingCompletion
+    ? 'exiting'
+    : shouldShowRestCard
+      ? 'full'
+      : shouldPreviewIncomingRest
+        ? 'preview'
+        : 'hidden'
   const isHoldTimerActive =
     isRuntimeHoldForCurrentExercise ||
     (sessionState.runtime.phase === 'idle' && currentProgress.holdTimerRunning)

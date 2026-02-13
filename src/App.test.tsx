@@ -673,7 +673,9 @@ describe('App shell', () => {
 
     expectOnOptionsScreen(/workflow phase: hold/i)
     expectOnOptionsScreen(/phase timer: 3.0s/i)
-    expect(screen.queryByText(/rest timer:/i)).not.toBeInTheDocument()
+    const holdRestStackAfterSetRest = document.querySelector('[data-hold-rest-stack="true"]')
+    expect(holdRestStackAfterSetRest).not.toBeNull()
+    expect(holdRestStackAfterSetRest).toHaveAttribute('data-rest-layer-state', 'hidden')
     expect(screen.getByText('0/10 reps')).toBeInTheDocument()
   })
 
@@ -726,7 +728,9 @@ describe('App shell', () => {
     expect(screen.getByRole('heading', { name: /terminal knee extension/i })).toBeInTheDocument()
     expectOnOptionsScreen(/workflow phase: idle/i)
     expectOnOptionsScreen(/phase timer: 0.0s/i)
-    expect(screen.queryByText(/rest timer:/i)).not.toBeInTheDocument()
+    const holdRestStackAfterExerciseRest = document.querySelector('[data-hold-rest-stack="true"]')
+    expect(holdRestStackAfterExerciseRest).not.toBeNull()
+    expect(holdRestStackAfterExerciseRest).toHaveAttribute('data-rest-layer-state', 'hidden')
     expect(screen.getByText('Hold Pending')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: /^start$/i }))
@@ -1097,7 +1101,9 @@ describe('App shell', () => {
 
     expect(screen.getByText('Set 2/3')).toBeInTheDocument()
     expect(screen.getByText('0/8 reps')).toBeInTheDocument()
-    expect(screen.queryByText(/rest timer:/i)).not.toBeInTheDocument()
+    const holdRestStackAfterSkippingRest = document.querySelector('[data-hold-rest-stack="true"]')
+    expect(holdRestStackAfterSkippingRest).not.toBeNull()
+    expect(holdRestStackAfterSkippingRest).toHaveAttribute('data-rest-layer-state', 'hidden')
   })
 
   it('keeps complete-exercise disabled until all sets are fully done', async () => {
@@ -1338,7 +1344,7 @@ describe('App shell', () => {
 
     const stack = document.querySelector('[data-hold-rest-stack="true"]')
     expect(stack).not.toBeNull()
-    expect(stack).toHaveAttribute('data-rest-layer-state', 'visible')
+    expect(stack).toHaveAttribute('data-rest-layer-state', 'full')
     expect(screen.getByText(/^hold$/i)).toBeInTheDocument()
     expect(screen.getByText(/^rest$/i)).toBeInTheDocument()
   })
@@ -1357,7 +1363,9 @@ describe('App shell', () => {
       vi.advanceTimersByTime(800)
     })
 
-    expect(screen.queryByText(/rest timer:/i)).not.toBeInTheDocument()
+    const stack = document.querySelector('[data-hold-rest-stack="true"]')
+    expect(stack).not.toBeNull()
+    expect(stack).toHaveAttribute('data-rest-layer-state', 'hidden')
   })
 
   it('shows entering rest layer near hold completion', async () => {
@@ -1374,7 +1382,7 @@ describe('App shell', () => {
 
     const stack = document.querySelector('[data-hold-rest-stack="true"]')
     expect(stack).not.toBeNull()
-    expect(stack).toHaveAttribute('data-rest-layer-state', 'entering')
+    expect(stack).toHaveAttribute('data-rest-layer-state', 'preview')
     expect(screen.getByText(/rest timer:/i)).toBeInTheDocument()
   })
 
@@ -1436,7 +1444,9 @@ describe('App shell', () => {
 
     expect(screen.getByText('Rest timer: 6.0s')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /add 10 seconds/i }))
-    expect(screen.queryByText(/rest timer:/i)).not.toBeInTheDocument()
+    const holdRestStackAfterPlus = document.querySelector('[data-hold-rest-stack="true"]')
+    expect(holdRestStackAfterPlus).not.toBeNull()
+    expect(holdRestStackAfterPlus).toHaveAttribute('data-rest-layer-state', 'hidden')
     expect(screen.getByText('Hold Running')).toBeInTheDocument()
   })
 
