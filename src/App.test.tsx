@@ -1306,6 +1306,8 @@ describe('App shell', () => {
     expect(screen.getByText('1/15 reps')).toBeInTheDocument()
     expect(screen.getByText('Hold timer: 3.0s')).toBeInTheDocument()
     expect(screen.getByText('Rest timer: 3.0s')).toBeInTheDocument()
+    const runtimeRestHint = screen.getByText('Swipe to dismiss rest')
+    expect(runtimeRestHint).toHaveClass('rest-dismiss-hint-visible')
     expect(screen.queryByRole('button', { name: /start hold/i })).not.toBeInTheDocument()
 
     await act(async () => {
@@ -1384,6 +1386,8 @@ describe('App shell', () => {
     expect(stack).not.toBeNull()
     expect(stack).toHaveAttribute('data-rest-layer-state', 'preview')
     expect(screen.getByText(/rest timer:/i)).toBeInTheDocument()
+    const previewRestHint = screen.getByText('Swipe to dismiss rest')
+    expect(previewRestHint).toHaveClass('rest-dismiss-hint-hidden')
   })
 
   it('marks rest layer exiting when runtime rest is near completion', () => {

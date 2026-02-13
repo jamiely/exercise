@@ -970,7 +970,14 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
                 <p className="timer-text">
                   Rest timer: {formatTimerSeconds(displayedRestRemainingSeconds)}
                 </p>
-                {isRuntimeRestPhase ? <p className="subtitle">Swipe to dismiss rest</p> : null}
+                <p
+                  className={`subtitle rest-dismiss-hint ${
+                    isRuntimeRestPhase ? 'rest-dismiss-hint-visible' : 'rest-dismiss-hint-hidden'
+                  }`}
+                  aria-hidden={isRuntimeRestPhase ? undefined : 'true'}
+                >
+                  Swipe to dismiss rest
+                </p>
               </div>
             ) : null}
           </div>
