@@ -596,16 +596,43 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
           ),
         )
       : currentProgress.holdElapsedSeconds
+  const displayedHoldRemainingSeconds =
+    isHoldExercise && currentExercise.holdSeconds !== null
+      ? Math.max(0, currentExercise.holdSeconds - displayedHoldElapsedSeconds)
+      : 0
   const restTotalSeconds = currentExercise.repRestMs / 1000
   const displayedRestRemainingSeconds = isRuntimeTimedRestPhase
     ? Math.max(0, Math.round((sessionState.runtime.remainingMs / 1000) * 10) / 10)
     : Math.max(0, restTotalSeconds - currentProgress.restElapsedSeconds)
   const shouldShowHoldExerciseRestFallback =
-    isHoldExercise && activeSet.completedReps > 0 && activeSet.completedReps < activeSet.targetReps
+    isHoldExercise &&
+    !isRuntimeHoldForCurrentExercise &&
+    activeSet.completedReps > 0 &&
+    activeSet.completedReps < activeSet.targetReps
   const shouldShowRestCard =
     currentProgress.restTimerRunning ||
     isRuntimeTimedRestPhase ||
     shouldShowHoldExerciseRestFallback
+  const holdRestPreviewThresholdSeconds =
+    isHoldExercise && currentExercise.holdSeconds !== null
+      ? Math.max(0.8, Math.min(2, currentExercise.holdSeconds * 0.35))
+      : 0
+  const shouldPreviewIncomingRest =
+    isRuntimeHoldForCurrentExercise &&
+    displayedHoldRemainingSeconds > 0 &&
+    displayedHoldRemainingSeconds <= holdRestPreviewThresholdSeconds
+  const shouldRenderHoldRestLayer =
+    isHoldExercise && (shouldShowRestCard || shouldPreviewIncomingRest)
+  const restSlideOutThresholdSeconds = 0.6
+  const isRestNearingCompletion =
+    isRuntimeTimedRestPhase && displayedRestRemainingSeconds <= restSlideOutThresholdSeconds
+  const holdRestLayerState = !shouldRenderHoldRestLayer
+    ? 'hidden'
+    : shouldPreviewIncomingRest
+      ? 'entering'
+      : isRestNearingCompletion
+        ? 'exiting'
+        : 'visible'
   const isHoldTimerActive =
     isRuntimeHoldForCurrentExercise ||
     (sessionState.runtime.phase === 'idle' && currentProgress.holdTimerRunning)
@@ -886,18 +913,69 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
         </div>
         {isHoldExercise && currentExercise.holdSeconds !== null ? (
           <div
-            className={`timer-card ${isHoldTimerActive ? 'timer-card-active' : 'timer-card-muted'}`}
-            aria-live="polite"
+            className="hold-rest-stack"
+            data-hold-rest-stack="true"
+            data-rest-layer-state={holdRestLayerState}
           >
-            <p className="eyebrow">Hold</p>
-            <p className="timer-text">
-              Hold timer:{' '}
-              {formatCountdownPair(displayedHoldElapsedSeconds, currentExercise.holdSeconds)}
-            </p>
-            <p className="subtitle">{isHoldTimerActive ? 'Hold Running' : 'Hold Pending'}</p>
+            <div
+              className={`timer-card ${isHoldTimerActive ? 'timer-card-active' : 'timer-card-muted'}`}
+              aria-live="polite"
+            >
+              <p className="eyebrow">Hold</p>
+              <p className="timer-text">
+                Hold timer:{' '}
+                {formatCountdownPair(displayedHoldElapsedSeconds, currentExercise.holdSeconds)}
+              </p>
+              <p className="subtitle">{isHoldTimerActive ? 'Hold Running' : 'Hold Pending'}</p>
+            </div>
+            {shouldRenderHoldRestLayer ? (
+              <div
+                className={`timer-card hold-rest-layer ${
+                  isRestTimerActive ? 'timer-card-active' : 'timer-card-muted'
+                }`}
+                aria-live="polite"
+                onPointerDown={handleRestPointerDown}
+                onPointerMove={handleRestPointerMove}
+                onPointerUp={handleRestPointerEnd}
+                onPointerCancel={handleRestPointerEnd}
+                data-runtime-rest-card={isRuntimeRestPhase ? 'true' : 'false'}
+              >
+                <div className="timer-header-row">
+                  <p className="eyebrow">Rest</p>
+                  <button
+                    type="button"
+                    className="timer-plus-button"
+                    disabled={!canAddRestTime}
+                    onClick={() => {
+                      const now = new Date().toISOString()
+                      dispatchAction({
+                        type: 'add_runtime_rest_time',
+                        now,
+                        ms: restPeriodSeconds * 1000,
+                      })
+
+                      if (!isRuntimeRepRest) {
+                        dispatchAction({
+                          type: 'tick_rest_timer',
+                          now,
+                          seconds: restPeriodSeconds,
+                        })
+                      }
+                    }}
+                    aria-label={`Add ${restPeriodSeconds} seconds`}
+                  >
+                    +
+                  </button>
+                </div>
+                <p className="timer-text">
+                  Rest timer: {formatTimerSeconds(displayedRestRemainingSeconds)}
+                </p>
+                {isRuntimeRestPhase ? <p className="subtitle">Swipe to dismiss rest</p> : null}
+              </div>
+            ) : null}
           </div>
         ) : null}
-        {shouldShowRestCard ? (
+        {shouldShowRestCard && !isHoldExercise ? (
           <div
             className={`timer-card ${isRestTimerActive ? 'timer-card-active' : 'timer-card-muted'}`}
             aria-live="polite"
@@ -938,15 +1016,13 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
               Rest timer: {formatTimerSeconds(displayedRestRemainingSeconds)}
             </p>
             {isRuntimeRestPhase ? <p className="subtitle">Swipe to dismiss rest</p> : null}
-            {!isHoldExercise ? (
-              <button
-                type="button"
-                className="secondary-button"
-                onClick={() => dispatchTimed('start_next_set')}
-              >
-                Start Next Set
-              </button>
-            ) : null}
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => dispatchTimed('start_next_set')}
+            >
+              Start Next Set
+            </button>
           </div>
         ) : null}
       </article>

@@ -1308,7 +1308,7 @@ describe('App shell', () => {
     expect(screen.getByText('Hold Running')).toBeInTheDocument()
   })
 
-  it('renders hold card above rest card during hold-exercise rest', () => {
+  it('renders combined hold/rest stack during hold-exercise rest', () => {
     const program = loadProgram()
     const session = createSessionState(program, {
       now: '2026-02-10T00:00:00.000Z',
@@ -1336,16 +1336,77 @@ describe('App shell', () => {
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: /resume/i }))
 
-    const holdCard = screen.getByText(/^hold$/i).closest('.timer-card')
-    const restCard = screen.getByText(/^rest$/i).closest('.timer-card')
-    expect(holdCard).not.toBeNull()
-    expect(restCard).not.toBeNull()
-    if (!holdCard || !restCard) {
-      throw new Error('Expected hold and rest cards to be rendered')
-    }
-    expect(
-      holdCard.compareDocumentPosition(restCard) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy()
+    const stack = document.querySelector('[data-hold-rest-stack="true"]')
+    expect(stack).not.toBeNull()
+    expect(stack).toHaveAttribute('data-rest-layer-state', 'visible')
+    expect(screen.getByText(/^hold$/i)).toBeInTheDocument()
+    expect(screen.getByText(/^rest$/i)).toBeInTheDocument()
+  })
+
+  it('keeps rest layer hidden while hold is still early', async () => {
+    vi.useFakeTimers()
+    render(<App />)
+    enterNewSession()
+    clickOptionsAction(/skip exercise/i)
+    fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
+
+    expect(screen.getByRole('heading', { name: /straight leg raise/i })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /^start$/i }))
+
+    await act(async () => {
+      vi.advanceTimersByTime(800)
+    })
+
+    expect(screen.queryByText(/rest timer:/i)).not.toBeInTheDocument()
+  })
+
+  it('shows entering rest layer near hold completion', async () => {
+    vi.useFakeTimers()
+    render(<App />)
+    enterNewSession()
+    clickOptionsAction(/skip exercise/i)
+    fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^start$/i }))
+
+    await act(async () => {
+      vi.advanceTimersByTime(2_100)
+    })
+
+    const stack = document.querySelector('[data-hold-rest-stack="true"]')
+    expect(stack).not.toBeNull()
+    expect(stack).toHaveAttribute('data-rest-layer-state', 'entering')
+    expect(screen.getByText(/rest timer:/i)).toBeInTheDocument()
+  })
+
+  it('marks rest layer exiting when runtime rest is near completion', () => {
+    const program = loadProgram()
+    const session = createSessionState(program, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-hold-rest-exiting',
+    })
+    const exerciseId = program.exercises[1].id
+
+    persistSession({
+      ...session,
+      primaryCursor: 1,
+      currentExerciseId: exerciseId,
+      updatedAt: '2026-02-10T00:00:02.000Z',
+      runtime: {
+        phase: 'repRest',
+        exerciseIndex: 1,
+        setIndex: 0,
+        repIndex: 1,
+        remainingMs: 500,
+        previousPhase: null,
+      },
+    })
+
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: /resume/i }))
+
+    const stack = document.querySelector('[data-hold-rest-stack="true"]')
+    expect(stack).not.toBeNull()
+    expect(stack).toHaveAttribute('data-rest-layer-state', 'exiting')
   })
 
   it('adds one full rest period when tapping the rest plus button', () => {

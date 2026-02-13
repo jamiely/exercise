@@ -196,6 +196,43 @@ h2 {
   gap: 0.5rem;
 }
 
+.hold-rest-stack {
+  position: relative;
+  margin-top: 0.25rem;
+}
+
+.hold-rest-stack .timer-card {
+  margin-top: 0;
+}
+
+.hold-rest-layer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 82%;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+  transform: translate3d(112%, 0, 0);
+  opacity: 0;
+  transition:
+    transform 520ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 520ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform, opacity;
+}
+
+.hold-rest-stack[data-rest-layer-state='entering'] .hold-rest-layer,
+.hold-rest-stack[data-rest-layer-state='visible'] .hold-rest-layer {
+  transform: translate3d(0, 0, 0);
+  opacity: 1;
+}
+
+.hold-rest-stack[data-rest-layer-state='exiting'] .hold-rest-layer {
+  transform: translate3d(112%, 0, 0);
+  opacity: 0;
+  transition-duration: 140ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 1, 1);
+  pointer-events: none;
+}
+
 .timer-card[data-runtime-rest-card='true'] {
   touch-action: pan-y;
 }
@@ -325,5 +362,9 @@ button:focus-visible {
 @media (prefers-reduced-motion: reduce) {
   .exercise-card-transition {
     animation: none;
+  }
+
+  .hold-rest-layer {
+    transition: none;
   }
 }

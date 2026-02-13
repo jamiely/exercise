@@ -270,6 +270,77 @@ const seedStraightLegRaiseRuntimeRepRestSession = async (page: Page) => {
   }, SESSION_STORAGE_KEY)
 }
 
+const seedStraightLegRaiseRuntimeHoldNearCompletionSession = async (page: Page) => {
+  await page.evaluate((sessionStorageKey) => {
+    const raw = window.localStorage.getItem(sessionStorageKey)
+    if (!raw) {
+      throw new Error('expected persisted session payload to exist')
+    }
+
+    const payload = JSON.parse(raw) as {
+      session: {
+        currentPhase: 'primary' | 'skip'
+        primaryCursor: number
+        currentExerciseId: string
+        skipQueue: string[]
+        runtime: {
+          phase: 'idle' | 'hold' | 'repRest' | 'setRest' | 'exerciseRest' | 'paused' | 'complete'
+          exerciseIndex: number
+          setIndex: number
+          repIndex: number
+          remainingMs: number
+          previousPhase: 'hold' | 'repRest' | 'setRest' | 'exerciseRest' | null
+        }
+        exerciseProgress: Record<
+          string,
+          {
+            completed: boolean
+            skippedCount: number
+            activeSetIndex: number
+            sets: Array<{ setNumber: number; completedReps: number; targetReps: number }>
+            holdTimerRunning: boolean
+            holdElapsedSeconds: number
+            restTimerRunning: boolean
+            restElapsedSeconds: number
+          }
+        >
+      }
+    }
+
+    const exerciseId = 'straight-leg-raise'
+    const progress = payload.session.exerciseProgress[exerciseId]
+    if (!progress) {
+      throw new Error('straight leg raise progress missing from persisted session payload')
+    }
+
+    payload.session.currentPhase = 'primary'
+    payload.session.primaryCursor = 1
+    payload.session.currentExerciseId = exerciseId
+    payload.session.skipQueue = []
+    payload.session.runtime = {
+      phase: 'hold',
+      exerciseIndex: 1,
+      setIndex: 0,
+      repIndex: 0,
+      remainingMs: 900,
+      previousPhase: null,
+    }
+    payload.session.exerciseProgress[exerciseId] = {
+      ...progress,
+      completed: false,
+      skippedCount: 0,
+      activeSetIndex: 0,
+      sets: [{ setNumber: 1, completedReps: 0, targetReps: 5 }],
+      holdTimerRunning: false,
+      holdElapsedSeconds: 0,
+      restTimerRunning: false,
+      restElapsedSeconds: 0,
+    }
+
+    window.localStorage.setItem(sessionStorageKey, JSON.stringify(payload))
+  }, SESSION_STORAGE_KEY)
+}
+
 const seedStraightLegRaiseRuntimeRestSession = async (
   page: Page,
   phase: 'setRest' | 'exerciseRest',
@@ -473,6 +544,21 @@ test('shows rest timer card after hold finishes on straight leg raise', async ({
   expect(runtimeState.exerciseIndex).toBe(1)
   expect(runtimeState.remainingMs).toBeGreaterThan(1_000)
 
+  await expect(page.getByText(/rest timer:/i)).toBeVisible()
+})
+
+test('shows rest preview before hold ends and then transitions into rep rest', async ({ page }) => {
+  await seedStraightLegRaiseRuntimeHoldNearCompletionSession(page)
+  await page.reload()
+
+  await expect(page.getByRole('button', { name: /resume session/i })).toBeVisible()
+  await tapByRoleName(page, 'button', /resume session/i)
+  await expect(page.getByRole('heading', { name: /straight leg raise/i })).toBeVisible()
+  await expect(page.getByText(/rest timer:/i)).toBeVisible()
+
+  await tapByRoleName(page, 'button', /options/i)
+  await expect(page.getByText(/workflow phase: represt/i)).toBeVisible({ timeout: 4_000 })
+  await tapByRoleName(page, 'button', /back to exercise/i)
   await expect(page.getByText(/rest timer:/i)).toBeVisible()
 })
 
