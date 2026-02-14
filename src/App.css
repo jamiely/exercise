@@ -199,7 +199,6 @@ h2 {
 .hold-rest-stack {
   position: relative;
   margin-top: 0.25rem;
-  --hold-rest-card-min-height: 8.75rem;
   --hold-rest-layer-width: 82%;
   --hold-rest-layer-offscreen-x: 112%;
   --hold-rest-layer-preview-x: 50%;
@@ -210,13 +209,13 @@ h2 {
 
 .hold-rest-stack .timer-card {
   margin-top: 0;
-  min-height: var(--hold-rest-card-min-height);
 }
 
 .hold-rest-layer {
   position: absolute;
   top: 0;
   right: 0;
+  height: 100%;
   width: var(--hold-rest-layer-width);
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
   transform: translate3d(var(--hold-rest-layer-offscreen-x), 0, 0);
