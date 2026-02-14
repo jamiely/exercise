@@ -1,6 +1,7 @@
 import { loadProgram } from '../program/program'
 import { vi } from 'vitest'
 import {
+  SESSION_EXPIRY_MS,
   SESSION_STORAGE_KEY,
   SESSION_STORAGE_VERSION,
   clearPersistedSession,
@@ -13,7 +14,13 @@ describe('session persistence', () => {
   const program = loadProgram()
 
   beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-02-10T00:00:00.000Z'))
     window.localStorage.clear()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it('writes and reads an in-progress session', () => {
@@ -140,6 +147,55 @@ describe('session persistence', () => {
           endedAt: '2026-02-10T00:02:00.000Z',
           endedEarly: true,
           currentExerciseId: null,
+        },
+      }),
+    )
+
+    expect(readPersistedSession()).toBeNull()
+    expect(window.localStorage.getItem(SESSION_STORAGE_KEY)).toBeNull()
+  })
+
+  it('expires persisted in-progress sessions after twelve hours', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-02-10T12:00:01.000Z'))
+
+    const session = createSessionState(program, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-expired',
+    })
+    persistSession(session)
+
+    expect(readPersistedSession()).toBeNull()
+    expect(window.localStorage.getItem(SESSION_STORAGE_KEY)).toBeNull()
+  })
+
+  it('keeps persisted in-progress sessions at or under twelve hours old', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-02-10T12:00:00.000Z'))
+
+    const updatedAt = new Date(Date.now() - SESSION_EXPIRY_MS).toISOString()
+    const session = createSessionState(program, {
+      now: updatedAt,
+      sessionId: 'session-not-expired',
+    })
+    persistSession(session)
+
+    const persisted = readPersistedSession()
+    expect(persisted?.sessionId).toBe('session-not-expired')
+  })
+
+  it('expires persisted sessions with invalid updatedAt timestamps', () => {
+    const session = createSessionState(program, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-invalid-updated-at',
+    })
+    window.localStorage.setItem(
+      SESSION_STORAGE_KEY,
+      JSON.stringify({
+        version: SESSION_STORAGE_VERSION,
+        session: {
+          ...session,
+          updatedAt: 'not-a-timestamp',
         },
       }),
     )

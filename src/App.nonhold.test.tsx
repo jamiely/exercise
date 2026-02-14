@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createSessionState } from './session/session'
 import { persistSession } from './session/persistence'
 
@@ -28,7 +28,13 @@ vi.mock('./program/program', () => ({
 
 describe('App non-hold flow', () => {
   beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-02-10T00:00:00.000Z'))
     window.localStorage.clear()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it('auto-starts routine when +1 Rep is tapped on non-hold exercises', async () => {

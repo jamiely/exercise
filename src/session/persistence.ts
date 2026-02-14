@@ -2,6 +2,7 @@ import type { SessionState } from './session'
 
 export const SESSION_STORAGE_KEY = 'exercise-tracker/session'
 export const SESSION_STORAGE_VERSION = 2
+export const SESSION_EXPIRY_MS = 12 * 60 * 60 * 1000
 
 type PersistedSession = {
   version: number
@@ -135,6 +136,15 @@ const parsePersistedSession = (raw: string): SessionState | null => {
   return payload.session.status === 'in_progress' ? payload.session : null
 }
 
+const isSessionExpired = (session: SessionState): boolean => {
+  const updatedAtMs = Date.parse(session.updatedAt)
+  if (Number.isNaN(updatedAtMs)) {
+    return true
+  }
+
+  return Date.now() - updatedAtMs > SESSION_EXPIRY_MS
+}
+
 export const clearPersistedSession = (): void => {
   const storage = getStorage()
   if (!storage) {
@@ -162,6 +172,11 @@ export const readPersistedSession = (): SessionState | null => {
 
     const parsed = parsePersistedSession(raw)
     if (!parsed) {
+      clearPersistedSession()
+      return null
+    }
+
+    if (isSessionExpired(parsed)) {
       clearPersistedSession()
       return null
     }

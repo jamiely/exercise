@@ -13,6 +13,7 @@ dist-ssr
 playwright-report
 test-results
 coverage
+storybook-static
 *.local
 tmp-vite-*
 

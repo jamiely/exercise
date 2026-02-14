@@ -43,6 +43,8 @@ describe('App shell', () => {
   }
 
   beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-02-10T00:00:00.000Z'))
     window.localStorage.clear()
     setReducedMotionPreference(false)
   })
@@ -1550,6 +1552,22 @@ describe('App shell', () => {
 
     expect(screen.getByRole('heading', { name: /knee pain/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /resume session/i })).toBeEnabled()
+    expect(screen.getByRole('button', { name: /start new session/i })).toBeInTheDocument()
+  })
+
+  it('does not offer resume when persisted session is older than twelve hours', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-02-10T12:00:01.000Z'))
+    const program = loadProgram()
+    const session = createSessionState(program, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-expired-ui',
+    })
+    persistSession(session)
+
+    render(<App />)
+
+    expect(screen.queryByRole('button', { name: /resume session/i })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: /start new session/i })).toBeInTheDocument()
   })
 

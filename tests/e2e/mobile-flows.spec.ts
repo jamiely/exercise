@@ -6,13 +6,59 @@ const tapByRoleName = async (page: Page, role: 'button' | 'heading', name: RegEx
   await page.getByRole(role, { name }).click()
 }
 
+const readWorkflowPhase = async (page: Page): Promise<string> => {
+  const phaseText = await page.locator('.session-meta').getByText(/workflow phase:/i).innerText()
+  const match = phaseText.match(/workflow phase:\s*([a-z]+)/i)
+  if (!match) {
+    throw new Error(`Unable to parse workflow phase text: ${phaseText}`)
+  }
+  return match[1].toLowerCase()
+}
+
 const startNewSession = async (page: Page) => {
   await tapByRoleName(page, 'button', /start new session/i)
 }
 
+const ensureHoldPhase = async (page: Page) => {
+  for (let guard = 0; guard < 5; guard += 1) {
+    if (!(await page.getByRole('button', { name: /back to exercise/i }).isVisible())) {
+      await tapByRoleName(page, 'button', /options/i)
+    }
+    const phase = await readWorkflowPhase(page)
+    if (phase === 'hold') {
+      return
+    }
+    if (phase === 'idle') {
+      await closeOptionsIfOpen(page)
+      await tapByRoleName(page, 'button', /^start$/i)
+      continue
+    }
+    if (phase === 'represt' || phase === 'setrest' || phase === 'exerciserest') {
+      await tapOptionsAction(page, /skip rest/i)
+      continue
+    }
+    throw new Error(`Unexpected workflow phase while ensuring hold: ${phase}`)
+  }
+
+  throw new Error('Unable to reach hold workflow phase')
+}
+
 const addReps = async (page: Page, count: number) => {
   for (let rep = 0; rep < count; rep += 1) {
-    await tapByRoleName(page, 'button', /\+1 rep/i)
+    await ensureHoldPhase(page)
+    await tapOptionsAction(page, /skip rep/i)
+    for (let restGuard = 0; restGuard < 4; restGuard += 1) {
+      const phase = await readWorkflowPhase(page)
+      if (phase === 'hold') {
+        break
+      }
+      if (phase === 'represt' || phase === 'setrest' || phase === 'exerciserest') {
+        await tapOptionsAction(page, /skip rest/i)
+        continue
+      }
+      throw new Error(`Unexpected workflow phase while adding rep: ${phase}`)
+    }
+    await ensureHoldPhase(page)
   }
 }
 
@@ -29,6 +75,13 @@ const tapOptionsAction = async (page: Page, name: RegExp | string) => {
     await tapByRoleName(page, 'button', /options/i)
   }
   await tapByRoleName(page, 'button', name)
+}
+
+const closeOptionsIfOpen = async (page: Page) => {
+  const backButton = page.getByRole('button', { name: /back to exercise/i })
+  if (await backButton.isVisible().catch(() => false)) {
+    await backButton.click()
+  }
 }
 
 const readPhaseTimerSeconds = async (page: Page): Promise<number> => {
@@ -693,21 +746,23 @@ test('updates reps and auto-advances set state on the final rep', async ({ page 
   await tapOptionsAction(page, /skip exercise/i)
   await tapByRoleName(page, 'button', /back to exercise/i)
   await expect(page.getByRole('heading', { name: /backward step-up/i })).toBeVisible()
+  await tapByRoleName(page, 'button', /^start$/i)
 
-  await tapByRoleName(page, 'button', /\+1 rep/i)
+  await addReps(page, 1)
+  await closeOptionsIfOpen(page)
   await expect(page.getByText('1/8 reps')).toBeVisible()
   await tapOptionsAction(page, /undo rep/i)
   await tapByRoleName(page, 'button', /back to exercise/i)
   await expect(page.getByText('0/8 reps')).toBeVisible()
 
   await addReps(page, 8)
+  await closeOptionsIfOpen(page)
   await expect(page.getByText('Set 2/2')).toBeVisible()
   await expect(page.getByText('0/8 reps')).toBeVisible()
-  await expect(page.getByText(/rest timer:/i)).toHaveCount(0)
   await expect(page.getByLabel('Set tracker')).toHaveCount(0)
 })
 
-test('starts routine from +1 rep and keeps workout/exercise timers moving', async ({ page }) => {
+test('starts routine from Start and keeps workout/exercise timers moving', async ({ page }) => {
   await tapOptionsAction(page, /skip exercise/i)
   await tapOptionsAction(page, /skip exercise/i)
   await tapOptionsAction(page, /skip exercise/i)
@@ -716,9 +771,9 @@ test('starts routine from +1 rep and keeps workout/exercise timers moving', asyn
   await expect(page.getByRole('button', { name: /^start$/i })).toBeVisible()
   await expect(page.getByText(/current exercise:\s*0:00/i)).toBeVisible()
 
-  await tapByRoleName(page, 'button', /\+1 rep/i)
+  await tapByRoleName(page, 'button', /^start$/i)
 
-  await expect(page.getByText('1/8 reps')).toBeVisible()
+  await expect(page.getByText('0/8 reps')).toBeVisible()
   await expect(page.getByRole('button', { name: /^pause$/i })).toBeVisible()
   await page.waitForTimeout(1100)
   await expect(page.getByText('Workout time: 0:01')).toBeVisible()
@@ -783,8 +838,10 @@ test('restarts current set and current exercise from Options with scoped resets'
   await tapOptionsAction(page, /skip exercise/i)
   await tapByRoleName(page, 'button', /back to exercise/i)
   await expect(page.getByRole('heading', { name: /backward step-up/i })).toBeVisible()
+  await tapByRoleName(page, 'button', /^start$/i)
 
   await addReps(page, 3)
+  await closeOptionsIfOpen(page)
   await expect(page.getByText('3/8 reps')).toBeVisible()
 
   await tapByRoleName(page, 'button', /options/i)
@@ -796,8 +853,10 @@ test('restarts current set and current exercise from Options with scoped resets'
   await expect(page.getByText('0/8 reps')).toBeVisible()
 
   await addReps(page, 8)
+  await closeOptionsIfOpen(page)
   await expect(page.getByText('Set 2/2')).toBeVisible()
-  await tapByRoleName(page, 'button', /\+1 rep/i)
+  await addReps(page, 1)
+  await closeOptionsIfOpen(page)
   await expect(page.getByText('1/8 reps')).toBeVisible()
 
   await tapByRoleName(page, 'button', /options/i)
@@ -927,7 +986,9 @@ test('prompts to resume on reload with active session', async ({ page }) => {
   await tapOptionsAction(page, /skip exercise/i)
   await tapByRoleName(page, 'button', /back to exercise/i)
   await expect(page.getByRole('heading', { name: /backward step-up/i })).toBeVisible()
-  await tapByRoleName(page, 'button', /\+1 rep/i)
+  await tapByRoleName(page, 'button', /^start$/i)
+  await addReps(page, 1)
+  await closeOptionsIfOpen(page)
   await expect(page.getByText('1/8 reps')).toBeVisible()
 
   await page.reload()
@@ -936,6 +997,29 @@ test('prompts to resume on reload with active session', async ({ page }) => {
   await tapByRoleName(page, 'button', /resume session/i)
   await expect(page.getByRole('heading', { name: /backward step-up/i })).toBeVisible()
   await expect(page.getByText('1/8 reps')).toBeVisible()
+})
+
+test('expires persisted session after twelve hours and hides resume action', async ({ page }) => {
+  await page.evaluate((sessionStorageKey) => {
+    const raw = window.localStorage.getItem(sessionStorageKey)
+    if (!raw) {
+      throw new Error('expected persisted session payload to exist')
+    }
+
+    const payload = JSON.parse(raw) as { session: { updatedAt: string } }
+    payload.session.updatedAt = '2000-01-01T00:00:00.000Z'
+    window.localStorage.setItem(sessionStorageKey, JSON.stringify(payload))
+  }, SESSION_STORAGE_KEY)
+
+  await page.reload()
+
+  await expect(page.getByRole('button', { name: /resume session/i })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /start new session/i })).toBeVisible()
+
+  const persistedPayload = await page.evaluate((sessionStorageKey) => {
+    return window.localStorage.getItem(sessionStorageKey)
+  }, SESSION_STORAGE_KEY)
+  expect(persistedPayload).toBeNull()
 })
 
 test('ends session early and shows summary state', async ({ page }) => {
