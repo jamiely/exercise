@@ -480,7 +480,7 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
 
     return (
       <main className="app-shell">
-        <p className="eyebrow">Exercise Session</p>
+        <p className="eyebrow">Exercise Session Tracker</p>
         <h1>{program.programName}</h1>
         {hasPersistedSession ? (
           <p className="subtitle">Resume your last session or start a fresh one.</p>
@@ -532,7 +532,7 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
     const summary = getSessionSummary(sessionState, program.exercises.length)
     return (
       <main className="app-shell">
-        <p className="eyebrow">Exercise Session</p>
+        <p className="eyebrow">Exercise Session Tracker</p>
         <h1>{sessionState.status === 'completed' ? 'Session completed' : 'Session ended early'}</h1>
         <p className="subtitle">{program.programName}</p>
         <p className="workout-timer">
@@ -733,7 +733,7 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
   if (isSessionOptionsOpen) {
     return (
       <main className="app-shell">
-        <p className="eyebrow">Exercise Session</p>
+        <p className="eyebrow">Exercise Session Tracker</p>
         <h1>{program.programName}</h1>
         <p className="workout-timer">
           Workout time: {formatElapsedWorkoutTime(sessionState.workoutElapsedSeconds)}
@@ -1060,7 +1060,7 @@ function App() {
   if (!loadResult.ok) {
     return (
       <main className="app-shell" role="alert" aria-live="assertive">
-        <p className="eyebrow">Exercise Session</p>
+        <p className="eyebrow">Exercise Session Tracker</p>
         <h1>Invalid exercise data</h1>
         <p className="subtitle">{loadResult.message}</p>
       </main>
