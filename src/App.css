@@ -255,7 +255,6 @@ h2 {
 }
 
 .rest-dismiss-hint {
-  min-height: 1.5rem;
   transition: opacity 120ms cubic-bezier(0.4, 0, 1, 1);
 }
 
