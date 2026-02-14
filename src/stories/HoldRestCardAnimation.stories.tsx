@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import type { Meta, StoryObj } from '@storybook/react'
 
 type HoldRestState = 'hidden' | 'preview' | 'full' | 'exiting'
@@ -66,6 +66,78 @@ const HoldRestCardPlayground = ({
   )
 }
 
+type HoldRestAnimationTuningProps = Pick<
+  HoldRestCardPlaygroundProps,
+  | 'previewOffsetPercent'
+  | 'offscreenOffsetPercent'
+  | 'previewDurationMs'
+  | 'settleDurationMs'
+  | 'exitDurationMs'
+>
+
+const HoldRestAutoLoop = ({
+  previewOffsetPercent,
+  offscreenOffsetPercent,
+  previewDurationMs,
+  settleDurationMs,
+  exitDurationMs,
+}: HoldRestAnimationTuningProps) => {
+  const holdDurationMs = 2_000
+  const restDurationMs = 2_000
+  const cycleDurationMs = holdDurationMs + restDurationMs
+  const tickMs = 100
+  const [cycleMs, setCycleMs] = useState(0)
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setCycleMs((previousMs) => (previousMs + tickMs) % cycleDurationMs)
+    }, tickMs)
+
+    return () => window.clearInterval(intervalId)
+  }, [cycleDurationMs])
+
+  const holdSeconds = holdDurationMs / 1000
+  const restSeconds = restDurationMs / 1000
+  const isHoldPhase = cycleMs < holdDurationMs
+  const holdRemainingSeconds = isHoldPhase
+    ? Math.max(0, (holdDurationMs - cycleMs) / 1000)
+    : holdSeconds
+  const restElapsedMs = isHoldPhase ? 0 : cycleMs - holdDurationMs
+  const restRemainingSeconds = isHoldPhase
+    ? restSeconds
+    : Math.max(0, (restDurationMs - restElapsedMs) / 1000)
+  const layerState: HoldRestState = isHoldPhase
+    ? holdRemainingSeconds <= 0.8
+      ? 'preview'
+      : 'hidden'
+    : restRemainingSeconds <= 0.5
+      ? 'exiting'
+      : 'full'
+
+  return (
+    <div style={{ width: 'min(30rem, 92vw)' }}>
+      <p className="subtitle" style={{ marginBottom: '0.5rem' }}>
+        Auto loop: 2.0s hold, 2.0s rest
+      </p>
+      <HoldRestCardPlayground
+        layerState={layerState}
+        holdActive={isHoldPhase}
+        restActive={!isHoldPhase}
+        showDismissHint={!isHoldPhase}
+        previewOffsetPercent={previewOffsetPercent}
+        offscreenOffsetPercent={offscreenOffsetPercent}
+        previewDurationMs={previewDurationMs}
+        settleDurationMs={settleDurationMs}
+        exitDurationMs={exitDurationMs}
+      />
+      <p className="subtitle" style={{ marginTop: '0.5rem' }}>
+        Hold timer: {holdRemainingSeconds.toFixed(1)}s · Rest timer:{' '}
+        {restRemainingSeconds.toFixed(1)}s
+      </p>
+    </div>
+  )
+}
+
 const meta: Meta<typeof HoldRestCardPlayground> = {
   title: 'Workout/Hold Rest Card Animation',
   component: HoldRestCardPlayground,
@@ -108,5 +180,36 @@ export const RuntimeRest: Story = {
     holdActive: false,
     restActive: true,
     showDismissHint: true,
+  },
+}
+
+export const AutoLoopTwoSecondCycle: Story = {
+  name: 'Auto Loop (2s Hold / 2s Rest)',
+  args: {
+    previewOffsetPercent: 50,
+    offscreenOffsetPercent: 112,
+    previewDurationMs: 520,
+    settleDurationMs: 140,
+    exitDurationMs: 140,
+  },
+  render: (args) => (
+    <HoldRestAutoLoop
+      previewOffsetPercent={args.previewOffsetPercent}
+      offscreenOffsetPercent={args.offscreenOffsetPercent}
+      previewDurationMs={args.previewDurationMs}
+      settleDurationMs={args.settleDurationMs}
+      exitDurationMs={args.exitDurationMs}
+    />
+  ),
+  parameters: {
+    controls: {
+      include: [
+        'previewOffsetPercent',
+        'offscreenOffsetPercent',
+        'previewDurationMs',
+        'settleDurationMs',
+        'exitDurationMs',
+      ],
+    },
   },
 }
