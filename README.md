@@ -23,6 +23,7 @@ Mobile-first React app for running an exercise session from a JSON prescription.
 - Supports rest controls (`+`) and swipe-to-dismiss for active rest phases.
 - Supports `Restart Current Set` and `Restart Current Exercise` from session options.
 - Persists in-progress session state in `localStorage`.
+- Expires persisted in-progress sessions after 12 hours of inactivity.
 - Prompts `Resume` vs `Start New` on reload when an active session exists.
 - Supports de-emphasized `End Session Early` with terminal summary.
 
@@ -52,32 +53,34 @@ Mobile-first React app for running an exercise session from a JSON prescription.
 1. Install dependencies:
 
 ```bash
-corepack pnpm install
+pnpm install
 ```
 
 2. Start dev server:
 
 ```bash
-corepack pnpm dev
+pnpm dev
 ```
 
 ## Scripts
 
-- `corepack pnpm prettier --check .` (when Prettier is added/configured)
-- `corepack pnpm prettier --write .` (when Prettier is added/configured)
-- `corepack pnpm lint`
-- `corepack pnpm test`
-- `corepack pnpm test:coverage`
-- `corepack pnpm build`
-- `corepack pnpm test:e2e`
-- `corepack pnpm screenshots:readme`
+- `pnpm prettier --check .` (when Prettier is added/configured)
+- `pnpm prettier --write .` (when Prettier is added/configured)
+- `pnpm lint`
+- `pnpm test`
+- `pnpm test:coverage`
+- `pnpm build`
+- `pnpm test:e2e`
+- `pnpm storybook`
+- `pnpm build-storybook`
+- `pnpm screenshots:readme`
 
 ## Final Verification Pipeline
 
 Run the full regression check:
 
 ```bash
-mkdir -p test-results && corepack pnpm prettier --check . && corepack pnpm lint && corepack pnpm test && corepack pnpm build && corepack pnpm test:e2e
+mkdir -p test-results && pnpm prettier --check . && pnpm lint && pnpm test && pnpm build && pnpm test:e2e
 ```
 
 ## GitHub Pages Deployment
