@@ -199,6 +199,7 @@ h2 {
 .hold-rest-stack {
   position: relative;
   margin-top: 0.25rem;
+  --hold-rest-card-min-height: 8.75rem;
   --hold-rest-layer-width: 82%;
   --hold-rest-layer-offscreen-x: 112%;
   --hold-rest-layer-preview-x: 50%;
@@ -209,6 +210,7 @@ h2 {
 
 .hold-rest-stack .timer-card {
   margin-top: 0;
+  min-height: var(--hold-rest-card-min-height);
 }
 
 .hold-rest-layer {
