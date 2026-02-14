@@ -148,8 +148,8 @@ const meta: Meta<typeof HoldRestCardPlayground> = {
     showDismissHint: false,
     previewOffsetPercent: 50,
     offscreenOffsetPercent: 112,
-    previewDurationMs: 520,
-    settleDurationMs: 140,
+    previewDurationMs: 420,
+    settleDurationMs: 160,
     exitDurationMs: 140,
   },
   argTypes: {
@@ -188,8 +188,8 @@ export const AutoLoopTwoSecondCycle: Story = {
   args: {
     previewOffsetPercent: 50,
     offscreenOffsetPercent: 112,
-    previewDurationMs: 520,
-    settleDurationMs: 140,
+    previewDurationMs: 420,
+    settleDurationMs: 160,
     exitDurationMs: 140,
   },
   render: (args) => (

@@ -202,8 +202,8 @@ h2 {
   --hold-rest-layer-width: 82%;
   --hold-rest-layer-offscreen-x: 112%;
   --hold-rest-layer-preview-x: 50%;
-  --hold-rest-layer-preview-duration: 520ms;
-  --hold-rest-layer-settle-duration: 140ms;
+  --hold-rest-layer-preview-duration: 420ms;
+  --hold-rest-layer-settle-duration: 160ms;
   --hold-rest-layer-exit-duration: 140ms;
 }
 
@@ -236,8 +236,8 @@ h2 {
   transform: translate3d(0, 0, 0);
   opacity: 1;
   transition:
-    transform var(--hold-rest-layer-settle-duration) cubic-bezier(0.4, 0, 1, 1),
-    opacity var(--hold-rest-layer-settle-duration) cubic-bezier(0.4, 0, 1, 1);
+    transform var(--hold-rest-layer-settle-duration) cubic-bezier(0.22, 1, 0.36, 1),
+    opacity var(--hold-rest-layer-settle-duration) cubic-bezier(0.22, 1, 0.36, 1);
   pointer-events: auto;
 }
 
