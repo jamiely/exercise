@@ -8,8 +8,8 @@ type HoldRestCardPlaygroundProps = {
   holdActive: boolean
   restActive: boolean
   showDismissHint: boolean
-  previewOffsetPercent: number
-  offscreenOffsetPercent: number
+  fullWidthPercent: number
+  previewWidthPercent: number
   previewDurationMs: number
   settleDurationMs: number
   exitDurationMs: number
@@ -20,15 +20,15 @@ const HoldRestCardPlayground = ({
   holdActive,
   restActive,
   showDismissHint,
-  previewOffsetPercent,
-  offscreenOffsetPercent,
+  fullWidthPercent,
+  previewWidthPercent,
   previewDurationMs,
   settleDurationMs,
   exitDurationMs,
 }: HoldRestCardPlaygroundProps) => {
   const stackStyle = {
-    '--hold-rest-layer-preview-x': `${previewOffsetPercent}%`,
-    '--hold-rest-layer-offscreen-x': `${offscreenOffsetPercent}%`,
+    '--hold-rest-layer-width': `${fullWidthPercent}%`,
+    '--hold-rest-layer-preview-width': `${previewWidthPercent}%`,
     '--hold-rest-layer-preview-duration': `${previewDurationMs}ms`,
     '--hold-rest-layer-settle-duration': `${settleDurationMs}ms`,
     '--hold-rest-layer-exit-duration': `${exitDurationMs}ms`,
@@ -68,16 +68,16 @@ const HoldRestCardPlayground = ({
 
 type HoldRestAnimationTuningProps = Pick<
   HoldRestCardPlaygroundProps,
-  | 'previewOffsetPercent'
-  | 'offscreenOffsetPercent'
+  | 'fullWidthPercent'
+  | 'previewWidthPercent'
   | 'previewDurationMs'
   | 'settleDurationMs'
   | 'exitDurationMs'
 >
 
 const HoldRestAutoLoop = ({
-  previewOffsetPercent,
-  offscreenOffsetPercent,
+  fullWidthPercent,
+  previewWidthPercent,
   previewDurationMs,
   settleDurationMs,
   exitDurationMs,
@@ -124,8 +124,8 @@ const HoldRestAutoLoop = ({
         holdActive={isHoldPhase}
         restActive={!isHoldPhase}
         showDismissHint={!isHoldPhase}
-        previewOffsetPercent={previewOffsetPercent}
-        offscreenOffsetPercent={offscreenOffsetPercent}
+        fullWidthPercent={fullWidthPercent}
+        previewWidthPercent={previewWidthPercent}
         previewDurationMs={previewDurationMs}
         settleDurationMs={settleDurationMs}
         exitDurationMs={exitDurationMs}
@@ -146,8 +146,8 @@ const meta: Meta<typeof HoldRestCardPlayground> = {
     holdActive: true,
     restActive: false,
     showDismissHint: false,
-    previewOffsetPercent: 50,
-    offscreenOffsetPercent: 112,
+    fullWidthPercent: 76,
+    previewWidthPercent: 44,
     previewDurationMs: 420,
     settleDurationMs: 160,
     exitDurationMs: 140,
@@ -160,8 +160,8 @@ const meta: Meta<typeof HoldRestCardPlayground> = {
     holdActive: { control: 'boolean' },
     restActive: { control: 'boolean' },
     showDismissHint: { control: 'boolean' },
-    previewOffsetPercent: { control: { type: 'range', min: 0, max: 100, step: 1 } },
-    offscreenOffsetPercent: { control: { type: 'range', min: 100, max: 150, step: 1 } },
+    fullWidthPercent: { control: { type: 'range', min: 40, max: 100, step: 1 } },
+    previewWidthPercent: { control: { type: 'range', min: 5, max: 95, step: 1 } },
     previewDurationMs: { control: { type: 'range', min: 100, max: 1200, step: 10 } },
     settleDurationMs: { control: { type: 'range', min: 60, max: 500, step: 10 } },
     exitDurationMs: { control: { type: 'range', min: 60, max: 500, step: 10 } },
@@ -186,16 +186,16 @@ export const RuntimeRest: Story = {
 export const AutoLoopTwoSecondCycle: Story = {
   name: 'Auto Loop (2s Hold / 2s Rest)',
   args: {
-    previewOffsetPercent: 50,
-    offscreenOffsetPercent: 112,
+    fullWidthPercent: 76,
+    previewWidthPercent: 44,
     previewDurationMs: 420,
     settleDurationMs: 160,
     exitDurationMs: 140,
   },
   render: (args) => (
     <HoldRestAutoLoop
-      previewOffsetPercent={args.previewOffsetPercent}
-      offscreenOffsetPercent={args.offscreenOffsetPercent}
+      fullWidthPercent={args.fullWidthPercent}
+      previewWidthPercent={args.previewWidthPercent}
       previewDurationMs={args.previewDurationMs}
       settleDurationMs={args.settleDurationMs}
       exitDurationMs={args.exitDurationMs}
@@ -204,8 +204,8 @@ export const AutoLoopTwoSecondCycle: Story = {
   parameters: {
     controls: {
       include: [
-        'previewOffsetPercent',
-        'offscreenOffsetPercent',
+        'fullWidthPercent',
+        'previewWidthPercent',
         'previewDurationMs',
         'settleDurationMs',
         'exitDurationMs',

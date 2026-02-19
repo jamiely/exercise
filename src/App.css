@@ -200,8 +200,8 @@ h2 {
   position: relative;
   margin-top: 0.25rem;
   --hold-rest-layer-width: 76%;
-  --hold-rest-layer-hidden-scale: 0.02;
-  --hold-rest-layer-preview-scale: 0.58;
+  --hold-rest-layer-hidden-width: 0%;
+  --hold-rest-layer-preview-width: 44%;
   --hold-rest-layer-preview-duration: 420ms;
   --hold-rest-layer-settle-duration: 160ms;
   --hold-rest-layer-exit-duration: 140ms;
@@ -216,38 +216,39 @@ h2 {
   top: 0;
   right: 0;
   height: 100%;
-  width: var(--hold-rest-layer-width);
-  transform-origin: right center;
+  width: var(--hold-rest-layer-hidden-width);
+  box-sizing: border-box;
+  overflow: hidden;
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
-  transform: scaleX(var(--hold-rest-layer-hidden-scale));
   opacity: 0;
   transition: none;
-  will-change: transform, opacity;
+  will-change: width, opacity;
   pointer-events: none;
 }
 
 .hold-rest-stack[data-rest-layer-state='preview'] .hold-rest-layer {
-  transform: scaleX(var(--hold-rest-layer-preview-scale));
+  width: var(--hold-rest-layer-preview-width);
   opacity: 1;
   transition:
-    transform var(--hold-rest-layer-preview-duration) cubic-bezier(0.22, 1, 0.36, 1),
+    width var(--hold-rest-layer-preview-duration) cubic-bezier(0.22, 1, 0.36, 1),
     opacity var(--hold-rest-layer-preview-duration) cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .hold-rest-stack[data-rest-layer-state='full'] .hold-rest-layer {
-  transform: scaleX(1);
+  width: var(--hold-rest-layer-width);
   opacity: 1;
   transition:
-    transform var(--hold-rest-layer-settle-duration) cubic-bezier(0.22, 1, 0.36, 1),
+    width var(--hold-rest-layer-settle-duration) cubic-bezier(0.22, 1, 0.36, 1),
     opacity var(--hold-rest-layer-settle-duration) cubic-bezier(0.22, 1, 0.36, 1);
   pointer-events: auto;
 }
 
 .hold-rest-stack[data-rest-layer-state='exiting'] .hold-rest-layer {
-  transform: scaleX(var(--hold-rest-layer-hidden-scale));
+  width: var(--hold-rest-layer-hidden-width);
   opacity: 0;
-  transition-duration: var(--hold-rest-layer-exit-duration);
-  transition-timing-function: cubic-bezier(0.4, 0, 1, 1);
+  transition:
+    width var(--hold-rest-layer-exit-duration) cubic-bezier(0.4, 0, 1, 1),
+    opacity var(--hold-rest-layer-exit-duration) cubic-bezier(0.4, 0, 1, 1);
   pointer-events: none;
 }
 

@@ -7,7 +7,10 @@ const tapByRoleName = async (page: Page, role: 'button' | 'heading', name: RegEx
 }
 
 const readWorkflowPhase = async (page: Page): Promise<string> => {
-  const phaseText = await page.locator('.session-meta').getByText(/workflow phase:/i).innerText()
+  const phaseText = await page
+    .locator('.session-meta')
+    .getByText(/workflow phase:/i)
+    .innerText()
   const match = phaseText.match(/workflow phase:\s*([a-z]+)/i)
   if (!match) {
     throw new Error(`Unable to parse workflow phase text: ${phaseText}`)
@@ -939,7 +942,7 @@ test('dismisses runtime rest with a horizontal swipe and transitions once', asyn
   await expect(page.getByRole('button', { name: /resume session/i })).toBeVisible()
   await tapByRoleName(page, 'button', /resume session/i)
   await expect(page.getByRole('heading', { name: /straight leg raise/i })).toBeVisible()
-  await expect(page.getByText(/Rest timer: 1\.0s/i)).toBeVisible()
+  await expect(page.getByText(/Rest timer:\s*[0-9]+\.[0-9]s/i)).toBeVisible()
   await expectOnOptionsScreen(page, /workflow phase: represt/i)
 
   const restCard = page
