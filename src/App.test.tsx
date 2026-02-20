@@ -25,6 +25,10 @@ describe('App shell', () => {
     })
   }
   const enterNewSession = () => {
+    const programPicker = screen.queryByRole('combobox', { name: /program/i })
+    if (programPicker && (programPicker as HTMLSelectElement).value !== 'test-program-1') {
+      fireEvent.change(programPicker, { target: { value: 'test-program-1' } })
+    }
     fireEvent.click(screen.getByRole('button', { name: /start new session/i }))
   }
   const ensureOptionsScreen = () => {
@@ -45,7 +49,7 @@ describe('App shell', () => {
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ['Date'] })
     vi.setSystemTime(new Date('2026-02-10T00:00:00.000Z'))
-    window.history.replaceState({}, '', '/')
+    window.history.replaceState({}, '', '/?mode=test')
     window.localStorage.clear()
     setReducedMotionPreference(false)
   })
@@ -57,11 +61,11 @@ describe('App shell', () => {
   it('renders the title screen with resume/new controls and exercise list', () => {
     render(<App />)
 
-    expect(screen.getByRole('heading', { name: /knee phase 2/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /test program 1/i })).toBeInTheDocument()
     const programPicker = screen.getByRole('combobox', { name: /program/i })
-    expect(programPicker).toHaveValue('knee-phase-2')
-    expect(screen.getByRole('option', { name: /knee phase 2/i })).toBeInTheDocument()
-    expect(screen.getByRole('option', { name: /knee phase 3/i })).toBeInTheDocument()
+    expect(programPicker).toHaveValue('test-program-1')
+    expect(screen.getByRole('option', { name: /test program 1/i })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: /test program 2/i })).toBeInTheDocument()
     expect(screen.queryByText(/start a fresh session/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/no in-progress session found yet/i)).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /resume session/i })).not.toBeInTheDocument()
@@ -75,17 +79,17 @@ describe('App shell', () => {
     expect(screen.getByText(/spanish squat hold/i)).toBeInTheDocument()
   })
 
-  it('switches to Knee Phase 3 from the start-screen program picker', () => {
+  it('switches to Test Program 2 from the start-screen program picker', () => {
     render(<App />)
 
     fireEvent.change(screen.getByRole('combobox', { name: /program/i }), {
-      target: { value: 'knee-phase-3' },
+      target: { value: 'test-program-2' },
     })
 
-    expect(screen.getByRole('heading', { name: /knee phase 3/i })).toBeInTheDocument()
-    expect(screen.getByText(/wall sits/i)).toBeInTheDocument()
-    expect(screen.getByText(/split squats/i)).toBeInTheDocument()
-    expect(screen.getByText(/single-leg sit-to-stand \(high chair\)/i)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /test program 2/i })).toBeInTheDocument()
+    expect(screen.getByText(/ankle mobility hold/i)).toBeInTheDocument()
+    expect(screen.getByText(/banded terminal knee extension/i)).toBeInTheDocument()
+    expect(screen.getByText(/single-leg bridge/i)).toBeInTheDocument()
   })
 
   it('shows test programs when mode=test is enabled in query string', () => {
@@ -1588,7 +1592,7 @@ describe('App shell', () => {
 
     render(<App />)
 
-    expect(screen.getByRole('heading', { name: /knee phase 2/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /test program 1/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /resume session/i })).toBeEnabled()
     expect(screen.getByRole('button', { name: /start new session/i })).toBeInTheDocument()
   })
@@ -1629,7 +1633,7 @@ describe('App shell', () => {
 
     expect(screen.getByRole('heading', { name: program.exercises[1].name })).toBeInTheDocument()
     ensureOptionsScreen()
-    expect(screen.getByRole('heading', { name: /knee phase 2/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /test program 1/i })).toBeInTheDocument()
   })
 
   it('starts a new session and replaces stale in-progress state', async () => {
@@ -1652,7 +1656,7 @@ describe('App shell', () => {
 
     expect(screen.getByRole('heading', { name: program.exercises[0].name })).toBeInTheDocument()
     ensureOptionsScreen()
-    expect(screen.getByRole('heading', { name: /knee phase 2/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /test program 1/i })).toBeInTheDocument()
 
     const persisted = readPersistedSession()
     expect(persisted?.currentExerciseId).toBe(program.exercises[0].id)

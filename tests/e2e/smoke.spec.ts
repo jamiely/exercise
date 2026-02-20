@@ -1,13 +1,13 @@
 import { expect, test } from '@playwright/test'
 
 test('loads app shell on mobile viewport', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/?mode=test')
   await page.evaluate(() => {
     window.localStorage.clear()
   })
   await page.reload()
 
-  await expect(page.getByRole('heading', { name: /knee phase 2/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /test program 1/i })).toBeVisible()
   await expect(page.getByRole('button', { name: /resume session/i })).toHaveCount(0)
   await expect(page.getByRole('button', { name: /start new session/i })).toBeVisible()
   await expect(page.getByText(/exercise list/i)).toBeVisible()
@@ -20,11 +20,11 @@ test('loads app shell on mobile viewport', async ({ page }) => {
 })
 
 test('opens and closes in-session options screen', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/?mode=test')
   await page.getByRole('button', { name: /start new session/i }).click()
 
   await page.getByRole('button', { name: /options/i }).click()
-  await expect(page.getByRole('heading', { name: /knee phase 2/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /test program 1/i })).toBeVisible()
   await expect(page.getByRole('region', { name: /cue options/i })).toBeVisible()
 
   await page.getByRole('button', { name: /back to exercise/i }).click()
@@ -32,7 +32,7 @@ test('opens and closes in-session options screen', async ({ page }) => {
 })
 
 test('renders workout timer with muted styling', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/?mode=test')
   await page.getByRole('button', { name: /start new session/i }).click()
 
   const workoutTimer = page.getByText('Workout time: 0:00')

@@ -3,7 +3,7 @@ import type { SessionState } from './session'
 export const SESSION_STORAGE_KEY = 'exercise-tracker/session'
 export const SESSION_STORAGE_VERSION = 3
 export const SESSION_EXPIRY_MS = 12 * 60 * 60 * 1000
-export const DEFAULT_PROGRAM_ID = 'knee-phase-2'
+export const DEFAULT_PROGRAM_ID = 'test-program-1'
 
 type PersistedSession = {
   version: number

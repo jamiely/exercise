@@ -233,22 +233,32 @@ const parseTestPrograms = (): ProgramOption[] => [
 export const loadProgramCatalog = (options?: { includeTestPrograms?: boolean }): ProgramCatalog => {
   const includeTestPrograms = options?.includeTestPrograms ?? false
   const programs = includeTestPrograms ? parseTestPrograms() : parseKneePrograms()
+  const defaultProgramId: ProgramId = includeTestPrograms ? 'test-program-1' : 'knee-phase-3'
 
   return {
-    defaultProgramId: programs[0].id,
+    defaultProgramId,
     programs,
   }
 }
 
 export const loadProgram = (): Program => {
-  const catalog = loadProgramCatalog()
+  const catalog = loadProgramCatalog({ includeTestPrograms: true })
+  const preferredProgramId: ProgramId = 'test-program-1'
   const selectedProgram = catalog.programs.find(
+    (programOption) => programOption.id === preferredProgramId,
+  )
+  const fallbackProgram = catalog.programs.find(
     (programOption) => programOption.id === catalog.defaultProgramId,
   )
 
-  if (!selectedProgram) {
+  if (!selectedProgram && !fallbackProgram) {
     throw new ProgramLoadError('default program id must exist in program catalog')
   }
 
-  return selectedProgram.program
+  const resolvedProgram = selectedProgram ?? fallbackProgram
+  if (!resolvedProgram) {
+    throw new ProgramLoadError('default program id must exist in program catalog')
+  }
+
+  return resolvedProgram.program
 }

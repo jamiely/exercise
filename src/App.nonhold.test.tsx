@@ -6,10 +6,10 @@ import { persistSession } from './session/persistence'
 vi.mock('./program/program', () => ({
   ProgramLoadError: class ProgramLoadError extends Error {},
   loadProgramCatalog: () => ({
-    defaultProgramId: 'knee-phase-2',
+    defaultProgramId: 'test-program-1',
     programs: [
       {
-        id: 'knee-phase-2',
+        id: 'test-program-1',
         program: {
           version: 1,
           programName: 'Test Program',

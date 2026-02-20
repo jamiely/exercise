@@ -19,6 +19,10 @@ const readWorkflowPhase = async (page: Page): Promise<string> => {
 }
 
 const startNewSession = async (page: Page) => {
+  const programPicker = page.getByRole('combobox', { name: /program/i })
+  if ((await programPicker.inputValue()) !== 'test-program-1') {
+    await programPicker.selectOption('test-program-1')
+  }
   await tapByRoleName(page, 'button', /start new session/i)
 }
 
@@ -485,12 +489,12 @@ const seedStraightLegRaiseRuntimeRestSession = async (
 }
 
 test.beforeEach(async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/?mode=test')
   await page.evaluate(() => {
     window.localStorage.clear()
   })
   await page.reload()
-  await expect(page.getByRole('heading', { name: /knee phase 2/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /test program 1/i })).toBeVisible()
   await expect(page.getByRole('button', { name: /start new session/i })).toBeVisible()
   await startNewSession(page)
   await expect(page.getByRole('heading', { name: /wall sit \(shallow\)/i })).toBeVisible()
@@ -1034,5 +1038,10 @@ test('ends session early and shows summary state', async ({ page }) => {
   await expect(page.getByText(/completed exercises/i)).toBeVisible()
   await expect(page.getByText('0/7')).toBeVisible()
   await expect(page.getByText(/skipped unresolved/i)).toBeVisible()
-  await expect(page.getByText('1')).toBeVisible()
+  await expect(
+    page
+      .getByRole('region', { name: /session summary/i })
+      .locator('.summary-row strong')
+      .nth(1),
+  ).toHaveText('1')
 })
