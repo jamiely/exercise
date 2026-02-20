@@ -16,6 +16,8 @@ coverage
 storybook-static
 *.local
 tmp-vite-*
+.ralph/
+.storybook/
 
 # Editor directories and files
 .vscode/*
