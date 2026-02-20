@@ -1181,8 +1181,13 @@ describe('App shell', () => {
 
     clickOptionsAction(/skip exercise/i)
     fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
+    expect(screen.getByRole('heading', { name: /low step downs/i })).toBeInTheDocument()
+    expectOnOptionsScreen(/primary pass · 6 skipped queued/i)
+
+    clickOptionsAction(/skip exercise/i)
+    fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
     expect(screen.getByRole('heading', { name: /wall sit \(shallow\)/i })).toBeInTheDocument()
-    expectOnOptionsScreen(/skipped cycle · 6 skipped queued/i)
+    expectOnOptionsScreen(/skipped cycle · 7 skipped queued/i)
   })
 
   it('marks session complete when last queued skipped exercise is completed', async () => {
@@ -1221,7 +1226,7 @@ describe('App shell', () => {
 
     expect(screen.getByRole('heading', { name: /session completed/i })).toBeInTheDocument()
     expect(screen.getByText(/completed exercises/i)).toBeInTheDocument()
-    expect(screen.getByText('1/6')).toBeInTheDocument()
+    expect(screen.getByText('1/7')).toBeInTheDocument()
     expect(screen.getByText(/skipped unresolved/i)).toBeInTheDocument()
     expect(screen.getByText('0')).toBeInTheDocument()
     expect(readPersistedSession()).toBeNull()
@@ -1235,7 +1240,7 @@ describe('App shell', () => {
 
     expect(screen.getByRole('heading', { name: /session ended early/i })).toBeInTheDocument()
     expect(screen.getByText(/completed exercises/i)).toBeInTheDocument()
-    expect(screen.getByText('0/6')).toBeInTheDocument()
+    expect(screen.getByText('0/7')).toBeInTheDocument()
     expect(screen.getByText(/skipped unresolved/i)).toBeInTheDocument()
     expect(screen.getByText('1')).toBeInTheDocument()
     expect(screen.getByText(/duration snapshot/i)).toBeInTheDocument()

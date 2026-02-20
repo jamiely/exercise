@@ -73,6 +73,18 @@
       "notes": "Maintain the Spanish squat position for 45 seconds each rep while keeping steady tension.",
       "optional": false,
       "availableOnOrAfter": null
+    },
+    {
+      "id": "low-step-downs",
+      "name": "Low Step Downs",
+      "order": 7,
+      "targetSets": 2,
+      "targetRepsPerSet": 5,
+      "holdSeconds": null,
+      "repRestMs": 3000,
+      "notes": "Use a low step and lower with control, keeping your knee tracking over your toes.",
+      "optional": false,
+      "availableOnOrAfter": null
     }
   ]
 }

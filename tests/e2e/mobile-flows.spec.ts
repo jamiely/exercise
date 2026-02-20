@@ -500,7 +500,7 @@ test('progresses in strict order after completing first exercise', async ({ page
   await tapOptionsAction(page, /skip exercise/i)
   await tapByRoleName(page, 'button', /back to exercise/i)
   await expect(page.getByRole('heading', { name: /straight leg raise/i })).toBeVisible()
-  await expectOnOptionsScreen(page, /exercise 2\/6/i)
+  await expectOnOptionsScreen(page, /exercise 2\/7/i)
 })
 
 test('animates exercise transition and keeps exercise controls responsive', async ({ page }) => {
@@ -887,7 +887,7 @@ test('persists cue settings choices across reload in options flow', async ({ pag
   await expect(page.getByRole('checkbox', { name: /vibration cues/i })).not.toBeChecked()
 })
 
-test('one-tap Start auto-completes seeded hold workflow path with no progression taps', async ({
+test('one-tap Start auto-runs seeded hold workflow until first non-hold exercise', async ({
   page,
 }) => {
   await seedWallSitAutoSession(page)
@@ -906,7 +906,8 @@ test('one-tap Start auto-completes seeded hold workflow path with no progression
 
   await page.clock.runFor(90_200)
 
-  await expect(page.getByRole('heading', { name: /session completed/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /low step downs/i })).toBeVisible()
+  await expectOnOptionsScreen(page, /workflow phase: idle/i)
 })
 
 test('keeps hold timer idle on entry until Start is tapped, then completes a rep at target', async ({
@@ -1031,7 +1032,7 @@ test('ends session early and shows summary state', async ({ page }) => {
 
   await expect(page.getByRole('heading', { name: /session ended early/i })).toBeVisible()
   await expect(page.getByText(/completed exercises/i)).toBeVisible()
-  await expect(page.getByText('0/6')).toBeVisible()
+  await expect(page.getByText('0/7')).toBeVisible()
   await expect(page.getByText(/skipped unresolved/i)).toBeVisible()
   await expect(page.getByText('1')).toBeVisible()
 })
