@@ -1,10 +1,14 @@
 import { loadProgram } from '../program/program'
 import { vi } from 'vitest'
 import {
+  DEFAULT_PROGRAM_ID,
   SESSION_EXPIRY_MS,
   SESSION_STORAGE_KEY,
   SESSION_STORAGE_VERSION,
   clearPersistedSession,
+  persistSessionForProgram,
+  readPersistedProgramSession,
+  readPersistedSessionForProgram,
   persistSession,
   readPersistedSession,
 } from './persistence'
@@ -33,6 +37,22 @@ describe('session persistence', () => {
     const persisted = readPersistedSession()
 
     expect(persisted).toEqual(session)
+    expect(readPersistedProgramSession()).toEqual({
+      programId: DEFAULT_PROGRAM_ID,
+      session,
+    })
+  })
+
+  it('only returns a session when the requested program id matches', () => {
+    const session = createSessionState(program, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-program-filter',
+    })
+
+    persistSessionForProgram('test-program-1', session)
+
+    expect(readPersistedSessionForProgram('knee-phase-2')).toBeNull()
+    expect(readPersistedSessionForProgram('test-program-1')).toEqual(session)
   })
 
   it('clears persisted session values', () => {
@@ -71,6 +91,89 @@ describe('session persistence', () => {
     const persisted = readPersistedSession()
 
     expect(persisted).toBeNull()
+    expect(window.localStorage.getItem(SESSION_STORAGE_KEY)).toBeNull()
+  })
+
+  it('clears payloads with blank program id', () => {
+    const session = createSessionState(program, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-invalid-program-id',
+    })
+
+    window.localStorage.setItem(
+      SESSION_STORAGE_KEY,
+      JSON.stringify({
+        version: SESSION_STORAGE_VERSION,
+        programId: '',
+        session,
+      }),
+    )
+
+    expect(readPersistedProgramSession()).toBeNull()
+    expect(window.localStorage.getItem(SESSION_STORAGE_KEY)).toBeNull()
+  })
+
+  it.each([
+    {
+      name: 'runtime payload is not a record',
+      mutate: (session: ReturnType<typeof createSessionState>) =>
+        ({ ...session, runtime: null }) as unknown,
+    },
+    {
+      name: 'options payload is not a record',
+      mutate: (session: ReturnType<typeof createSessionState>) =>
+        ({ ...session, options: null }) as unknown,
+    },
+    {
+      name: 'set progress payload is invalid',
+      mutate: (session: ReturnType<typeof createSessionState>) =>
+        ({
+          ...session,
+          exerciseProgress: {
+            ...session.exerciseProgress,
+            [session.currentExerciseId as string]: {
+              ...session.exerciseProgress[session.currentExerciseId as string],
+              sets: [null],
+            },
+          },
+        }) as unknown,
+    },
+    {
+      name: 'exercise progress payload is invalid',
+      mutate: (session: ReturnType<typeof createSessionState>) =>
+        ({
+          ...session,
+          exerciseProgress: {
+            ...session.exerciseProgress,
+            [session.currentExerciseId as string]: null,
+          },
+        }) as unknown,
+    },
+    {
+      name: 'exerciseProgress map is not a record',
+      mutate: (session: ReturnType<typeof createSessionState>) =>
+        ({
+          ...session,
+          exerciseProgress: null,
+        }) as unknown,
+    },
+  ])('clears malformed session payload when $name', ({ mutate }) => {
+    const session = createSessionState(program, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-malformed',
+    })
+    const mutatedSession = mutate(session)
+
+    window.localStorage.setItem(
+      SESSION_STORAGE_KEY,
+      JSON.stringify({
+        version: SESSION_STORAGE_VERSION,
+        programId: DEFAULT_PROGRAM_ID,
+        session: mutatedSession,
+      }),
+    )
+
+    expect(readPersistedProgramSession()).toBeNull()
     expect(window.localStorage.getItem(SESSION_STORAGE_KEY)).toBeNull()
   })
 
@@ -226,5 +329,30 @@ describe('session persistence', () => {
 
     expect(() => clearPersistedSession()).not.toThrow()
     removeItemSpy.mockRestore()
+  })
+
+  it('handles missing localStorage gracefully', () => {
+    const originalDescriptor = Object.getOwnPropertyDescriptor(window, 'localStorage')
+    try {
+      Object.defineProperty(window, 'localStorage', {
+        configurable: true,
+        value: undefined,
+      })
+
+      const session = createSessionState(program, {
+        now: '2026-02-10T00:00:00.000Z',
+        sessionId: 'session-no-storage',
+      })
+
+      expect(readPersistedProgramSession()).toBeNull()
+      expect(readPersistedSession()).toBeNull()
+      expect(readPersistedSessionForProgram('knee-phase-2')).toBeNull()
+      expect(() => persistSessionForProgram('knee-phase-2', session)).not.toThrow()
+      expect(() => clearPersistedSession()).not.toThrow()
+    } finally {
+      if (originalDescriptor) {
+        Object.defineProperty(window, 'localStorage', originalDescriptor)
+      }
+    }
   })
 })

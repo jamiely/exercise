@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "programName": "Test Program 2",
+  "exercises": [
+    {
+      "id": "ankle-mobility-hold",
+      "name": "Ankle Mobility Hold",
+      "order": 1,
+      "targetSets": 2,
+      "targetRepsPerSet": 1,
+      "holdSeconds": 20,
+      "repRestMs": 4000,
+      "notes": "Hold the end range gently and keep your heel planted.",
+      "optional": false,
+      "availableOnOrAfter": null
+    },
+    {
+      "id": "banded-terminal-knee-extension",
+      "name": "Banded Terminal Knee Extension",
+      "order": 2,
+      "targetSets": 2,
+      "targetRepsPerSet": 10,
+      "holdSeconds": 2,
+      "repRestMs": 3000,
+      "notes": "Squeeze into full extension against the band, then return smoothly.",
+      "optional": false,
+      "availableOnOrAfter": null
+    },
+    {
+      "id": "single-leg-bridge",
+      "name": "Single-Leg Bridge",
+      "order": 3,
+      "targetSets": 3,
+      "targetRepsPerSet": 8,
+      "holdSeconds": null,
+      "repRestMs": 4000,
+      "notes": "Drive through the heel and keep your pelvis level.",
+      "optional": false,
+      "availableOnOrAfter": null
+    },
+    {
+      "id": "lateral-step-over",
+      "name": "Lateral Step-Over",
+      "order": 4,
+      "targetSets": 2,
+      "targetRepsPerSet": 12,
+      "holdSeconds": null,
+      "repRestMs": 4000,
+      "notes": "Step sideways over a low obstacle with controlled foot placement.",
+      "optional": false,
+      "availableOnOrAfter": null
+    }
+  ]
+}

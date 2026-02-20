@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "programName": "Knee Phase 3",
+  "exercises": [
+    {
+      "id": "wall-sits",
+      "name": "Wall Sits",
+      "order": 1,
+      "targetSets": 2,
+      "targetRepsPerSet": 1,
+      "holdSeconds": 45,
+      "repRestMs": 10000,
+      "notes": "Hold a steady wall sit for 45 seconds while keeping your knees aligned over your feet.",
+      "optional": false,
+      "availableOnOrAfter": null
+    },
+    {
+      "id": "terminal-knee-extension",
+      "name": "Terminal Knee Extension",
+      "order": 2,
+      "targetSets": 2,
+      "targetRepsPerSet": 12,
+      "holdSeconds": 3,
+      "repRestMs": 3000,
+      "notes": "Extend your knee into terminal extension, hold for 3 seconds, then return with control.",
+      "optional": false,
+      "availableOnOrAfter": null
+    },
+    {
+      "id": "split-squats",
+      "name": "Split Squats",
+      "order": 3,
+      "targetSets": 3,
+      "targetRepsPerSet": 8,
+      "holdSeconds": null,
+      "repRestMs": 5000,
+      "notes": "Lower under control, keep your torso upright, and drive through the front foot.",
+      "optional": false,
+      "availableOnOrAfter": null
+    },
+    {
+      "id": "step-ups-8in",
+      "name": "Step Ups (8in)",
+      "order": 4,
+      "targetSets": 3,
+      "targetRepsPerSet": 10,
+      "holdSeconds": null,
+      "repRestMs": 5000,
+      "notes": "Use an 8-inch step and avoid pushing off the trailing leg.",
+      "optional": false,
+      "availableOnOrAfter": null
+    },
+    {
+      "id": "controlled-step-downs-6in",
+      "name": "Controlled Step Downs (6in)",
+      "order": 5,
+      "targetSets": 2,
+      "targetRepsPerSet": 6,
+      "holdSeconds": null,
+      "repRestMs": 6000,
+      "notes": "Use a 6-inch step with a 4-second lower and pause before returning.",
+      "optional": false,
+      "availableOnOrAfter": null
+    },
+    {
+      "id": "single-leg-sit-to-stand-high-chair",
+      "name": "Single-Leg Sit-to-Stand (High Chair)",
+      "order": 6,
+      "targetSets": 2,
+      "targetRepsPerSet": 8,
+      "holdSeconds": null,
+      "repRestMs": 5000,
+      "notes": "Use a high chair and control both the stand and the descent.",
+      "optional": false,
+      "availableOnOrAfter": null
+    }
+  ]
+}

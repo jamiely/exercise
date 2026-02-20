@@ -1,4 +1,7 @@
-import rawProgram from '../data/knee-program.json'
+import rawKneePhase2Program from '../data/knee-phase-2-program.json'
+import rawKneePhase3Program from '../data/knee-phase-3-program.json'
+import rawTestProgram1 from '../data/test-program-1.json'
+import rawTestProgram2 from '../data/test-program-2.json'
 
 export type Exercise = {
   id: string
@@ -19,6 +22,18 @@ export type Program = {
   version: number
   programName: string
   exercises: Exercise[]
+}
+
+export type ProgramId = 'knee-phase-2' | 'knee-phase-3' | 'test-program-1' | 'test-program-2'
+
+export type ProgramOption = {
+  id: ProgramId
+  program: Program
+}
+
+export type ProgramCatalog = {
+  defaultProgramId: ProgramId
+  programs: ProgramOption[]
 }
 
 export class ProgramLoadError extends Error {
@@ -181,4 +196,59 @@ export const parseProgram = (input: unknown): Program => {
   }
 }
 
-export const loadProgram = (): Program => parseProgram(rawProgram)
+const parseNamedProgram = (name: ProgramId, input: unknown): Program => {
+  try {
+    return parseProgram(input)
+  } catch (error) {
+    if (error instanceof ProgramLoadError) {
+      throw new ProgramLoadError(`${name}: ${error.message}`)
+    }
+
+    throw error
+  }
+}
+
+const parseKneePrograms = (): ProgramOption[] => [
+  {
+    id: 'knee-phase-2',
+    program: parseNamedProgram('knee-phase-2', rawKneePhase2Program),
+  },
+  {
+    id: 'knee-phase-3',
+    program: parseNamedProgram('knee-phase-3', rawKneePhase3Program),
+  },
+]
+
+const parseTestPrograms = (): ProgramOption[] => [
+  {
+    id: 'test-program-1',
+    program: parseNamedProgram('test-program-1', rawTestProgram1),
+  },
+  {
+    id: 'test-program-2',
+    program: parseNamedProgram('test-program-2', rawTestProgram2),
+  },
+]
+
+export const loadProgramCatalog = (options?: { includeTestPrograms?: boolean }): ProgramCatalog => {
+  const includeTestPrograms = options?.includeTestPrograms ?? false
+  const programs = includeTestPrograms ? parseTestPrograms() : parseKneePrograms()
+
+  return {
+    defaultProgramId: programs[0].id,
+    programs,
+  }
+}
+
+export const loadProgram = (): Program => {
+  const catalog = loadProgramCatalog()
+  const selectedProgram = catalog.programs.find(
+    (programOption) => programOption.id === catalog.defaultProgramId,
+  )
+
+  if (!selectedProgram) {
+    throw new ProgramLoadError('default program id must exist in program catalog')
+  }
+
+  return selectedProgram.program
+}

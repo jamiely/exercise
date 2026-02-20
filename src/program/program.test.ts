@@ -1,4 +1,4 @@
-import { parseProgram } from './program'
+import { loadProgram, loadProgramCatalog, parseProgram } from './program'
 
 const validProgram = {
   version: 1,
@@ -165,5 +165,39 @@ describe('parseProgram', () => {
     ],
   ])('throws for invalid schema values %#', (input, message) => {
     expect(() => parseProgram(input)).toThrow(message)
+  })
+})
+
+describe('loadProgramCatalog', () => {
+  it('loads knee phase programs by default', () => {
+    const catalog = loadProgramCatalog()
+
+    expect(catalog.defaultProgramId).toBe('knee-phase-2')
+    expect(catalog.programs.map((programOption) => programOption.id)).toEqual([
+      'knee-phase-2',
+      'knee-phase-3',
+    ])
+    expect(catalog.programs[0].program.programName).toBe('Knee Phase 2')
+    expect(catalog.programs[1].program.programName).toBe('Knee Phase 3')
+  })
+
+  it('loads test programs when includeTestPrograms is enabled', () => {
+    const catalog = loadProgramCatalog({ includeTestPrograms: true })
+
+    expect(catalog.defaultProgramId).toBe('test-program-1')
+    expect(catalog.programs.map((programOption) => programOption.id)).toEqual([
+      'test-program-1',
+      'test-program-2',
+    ])
+    expect(catalog.programs[0].program.programName).toBe('Test Program 1')
+    expect(catalog.programs[1].program.programName).toBe('Test Program 2')
+  })
+})
+
+describe('loadProgram', () => {
+  it('returns the default knee phase 2 program', () => {
+    const program = loadProgram()
+
+    expect(program.programName).toBe('Knee Phase 2')
   })
 })

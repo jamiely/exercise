@@ -4,23 +4,32 @@ import { createSessionState } from './session/session'
 import { persistSession } from './session/persistence'
 
 vi.mock('./program/program', () => ({
-  loadProgram: () => ({
-    version: 1,
-    programName: 'Test Program',
-    exercises: [
+  ProgramLoadError: class ProgramLoadError extends Error {},
+  loadProgramCatalog: () => ({
+    defaultProgramId: 'knee-phase-2',
+    programs: [
       {
-        id: 'non-hold-step',
-        name: 'Non-Hold Step',
-        order: 1,
-        targetSets: 1,
-        targetRepsPerSet: 2,
-        holdSeconds: null,
-        repRestMs: 1000,
-        setRestMs: 30000,
-        exerciseRestMs: 30000,
-        notes: 'Tap +1 rep to progress.',
-        optional: false,
-        availableOnOrAfter: null,
+        id: 'knee-phase-2',
+        program: {
+          version: 1,
+          programName: 'Test Program',
+          exercises: [
+            {
+              id: 'non-hold-step',
+              name: 'Non-Hold Step',
+              order: 1,
+              targetSets: 1,
+              targetRepsPerSet: 2,
+              holdSeconds: null,
+              repRestMs: 1000,
+              setRestMs: 30000,
+              exerciseRestMs: 30000,
+              notes: 'Tap +1 rep to progress.',
+              optional: false,
+              availableOnOrAfter: null,
+            },
+          ],
+        },
       },
     ],
   }),

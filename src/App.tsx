@@ -1,19 +1,34 @@
 import { useEffect, useMemo, useReducer, useRef, useState, type PointerEvent } from 'react'
 import './App.css'
-import { ProgramLoadError, loadProgram } from './program/program'
+import {
+  ProgramLoadError,
+  loadProgramCatalog,
+  type Program,
+  type ProgramId,
+  type ProgramOption,
+} from './program/program'
 import { createCountdownController, formatCountdownTenths } from './session/countdown'
 import { emitTransitionCue } from './session/cues'
 import type { SessionAction, SessionState } from './session/session'
 import { createSessionState, reduceSession } from './session/session'
-import { persistSession, readPersistedSession } from './session/persistence'
+import {
+  persistSessionForProgram,
+  readPersistedProgramSession,
+  readPersistedSessionForProgram,
+} from './session/persistence'
 
 type LoadResult =
-  | { ok: true; program: ReturnType<typeof loadProgram> }
+  | { ok: true; programs: ProgramOption[]; defaultProgramId: ProgramId }
   | { ok: false; message: string }
 
-const readProgram = (): LoadResult => {
+const readProgramCatalog = (includeTestPrograms: boolean): LoadResult => {
   try {
-    return { ok: true, program: loadProgram() }
+    const catalog = loadProgramCatalog({ includeTestPrograms })
+    return {
+      ok: true,
+      programs: catalog.programs,
+      defaultProgramId: catalog.defaultProgramId,
+    }
   } catch (error) {
     const detail = error instanceof ProgramLoadError ? error.message : 'Unknown validation error'
     return { ok: false, message: detail }
@@ -21,7 +36,10 @@ const readProgram = (): LoadResult => {
 }
 
 type LoadedProgramProps = {
-  program: ReturnType<typeof loadProgram>
+  program: Program
+  programId: ProgramId
+  programOptions: ProgramOption[]
+  onProgramSelect: (programId: ProgramId) => void
 }
 
 type WakeLockSentinelLike = {
@@ -41,8 +59,8 @@ type SessionBootState = {
   pendingResume: SessionState | null
 }
 
-const buildSessionBootState = (program: ReturnType<typeof loadProgram>): SessionBootState => {
-  const persisted = readPersistedSession()
+const buildSessionBootState = (program: Program, programId: ProgramId): SessionBootState => {
+  const persisted = readPersistedSessionForProgram(programId)
   if (persisted) {
     return {
       initialSession: persisted,
@@ -123,8 +141,13 @@ const getSessionSummary = (sessionState: SessionState, totalExercises: number) =
   }
 }
 
-const LoadedProgramView = ({ program }: LoadedProgramProps) => {
-  const bootState = useMemo(() => buildSessionBootState(program), [program])
+const LoadedProgramView = ({
+  program,
+  programId,
+  programOptions,
+  onProgramSelect,
+}: LoadedProgramProps) => {
+  const bootState = useMemo(() => buildSessionBootState(program, programId), [program, programId])
   const [pendingResume, setPendingResume] = useState<SessionState | null>(bootState.pendingResume)
   const [hasEnteredSession, setHasEnteredSession] = useState(false)
   const [isSessionOptionsOpen, setIsSessionOptionsOpen] = useState(false)
@@ -187,8 +210,8 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
       return
     }
 
-    persistSession(sessionState)
-  }, [hasEnteredSession, sessionState])
+    persistSessionForProgram(programId, sessionState)
+  }, [hasEnteredSession, programId, sessionState])
 
   useEffect(() => {
     const onVisibilityChange = () => {
@@ -482,6 +505,20 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
       <main className="app-shell">
         <p className="eyebrow">Exercise Session Tracker</p>
         <h1>{program.programName}</h1>
+        <label className="program-picker">
+          <span className="eyebrow">Program</span>
+          <select
+            aria-label="Program"
+            value={programId}
+            onChange={(event) => onProgramSelect(event.currentTarget.value as ProgramId)}
+          >
+            {programOptions.map((programOption) => (
+              <option key={programOption.id} value={programOption.id}>
+                {programOption.program.programName}
+              </option>
+            ))}
+          </select>
+        </label>
         {hasPersistedSession ? (
           <p className="subtitle">Resume your last session or start a fresh one.</p>
         ) : null}
@@ -1054,8 +1091,53 @@ const LoadedProgramView = ({ program }: LoadedProgramProps) => {
   )
 }
 
+type ProgramSelectionProps = {
+  defaultProgramId: ProgramId
+  programs: ProgramOption[]
+}
+
+const ProgramSelectionView = ({ defaultProgramId, programs }: ProgramSelectionProps) => {
+  const programIds = new Set(programs.map((programOption) => programOption.id))
+  const persistedProgramSession = readPersistedProgramSession()
+  const [selectedProgramId, setSelectedProgramId] = useState<ProgramId>(() => {
+    if (persistedProgramSession && programIds.has(persistedProgramSession.programId as ProgramId)) {
+      return persistedProgramSession.programId as ProgramId
+    }
+
+    return defaultProgramId
+  })
+
+  const selectedProgramOption =
+    programs.find((programOption) => programOption.id === selectedProgramId) ??
+    programs.find((programOption) => programOption.id === defaultProgramId) ??
+    null
+
+  if (!selectedProgramOption) {
+    return (
+      <main className="app-shell" role="alert" aria-live="assertive">
+        <p className="eyebrow">Exercise Session Tracker</p>
+        <h1>Invalid exercise data</h1>
+        <p className="subtitle">Program catalog must contain at least one program.</p>
+      </main>
+    )
+  }
+
+  return (
+    <LoadedProgramView
+      key={selectedProgramOption.id}
+      program={selectedProgramOption.program}
+      programId={selectedProgramOption.id}
+      programOptions={programs}
+      onProgramSelect={setSelectedProgramId}
+    />
+  )
+}
+
 function App() {
-  const loadResult = readProgram()
+  const isTestingProgramsModeEnabled =
+    typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).get('mode') === 'test'
+  const loadResult = readProgramCatalog(isTestingProgramsModeEnabled)
 
   if (!loadResult.ok) {
     return (
@@ -1067,7 +1149,12 @@ function App() {
     )
   }
 
-  return <LoadedProgramView program={loadResult.program} />
+  return (
+    <ProgramSelectionView
+      defaultProgramId={loadResult.defaultProgramId}
+      programs={loadResult.programs}
+    />
+  )
 }
 
 export default App

@@ -490,7 +490,7 @@ test.beforeEach(async ({ page }) => {
     window.localStorage.clear()
   })
   await page.reload()
-  await expect(page.getByRole('heading', { name: /knee pain/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /knee phase 2/i })).toBeVisible()
   await expect(page.getByRole('button', { name: /start new session/i })).toBeVisible()
   await startNewSession(page)
   await expect(page.getByRole('heading', { name: /wall sit \(shallow\)/i })).toBeVisible()

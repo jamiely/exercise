@@ -48,6 +48,22 @@ h2 {
   gap: 0.75rem;
 }
 
+.program-picker {
+  display: grid;
+  gap: 0.375rem;
+}
+
+.program-picker select {
+  width: 100%;
+  min-height: 2.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.75rem;
+  background: #fff;
+  color: #111827;
+  font-size: 1rem;
+  padding: 0.5rem 0.75rem;
+}
+
 .resume-actions button {
   width: 100%;
   min-height: 2.75rem;

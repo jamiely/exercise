@@ -14,7 +14,9 @@ Mobile-first React app for running an exercise session from a JSON prescription.
 
 ## Features
 
-- Loads prescription data from `src/data/program.json`.
+- Loads selectable exercise programs from `src/data/*.json`.
+- Supports program selection on the start screen.
+- Supports test-only program catalog via `?mode=test` query parameter.
 - Enforces ordered primary pass through exercises.
 - Supports skipping exercises and automatic skipped-cycle revisit.
 - Tracks reps per set (`x/target reps`) and supports undo.
@@ -62,6 +64,14 @@ pnpm install
 pnpm dev
 ```
 
+3. Optional: enable test program catalog locally:
+
+```bash
+pnpm dev -- --host
+```
+
+Then open `http://localhost:5173/?mode=test`.
+
 ## Scripts
 
 - `pnpm prettier --check .` (when Prettier is added/configured)
@@ -99,6 +109,6 @@ After your next push to `main`, the site will publish at:
 
 ## Known Limitations
 
-- The app assumes a single active local session in browser `localStorage` (no multi-user/session switching UI).
+- The app assumes a single active local session in browser `localStorage` for one selected program at a time.
 - No remote sync or account-backed persistence.
 - Timer progression is client-driven; background tab throttling can affect perceived real-time cadence.

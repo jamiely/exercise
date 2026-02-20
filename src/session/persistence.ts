@@ -1,11 +1,18 @@
 import type { SessionState } from './session'
 
 export const SESSION_STORAGE_KEY = 'exercise-tracker/session'
-export const SESSION_STORAGE_VERSION = 2
+export const SESSION_STORAGE_VERSION = 3
 export const SESSION_EXPIRY_MS = 12 * 60 * 60 * 1000
+export const DEFAULT_PROGRAM_ID = 'knee-phase-2'
 
 type PersistedSession = {
   version: number
+  programId: string
+  session: SessionState
+}
+
+export type PersistedProgramSession = {
+  programId: string
   session: SessionState
 }
 
@@ -122,18 +129,25 @@ const getStorage = (): Storage | null => {
   return window.localStorage
 }
 
-const parsePersistedSession = (raw: string): SessionState | null => {
+const parsePersistedSession = (raw: string): PersistedProgramSession | null => {
   const parsed = JSON.parse(raw) as unknown
   if (!isRecord(parsed)) {
     return null
   }
 
   const payload = parsed as Partial<PersistedSession>
-  if (payload.version !== SESSION_STORAGE_VERSION || !isSessionState(payload.session)) {
+  if (
+    payload.version !== SESSION_STORAGE_VERSION ||
+    typeof payload.programId !== 'string' ||
+    payload.programId.length === 0 ||
+    !isSessionState(payload.session)
+  ) {
     return null
   }
 
-  return payload.session.status === 'in_progress' ? payload.session : null
+  return payload.session.status === 'in_progress'
+    ? { programId: payload.programId, session: payload.session }
+    : null
 }
 
 const isSessionExpired = (session: SessionState): boolean => {
@@ -159,6 +173,11 @@ export const clearPersistedSession = (): void => {
 }
 
 export const readPersistedSession = (): SessionState | null => {
+  const persisted = readPersistedProgramSession()
+  return persisted?.session ?? null
+}
+
+export const readPersistedProgramSession = (): PersistedProgramSession | null => {
   const storage = getStorage()
   if (!storage) {
     return null
@@ -176,7 +195,7 @@ export const readPersistedSession = (): SessionState | null => {
       return null
     }
 
-    if (isSessionExpired(parsed)) {
+    if (isSessionExpired(parsed.session)) {
       clearPersistedSession()
       return null
     }
@@ -188,7 +207,20 @@ export const readPersistedSession = (): SessionState | null => {
   }
 }
 
+export const readPersistedSessionForProgram = (programId: string): SessionState | null => {
+  const persisted = readPersistedProgramSession()
+  if (!persisted || persisted.programId !== programId) {
+    return null
+  }
+
+  return persisted.session
+}
+
 export const persistSession = (state: SessionState): void => {
+  persistSessionForProgram(DEFAULT_PROGRAM_ID, state)
+}
+
+export const persistSessionForProgram = (programId: string, state: SessionState): void => {
   const storage = getStorage()
   if (!storage) {
     return
@@ -201,6 +233,7 @@ export const persistSession = (state: SessionState): void => {
 
   const payload: PersistedSession = {
     version: SESSION_STORAGE_VERSION,
+    programId,
     session: state,
   }
 
