@@ -5,6 +5,8 @@ Mobile-first React app for running an exercise session from a JSON prescription.
 [![CI](https://github.com/jamiely/exercise/actions/workflows/ci.yml/badge.svg)](https://github.com/jamiely/exercise/actions/workflows/ci.yml)
 [![Deploy To GitHub Pages](https://github.com/jamiely/exercise/actions/workflows/deploy-pages.yml/badge.svg)](https://github.com/jamiely/exercise/actions/workflows/deploy-pages.yml)
 
+Try it live: https://jamiely.github.io/exercise/
+
 ## Stack
 
 - `pnpm`
