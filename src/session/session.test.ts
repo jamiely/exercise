@@ -489,7 +489,7 @@ describe('session reducer', () => {
     expect(finalized.exerciseProgress['exercise-3'].completed).toBe(true)
   })
 
-  it('enters exercise rest at exercise boundary and waits for explicit start on next exercise', () => {
+  it('advances directly to next exercise idle at exercise boundary', () => {
     const exerciseBoundaryProgram: Program = {
       ...testProgram,
       exercises: [
@@ -541,18 +541,17 @@ describe('session reducer', () => {
 
     expect(afterHold.runtime.phase).toBe('repRest')
     expect(afterHold.runtime.remainingMs).toBe(2000)
-    expect(afterRepRest.runtime.phase).toBe('exerciseRest')
-    expect(afterRepRest.runtime.remainingMs).toBe(6000)
-    expect(afterExerciseRest.runtime.phase).toBe('idle')
-    expect(afterExerciseRest.runtime.exerciseIndex).toBe(1)
-    expect(afterExerciseRest.runtime.setIndex).toBe(0)
-    expect(afterExerciseRest.runtime.repIndex).toBe(0)
-    expect(afterExerciseRest.runtime.remainingMs).toBe(0)
-    expect(afterExerciseRest.workoutTimerRunning).toBe(false)
-    expect(afterExerciseRest.currentExerciseId).toBe(exerciseBoundaryProgram.exercises[1].id)
-    expect(
-      afterExerciseRest.exerciseProgress[exerciseBoundaryProgram.exercises[0].id].completed,
-    ).toBe(true)
+    expect(afterRepRest.runtime.phase).toBe('idle')
+    expect(afterRepRest.runtime.remainingMs).toBe(0)
+    expect(afterRepRest.runtime.exerciseIndex).toBe(1)
+    expect(afterRepRest.runtime.setIndex).toBe(0)
+    expect(afterRepRest.runtime.repIndex).toBe(0)
+    expect(afterRepRest.workoutTimerRunning).toBe(false)
+    expect(afterRepRest.currentExerciseId).toBe(exerciseBoundaryProgram.exercises[1].id)
+    expect(afterRepRest.exerciseProgress[exerciseBoundaryProgram.exercises[0].id].completed).toBe(
+      true,
+    )
+    expect(afterExerciseRest).toEqual(afterRepRest)
   })
 
   it('completes rep rest by returning to hold for the next rep', () => {

@@ -622,19 +622,27 @@ test('shows rest preview before hold ends and then transitions into rep rest', a
   await expect(page.getByText(/rest timer:/i)).toBeVisible()
 })
 
-for (const phase of ['setRest', 'exerciseRest'] as const) {
-  test(`shows visible rest countdown during runtime ${phase}`, async ({ page }) => {
-    await seedStraightLegRaiseRuntimeRestSession(page, phase)
-    await page.reload()
-    await tapByRoleName(page, 'button', /resume session/i)
-    await expect(page.getByRole('heading', { name: /straight leg raise/i })).toBeVisible()
-    await tapByRoleName(page, 'button', /options/i)
-    await expect(page.getByText(new RegExp(`workflow phase: ${phase}`, 'i'))).toBeVisible()
-    await tapByRoleName(page, 'button', /back to exercise/i)
-    await expect(page.getByText(/rest timer:/i)).toBeVisible()
-    await expect.poll(() => readRestTimerSeconds(page)).toBeGreaterThan(0.1)
-  })
-}
+test('shows visible rest countdown during runtime setRest', async ({ page }) => {
+  await seedStraightLegRaiseRuntimeRestSession(page, 'setRest')
+  await page.reload()
+  await tapByRoleName(page, 'button', /resume session/i)
+  await expect(page.getByRole('heading', { name: /straight leg raise/i })).toBeVisible()
+  await tapByRoleName(page, 'button', /options/i)
+  await expect(page.getByText(/workflow phase: setrest/i)).toBeVisible()
+  await tapByRoleName(page, 'button', /back to exercise/i)
+  await expect(page.getByText(/rest timer:/i)).toBeVisible()
+  await expect.poll(() => readRestTimerSeconds(page)).toBeGreaterThan(0.1)
+})
+
+test('normalizes legacy runtime exerciseRest to next exercise idle on resume', async ({ page }) => {
+  await seedStraightLegRaiseRuntimeRestSession(page, 'exerciseRest')
+  await page.reload()
+  await tapByRoleName(page, 'button', /resume session/i)
+  await expect(page.getByRole('heading', { name: /terminal knee extension/i })).toBeVisible()
+  await tapByRoleName(page, 'button', /options/i)
+  await expect(page.getByText(/workflow phase: idle/i)).toBeVisible()
+  await expect(page.getByText(/phase timer: 0.0s/i)).toBeVisible()
+})
 
 test('adds configured rest step with + during runtime rep rest', async ({ page }) => {
   await seedStraightLegRaiseRuntimeRepRestSession(page)
@@ -834,7 +842,9 @@ test('renders overrides in Options and applies end exercise override there', asy
   await expect(page.getByRole('button', { name: /end exercise/i })).toBeVisible()
 
   await tapByRoleName(page, 'button', /end exercise/i)
-  await expect(page.getByText(/workflow phase: exerciserest/i)).toBeVisible()
+  await expect(page.getByText(/workflow phase: idle/i)).toBeVisible()
+  await tapByRoleName(page, 'button', /back to exercise/i)
+  await expect(page.getByRole('heading', { name: /straight leg raise/i })).toBeVisible()
 })
 
 test('restarts current set and current exercise from Options with scoped resets', async ({

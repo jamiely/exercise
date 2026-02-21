@@ -718,7 +718,7 @@ describe('App shell', () => {
     expect(screen.getByText('0/10 reps')).toBeInTheDocument()
   })
 
-  it('counts down exercise rest runtime phase and keeps next exercise idle until Start', async () => {
+  it('normalizes persisted exercise rest to next exercise idle without countdown', async () => {
     vi.useFakeTimers()
     const program = loadProgram()
     const session = createSessionState(program, {
@@ -755,15 +755,6 @@ describe('App shell', () => {
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: /resume/i }))
 
-    expectOnOptionsScreen(/workflow phase: exerciserest/i)
-    expectOnOptionsScreen(/phase timer: 1.0s/i)
-    expect(screen.getByRole('heading', { name: program.exercises[1].name })).toBeInTheDocument()
-    expect(screen.getByText('Rest timer: 1.0s')).toBeInTheDocument()
-
-    await act(async () => {
-      vi.advanceTimersByTime(1_000)
-    })
-
     expect(screen.getByRole('heading', { name: /terminal knee extension/i })).toBeInTheDocument()
     expectOnOptionsScreen(/workflow phase: idle/i)
     expectOnOptionsScreen(/phase timer: 0.0s/i)
@@ -771,6 +762,7 @@ describe('App shell', () => {
     expect(holdRestStackAfterExerciseRest).not.toBeNull()
     expect(holdRestStackAfterExerciseRest).toHaveAttribute('data-rest-layer-state', 'hidden')
     expect(screen.getByText('Hold Pending')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^start$/i })).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: /^start$/i }))
     expectOnOptionsScreen(/workflow phase: hold/i)
@@ -952,7 +944,7 @@ describe('App shell', () => {
     expect(screen.getByText('10/10 reps')).toBeInTheDocument()
   })
 
-  it('ends exercise from options overrides and transitions to exercise rest', () => {
+  it('ends exercise from options overrides and advances to next exercise idle', () => {
     const program = loadProgram()
     const session = createSessionState(program, {
       now: '2026-02-10T00:00:00.000Z',
@@ -997,9 +989,10 @@ describe('App shell', () => {
     fireEvent.click(screen.getByRole('button', { name: /end exercise/i }))
     fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
 
-    expectOnOptionsScreen(/workflow phase: exerciserest/i)
-    expectOnOptionsScreen(/phase timer: 30.0s/i)
-    expect(screen.getByText('10/10 reps')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /terminal knee extension/i })).toBeInTheDocument()
+    expectOnOptionsScreen(/workflow phase: idle/i)
+    expectOnOptionsScreen(/phase timer: 0.0s/i)
+    expect(screen.getByText('0/15 reps')).toBeInTheDocument()
   })
 
   it('increments and undoes reps for active set', async () => {
@@ -1093,7 +1086,6 @@ describe('App shell', () => {
     expect(screen.getByRole('heading', { name: /sit-to-stand/i })).toBeInTheDocument()
 
     clickOptionsAction(/end exercise/i)
-    clickOptionsAction(/skip rest/i)
     fireEvent.click(screen.getByRole('button', { name: /back to exercise/i }))
 
     expect(screen.getByRole('heading', { name: /spanish squat hold/i })).toBeInTheDocument()

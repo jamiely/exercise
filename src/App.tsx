@@ -59,12 +59,34 @@ type SessionBootState = {
   pendingResume: SessionState | null
 }
 
+const normalizePersistedSession = (session: SessionState, program: Program): SessionState => {
+  if (session.status !== 'in_progress' || session.runtime.phase !== 'exerciseRest') {
+    return session
+  }
+
+  return reduceSession(
+    session,
+    {
+      type: 'complete_runtime_countdown',
+      now: session.updatedAt,
+      force: true,
+      generation: session.runtime.countdownGeneration ?? 0,
+      phase: session.runtime.phase,
+      exerciseIndex: session.runtime.exerciseIndex,
+      setIndex: session.runtime.setIndex,
+      repIndex: session.runtime.repIndex,
+    },
+    program,
+  )
+}
+
 const buildSessionBootState = (program: Program, programId: ProgramId): SessionBootState => {
   const persisted = readPersistedSessionForProgram(programId)
   if (persisted) {
+    const normalized = normalizePersistedSession(persisted, program)
     return {
-      initialSession: persisted,
-      pendingResume: persisted,
+      initialSession: normalized,
+      pendingResume: normalized,
     }
   }
 

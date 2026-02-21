@@ -330,6 +330,41 @@ const advanceAfterSkip = (state: SessionState, program: Program, now?: string): 
   return withIdleRuntimeForCurrentExercise(advancedState, program)
 }
 
+const advanceToNextExerciseIdleAfterCompletion = (
+  state: SessionState,
+  program: Program,
+  now?: string,
+): SessionState => {
+  const advancedState =
+    state.currentPhase === 'primary'
+      ? advanceAfterPrimary(state, program, now)
+      : advanceAfterSkip(state, program, now)
+
+  if (!isInProgress(advancedState) || !advancedState.currentExerciseId) {
+    return advancedState
+  }
+
+  const nextExerciseIndex = getCurrentExerciseIndex(advancedState, program)
+  const nextExercise = program.exercises[nextExerciseIndex]
+  if (!nextExercise) {
+    return advancedState
+  }
+
+  return {
+    ...advancedState,
+    workoutTimerRunning: false,
+    runtime: {
+      ...advancedState.runtime,
+      phase: 'idle',
+      exerciseIndex: nextExerciseIndex,
+      setIndex: 0,
+      repIndex: 0,
+      remainingMs: 0,
+      previousPhase: null,
+    },
+  }
+}
+
 export const createSessionState = (
   program: Program,
   options?: {
@@ -553,10 +588,27 @@ export const reduceSession = (
         return withTerminalStatus(progressedState, 'completed', action.now)
       }
 
-      const nextPhase = hasNextSet ? 'setRest' : 'exerciseRest'
-      const nextRemainingMs = hasNextSet
-        ? runtimeExercise.setRestMs
-        : runtimeExercise.exerciseRestMs
+      const nextPhase = hasNextSet ? 'setRest' : null
+      const nextRemainingMs = hasNextSet ? runtimeExercise.setRestMs : 0
+
+      if (nextPhase === null) {
+        const progressedState = withUpdatedExerciseProgress(
+          state,
+          state.currentExerciseId,
+          {
+            ...currentProgress,
+            sets: nextSets,
+            completed: true,
+            restTimerRunning: false,
+            restElapsedSeconds: 0,
+            holdTimerRunning: false,
+            holdElapsedSeconds: 0,
+          },
+          action.now,
+        )
+
+        return advanceToNextExerciseIdleAfterCompletion(progressedState, program, action.now)
+      }
 
       return {
         ...state,
@@ -618,9 +670,8 @@ export const reduceSession = (
       }
 
       const lastSetIndex = completedSets.length - 1
-      const lastSet = completedSets[lastSetIndex]
 
-      return {
+      const progressedState = {
         ...state,
         updatedAt: getTimestamp(state, action.now),
         exerciseProgress: {
@@ -636,15 +687,9 @@ export const reduceSession = (
             holdElapsedSeconds: 0,
           },
         },
-        runtime: {
-          ...state.runtime,
-          phase: 'exerciseRest',
-          setIndex: lastSetIndex,
-          repIndex: lastSet.targetReps,
-          remainingMs: runtimeExercise.exerciseRestMs,
-          previousPhase: null,
-        },
       }
+
+      return advanceToNextExerciseIdleAfterCompletion(progressedState, program, action.now)
     }
     case 'set_sound_enabled': {
       if (!isInProgress(state) || state.options.soundEnabled === action.enabled) {
@@ -961,13 +1006,31 @@ export const reduceSession = (
           return withTerminalStatus(progressedState, 'completed', action.now)
         }
 
-        const nextPhase = !isSetComplete ? 'hold' : hasNextSet ? 'setRest' : 'exerciseRest'
+        const nextPhase = !isSetComplete ? 'hold' : hasNextSet ? 'setRest' : null
         const nextRemainingMs =
           nextPhase === 'hold'
             ? holdRemainingMs
             : nextPhase === 'setRest'
               ? runtimeExercise.setRestMs
-              : runtimeExercise.exerciseRestMs
+              : 0
+
+        if (nextPhase === null) {
+          const progressedState = withUpdatedExerciseProgress(
+            state,
+            state.currentExerciseId,
+            {
+              ...currentProgress,
+              completed: true,
+              restTimerRunning: false,
+              restElapsedSeconds: 0,
+              holdTimerRunning: false,
+              holdElapsedSeconds: 0,
+            },
+            action.now,
+          )
+
+          return advanceToNextExerciseIdleAfterCompletion(progressedState, program, action.now)
+        }
 
         return {
           ...state,
@@ -1005,34 +1068,7 @@ export const reduceSession = (
           },
           action.now,
         )
-        const advancedState =
-          progressedState.currentPhase === 'primary'
-            ? advanceAfterPrimary(progressedState, program, action.now)
-            : advanceAfterSkip(progressedState, program, action.now)
-
-        if (!isInProgress(advancedState) || !advancedState.currentExerciseId) {
-          return advancedState
-        }
-
-        const nextExerciseIndex = getCurrentExerciseIndex(advancedState, program)
-        const nextExercise = program.exercises[nextExerciseIndex]
-        if (!nextExercise) {
-          return advancedState
-        }
-
-        return {
-          ...advancedState,
-          workoutTimerRunning: false,
-          runtime: {
-            ...advancedState.runtime,
-            phase: 'idle',
-            exerciseIndex: nextExerciseIndex,
-            setIndex: 0,
-            repIndex: 0,
-            remainingMs: 0,
-            previousPhase: null,
-          },
-        }
+        return advanceToNextExerciseIdleAfterCompletion(progressedState, program, action.now)
       }
 
       const nextPhase = transitionRuntimePhase(state.runtime.phase, 'complete')
