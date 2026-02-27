@@ -6,6 +6,8 @@ test('loads app shell on mobile viewport', async ({ page }) => {
     window.localStorage.clear()
   })
   await page.reload()
+  const favicon = page.locator('link[rel="icon"]')
+  await expect(favicon).toHaveAttribute('href', /\/favicon\.svg$/)
 
   await expect(page.getByRole('heading', { name: /test program 1/i })).toBeVisible()
   await expect(page.getByRole('button', { name: /resume session/i })).toHaveCount(0)
