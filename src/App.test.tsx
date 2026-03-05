@@ -178,6 +178,31 @@ describe('App shell', () => {
     expect(screen.getByRole('button', { name: /end exercise/i })).toBeInTheDocument()
   })
 
+  it('shows a quick skip exercise action before Options on exercise screen', () => {
+    render(<App />)
+    enterNewSession()
+
+    const actionBar = screen.getByRole('region', { name: /exercise actions/i })
+    const actionButtons = within(actionBar).getAllByRole('button')
+    const quickSkipButton = within(actionBar).getByRole('button', { name: /skip exercise/i })
+    const optionsButton = within(actionBar).getByRole('button', { name: /options/i })
+
+    expect(actionButtons.indexOf(quickSkipButton)).toBeGreaterThanOrEqual(0)
+    expect(actionButtons.indexOf(optionsButton)).toBeGreaterThanOrEqual(0)
+    expect(actionButtons.indexOf(quickSkipButton)).toBeLessThan(
+      actionButtons.indexOf(optionsButton),
+    )
+  })
+
+  it('skips to the next exercise from the quick action on the exercise screen', () => {
+    render(<App />)
+    enterNewSession()
+
+    fireEvent.click(screen.getByRole('button', { name: /skip exercise/i }))
+
+    expect(screen.getByRole('heading', { name: /straight leg raise/i })).toBeInTheDocument()
+  })
+
   it('restarts the current set and current exercise from Options without affecting scope', () => {
     render(<App />)
     enterNewSession()

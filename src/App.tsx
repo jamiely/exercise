@@ -1104,6 +1104,13 @@ const LoadedProgramView = ({
         <button
           type="button"
           className="secondary-button"
+          onClick={() => dispatchTimed('skip_exercise')}
+        >
+          Skip Exercise
+        </button>
+        <button
+          type="button"
+          className="secondary-button"
           onClick={() => setIsSessionOptionsOpen(true)}
         >
           Options

@@ -33,6 +33,19 @@ test('opens and closes in-session options screen', async ({ page }) => {
   await expect(page.getByRole('heading', { name: /wall sit \(shallow\)/i })).toBeVisible()
 })
 
+test('skips exercise directly from the exercise page quick action', async ({ page }) => {
+  await page.goto('/?mode=test')
+  await page.getByRole('button', { name: /start new session/i }).click()
+
+  const actionBar = page.getByRole('region', { name: /exercise actions/i })
+  await expect(actionBar.getByRole('button', { name: /^start$/i })).toBeVisible()
+  await expect(actionBar.getByRole('button', { name: /skip exercise/i })).toBeVisible()
+  await expect(actionBar.getByRole('button', { name: /options/i })).toBeVisible()
+
+  await actionBar.getByRole('button', { name: /skip exercise/i }).click()
+  await expect(page.getByRole('heading', { name: /straight leg raise/i })).toBeVisible()
+})
+
 test('renders workout timer with muted styling', async ({ page }) => {
   await page.goto('/?mode=test')
   await page.getByRole('button', { name: /start new session/i }).click()
@@ -62,6 +75,7 @@ test('shows knee phase options by default and selects Knee Phase 4', async ({ pa
   })
   await page.reload()
 
+  await expect(page.getByRole('heading', { name: /knee phase 4/i })).toBeVisible()
   await expect(page.getByRole('option', { name: /knee phase 2/i })).toHaveCount(1)
   await expect(page.getByRole('option', { name: /knee phase 3/i })).toHaveCount(1)
   await expect(page.getByRole('option', { name: /knee phase 4/i })).toHaveCount(1)
