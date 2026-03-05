@@ -1,5 +1,6 @@
 import rawKneePhase2Program from '../data/knee-phase-2-program.json'
 import rawKneePhase3Program from '../data/knee-phase-3-program.json'
+import rawKneePhase4Program from '../data/knee-phase-4-program.json'
 import rawTestProgram1 from '../data/test-program-1.json'
 import rawTestProgram2 from '../data/test-program-2.json'
 
@@ -24,7 +25,12 @@ export type Program = {
   exercises: Exercise[]
 }
 
-export type ProgramId = 'knee-phase-2' | 'knee-phase-3' | 'test-program-1' | 'test-program-2'
+export type ProgramId =
+  | 'knee-phase-2'
+  | 'knee-phase-3'
+  | 'knee-phase-4'
+  | 'test-program-1'
+  | 'test-program-2'
 
 export type ProgramOption = {
   id: ProgramId
@@ -217,6 +223,10 @@ const parseKneePrograms = (): ProgramOption[] => [
     id: 'knee-phase-3',
     program: parseNamedProgram('knee-phase-3', rawKneePhase3Program),
   },
+  {
+    id: 'knee-phase-4',
+    program: parseNamedProgram('knee-phase-4', rawKneePhase4Program),
+  },
 ]
 
 const parseTestPrograms = (): ProgramOption[] => [
@@ -233,7 +243,7 @@ const parseTestPrograms = (): ProgramOption[] => [
 export const loadProgramCatalog = (options?: { includeTestPrograms?: boolean }): ProgramCatalog => {
   const includeTestPrograms = options?.includeTestPrograms ?? false
   const programs = includeTestPrograms ? parseTestPrograms() : parseKneePrograms()
-  const defaultProgramId: ProgramId = includeTestPrograms ? 'test-program-1' : 'knee-phase-3'
+  const defaultProgramId: ProgramId = includeTestPrograms ? 'test-program-1' : 'knee-phase-4'
 
   return {
     defaultProgramId,

@@ -172,13 +172,15 @@ describe('loadProgramCatalog', () => {
   it('loads knee phase programs by default', () => {
     const catalog = loadProgramCatalog()
 
-    expect(catalog.defaultProgramId).toBe('knee-phase-3')
+    expect(catalog.defaultProgramId).toBe('knee-phase-4')
     expect(catalog.programs.map((programOption) => programOption.id)).toEqual([
       'knee-phase-2',
       'knee-phase-3',
+      'knee-phase-4',
     ])
     expect(catalog.programs[0].program.programName).toBe('Knee Phase 2')
     expect(catalog.programs[1].program.programName).toBe('Knee Phase 3')
+    expect(catalog.programs[2].program.programName).toBe('Knee Phase 4')
   })
 
   it('loads test programs when includeTestPrograms is enabled', () => {

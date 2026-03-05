@@ -55,6 +55,24 @@ test('shows test program options when mode=test is enabled', async ({ page }) =>
   await expect(page.getByRole('option', { name: /knee phase 2/i })).toHaveCount(0)
 })
 
+test('shows knee phase options by default and selects Knee Phase 4', async ({ page }) => {
+  await page.goto('/')
+  await page.evaluate(() => {
+    window.localStorage.clear()
+  })
+  await page.reload()
+
+  await expect(page.getByRole('option', { name: /knee phase 2/i })).toHaveCount(1)
+  await expect(page.getByRole('option', { name: /knee phase 3/i })).toHaveCount(1)
+  await expect(page.getByRole('option', { name: /knee phase 4/i })).toHaveCount(1)
+  await page.getByRole('combobox', { name: /program/i }).selectOption('knee-phase-4')
+  await expect(page.getByRole('heading', { name: /knee phase 4/i })).toBeVisible()
+  await expect(page.getByText(/single-leg balance \(foam pad\)/i)).toBeVisible()
+  await expect(page.getByText(/clamshells/i)).toBeVisible()
+  await expect(page.getByText(/banded march with lateral pull/i)).toBeVisible()
+  await expect(page.getByText(/assisted \(trx\) pistol squats/i)).toBeVisible()
+})
+
 test('starts session with selected test program 2', async ({ page }) => {
   await page.goto('/?mode=test')
   await page.evaluate(() => {
