@@ -3,9 +3,45 @@
   "programName": "Knee Phase 4",
   "exercises": [
     {
+      "id": "assisted-hamstring-stretch",
+      "name": "Assisted Hamstring Stretch",
+      "order": 1,
+      "targetSets": 1,
+      "targetRepsPerSet": 2,
+      "holdSeconds": 30,
+      "repRestMs": 10000,
+      "notes": "Use assistance to maintain a gentle hamstring stretch and keep breathing steadily through each hold.",
+      "optional": false,
+      "availableOnOrAfter": null
+    },
+    {
+      "id": "quad-stretch",
+      "name": "Quad Stretch",
+      "order": 2,
+      "targetSets": 1,
+      "targetRepsPerSet": 2,
+      "holdSeconds": 30,
+      "repRestMs": 10000,
+      "notes": "Keep hips squared and core engaged while holding a controlled quad stretch for the full interval.",
+      "optional": false,
+      "availableOnOrAfter": null
+    },
+    {
+      "id": "single-leg-raises",
+      "name": "Single Leg Raises",
+      "order": 3,
+      "targetSets": 2,
+      "targetRepsPerSet": 8,
+      "holdSeconds": null,
+      "repRestMs": 4000,
+      "notes": "Lift with control, keep the working knee straight, and lower slowly without arching your back.",
+      "optional": false,
+      "availableOnOrAfter": null
+    },
+    {
       "id": "wall-sits",
       "name": "Wall Sits",
-      "order": 1,
+      "order": 4,
       "targetSets": 1,
       "targetRepsPerSet": 2,
       "holdSeconds": 45,
@@ -17,7 +53,7 @@
     {
       "id": "single-leg-balance-foam-pad",
       "name": "Single-leg Balance (Foam Pad)",
-      "order": 2,
+      "order": 5,
       "targetSets": 1,
       "targetRepsPerSet": 2,
       "holdSeconds": 30,
@@ -29,7 +65,7 @@
     {
       "id": "terminal-knee-extension",
       "name": "Terminal Knee Extension",
-      "order": 3,
+      "order": 6,
       "targetSets": 1,
       "targetRepsPerSet": 2,
       "holdSeconds": 20,
@@ -41,7 +77,7 @@
     {
       "id": "split-squats",
       "name": "Split Squats",
-      "order": 4,
+      "order": 7,
       "targetSets": 3,
       "targetRepsPerSet": 8,
       "holdSeconds": null,
@@ -53,7 +89,7 @@
     {
       "id": "step-ups-8in",
       "name": "Step Ups (8in)",
-      "order": 5,
+      "order": 8,
       "targetSets": 3,
       "targetRepsPerSet": 10,
       "holdSeconds": null,
@@ -65,7 +101,7 @@
     {
       "id": "controlled-step-downs-6in",
       "name": "Controlled Step Downs (6in)",
-      "order": 6,
+      "order": 9,
       "targetSets": 3,
       "targetRepsPerSet": 6,
       "holdSeconds": null,
@@ -77,7 +113,7 @@
     {
       "id": "single-leg-sit-to-stand-high-chair",
       "name": "Single-Leg Sit-to-Stand (High Chair)",
-      "order": 7,
+      "order": 10,
       "targetSets": 2,
       "targetRepsPerSet": 8,
       "holdSeconds": null,
@@ -89,7 +125,7 @@
     {
       "id": "clamshells",
       "name": "Clamshells",
-      "order": 8,
+      "order": 11,
       "targetSets": 2,
       "targetRepsPerSet": 8,
       "holdSeconds": null,
@@ -101,7 +137,7 @@
     {
       "id": "banded-march-with-lateral-pull",
       "name": "Banded March With Lateral Pull",
-      "order": 9,
+      "order": 12,
       "targetSets": 2,
       "targetRepsPerSet": 1,
       "holdSeconds": 30,
@@ -113,7 +149,7 @@
     {
       "id": "assisted-trx-pistol-squats",
       "name": "Assisted (TRX) Pistol Squats",
-      "order": 10,
+      "order": 13,
       "targetSets": 2,
       "targetRepsPerSet": 8,
       "holdSeconds": null,
