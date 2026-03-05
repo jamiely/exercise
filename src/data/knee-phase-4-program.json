@@ -157,6 +157,18 @@
       "notes": "Use TRX assistance to stay balanced, keep knee tracking over toes, and control the full range.",
       "optional": false,
       "availableOnOrAfter": null
+    },
+    {
+      "id": "spanish-squats",
+      "name": "Spanish Squats",
+      "order": 14,
+      "targetSets": 2,
+      "targetRepsPerSet": 1,
+      "holdSeconds": 30,
+      "repRestMs": 10000,
+      "notes": "Maintain upright posture and steady band tension while holding a controlled Spanish squat position.",
+      "optional": false,
+      "availableOnOrAfter": null
     }
   ]
 }

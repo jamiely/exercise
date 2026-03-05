@@ -88,6 +88,7 @@ test('shows knee phase options by default and selects Knee Phase 4', async ({ pa
   await expect(page.getByText(/clamshells/i)).toBeVisible()
   await expect(page.getByText(/banded march with lateral pull/i)).toBeVisible()
   await expect(page.getByText(/assisted \(trx\) pistol squats/i)).toBeVisible()
+  await expect(page.getByText(/spanish squats/i)).toBeVisible()
 })
 
 test('starts session with selected test program 2', async ({ page }) => {
