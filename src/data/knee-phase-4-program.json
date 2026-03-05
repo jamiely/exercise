@@ -39,21 +39,9 @@
       "availableOnOrAfter": null
     },
     {
-      "id": "wall-sits",
-      "name": "Wall Sits",
-      "order": 4,
-      "targetSets": 1,
-      "targetRepsPerSet": 2,
-      "holdSeconds": 45,
-      "repRestMs": 10000,
-      "notes": "Hold a steady wall sit for 45 seconds while keeping your knees aligned over your feet.",
-      "optional": false,
-      "availableOnOrAfter": null
-    },
-    {
       "id": "single-leg-balance-foam-pad",
       "name": "Single-leg Balance (Foam Pad)",
-      "order": 5,
+      "order": 4,
       "targetSets": 1,
       "targetRepsPerSet": 2,
       "holdSeconds": 30,
@@ -63,9 +51,21 @@
       "availableOnOrAfter": null
     },
     {
+      "id": "wall-sits",
+      "name": "Wall Sits",
+      "order": 6,
+      "targetSets": 1,
+      "targetRepsPerSet": 2,
+      "holdSeconds": 45,
+      "repRestMs": 10000,
+      "notes": "Hold a steady wall sit for 45 seconds while keeping your knees aligned over your feet.",
+      "optional": false,
+      "availableOnOrAfter": null
+    },
+    {
       "id": "terminal-knee-extension",
       "name": "Terminal Knee Extension",
-      "order": 6,
+      "order": 7,
       "targetSets": 1,
       "targetRepsPerSet": 2,
       "holdSeconds": 20,
@@ -76,8 +76,8 @@
     },
     {
       "id": "split-squats",
-      "name": "Split Squats",
-      "order": 7,
+      "name": "Bulgarian Split Squats",
+      "order": 9,
       "targetSets": 3,
       "targetRepsPerSet": 8,
       "holdSeconds": null,
@@ -89,7 +89,7 @@
     {
       "id": "step-ups-8in",
       "name": "Step Ups (8in)",
-      "order": 8,
+      "order": 10,
       "targetSets": 3,
       "targetRepsPerSet": 10,
       "holdSeconds": null,
@@ -101,7 +101,7 @@
     {
       "id": "controlled-step-downs-6in",
       "name": "Controlled Step Downs (6in)",
-      "order": 9,
+      "order": 11,
       "targetSets": 3,
       "targetRepsPerSet": 6,
       "holdSeconds": null,
@@ -113,7 +113,7 @@
     {
       "id": "single-leg-sit-to-stand-high-chair",
       "name": "Single-Leg Sit-to-Stand (High Chair)",
-      "order": 10,
+      "order": 12,
       "targetSets": 2,
       "targetRepsPerSet": 8,
       "holdSeconds": null,
@@ -125,7 +125,7 @@
     {
       "id": "clamshells",
       "name": "Clamshells",
-      "order": 11,
+      "order": 5,
       "targetSets": 2,
       "targetRepsPerSet": 8,
       "holdSeconds": null,
@@ -137,7 +137,7 @@
     {
       "id": "banded-march-with-lateral-pull",
       "name": "Banded March With Lateral Pull",
-      "order": 12,
+      "order": 8,
       "targetSets": 2,
       "targetRepsPerSet": 1,
       "holdSeconds": 30,
