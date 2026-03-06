@@ -33,17 +33,21 @@ test('opens and closes in-session options screen', async ({ page }) => {
   await expect(page.getByRole('heading', { name: /wall sit \(shallow\)/i })).toBeVisible()
 })
 
-test('skips exercise directly from the exercise page quick action', async ({ page }) => {
+test('skips exercises backward and forward from exercise page quick actions', async ({ page }) => {
   await page.goto('/?mode=test')
   await page.getByRole('button', { name: /start new session/i }).click()
 
   const actionBar = page.getByRole('region', { name: /exercise actions/i })
   await expect(actionBar.getByRole('button', { name: /^start$/i })).toBeVisible()
-  await expect(actionBar.getByRole('button', { name: /skip exercise/i })).toBeVisible()
+  await expect(actionBar.getByRole('button', { name: /skip exercise backward/i })).toBeVisible()
+  await expect(actionBar.getByRole('button', { name: /skip exercise forward/i })).toBeVisible()
   await expect(actionBar.getByRole('button', { name: /options/i })).toBeVisible()
 
-  await actionBar.getByRole('button', { name: /skip exercise/i }).click()
+  await actionBar.getByRole('button', { name: /skip exercise forward/i }).click()
   await expect(page.getByRole('heading', { name: /straight leg raise/i })).toBeVisible()
+
+  await actionBar.getByRole('button', { name: /skip exercise backward/i }).click()
+  await expect(page.getByRole('heading', { name: /wall sit \(shallow\)/i })).toBeVisible()
 })
 
 test('renders workout timer with muted styling', async ({ page }) => {

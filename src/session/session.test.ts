@@ -1533,6 +1533,56 @@ describe('session reducer', () => {
     )
   })
 
+  it('moves to previous exercise when skip_exercise_backward is dispatched in primary phase', () => {
+    const initial = createSessionState(testProgram, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-skip-backward',
+    })
+    const next = reduceSession(
+      initial,
+      { type: 'skip_exercise', now: '2026-02-10T00:00:01.000Z' },
+      testProgram,
+    )
+    const previous = reduceSession(
+      next,
+      { type: 'skip_exercise_backward', now: '2026-02-10T00:00:02.000Z' },
+      testProgram,
+    )
+
+    expect(next.currentExerciseId).toBe('exercise-2')
+    expect(next.primaryCursor).toBe(1)
+    expect(previous.currentExerciseId).toBe('exercise-1')
+    expect(previous.primaryCursor).toBe(0)
+    expect(previous.runtime.phase).toBe('idle')
+    expect(previous.runtime.exerciseIndex).toBe(0)
+  })
+
+  it('ignores skip_exercise_backward at the start of primary phase and in skip phase', () => {
+    const initial = createSessionState(testProgram, {
+      now: '2026-02-10T00:00:00.000Z',
+      sessionId: 'session-skip-backward-guard',
+    })
+
+    const atStart = reduceSession(
+      initial,
+      { type: 'skip_exercise_backward', now: '2026-02-10T00:00:01.000Z' },
+      testProgram,
+    )
+    expect(atStart).toEqual(initial)
+
+    const skipPhase = {
+      ...initial,
+      currentPhase: 'skip' as const,
+      skipQueue: ['exercise-1'],
+    }
+    const ignoredInSkip = reduceSession(
+      skipPhase,
+      { type: 'skip_exercise_backward', now: '2026-02-10T00:00:02.000Z' },
+      testProgram,
+    )
+    expect(ignoredInSkip).toEqual(skipPhase)
+  })
+
   it('returns unchanged when override actions reference invalid runtime indexes', () => {
     const initial = createSessionState(testProgram, {
       now: '2026-02-10T00:00:00.000Z',

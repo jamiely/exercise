@@ -332,6 +332,12 @@ h2 {
   gap: 0.625rem;
 }
 
+.exercise-skip-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.625rem;
+}
+
 .options-screen-back {
   min-height: 2.875rem;
 }

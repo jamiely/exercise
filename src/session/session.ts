@@ -107,6 +107,7 @@ export type SessionAction =
   | { type: 'complete_hold_rep'; now?: string }
   | { type: 'tick_workout_timer'; now?: string; seconds?: number }
   | { type: 'complete_exercise'; now?: string }
+  | { type: 'skip_exercise_backward'; now?: string }
   | { type: 'skip_exercise'; now?: string }
   | { type: 'end_session_early'; now?: string }
   | { type: 'finish_session'; now?: string }
@@ -1594,6 +1595,32 @@ export const reduceSession = (
       return progressedState.currentPhase === 'primary'
         ? advanceAfterPrimary(progressedState, program, action.now)
         : advanceAfterSkip(progressedState, program, action.now)
+    }
+    case 'skip_exercise_backward': {
+      if (!isInProgress(state) || !state.currentExerciseId || state.currentPhase !== 'primary') {
+        return state
+      }
+
+      const previousCursor = state.primaryCursor - 1
+      if (previousCursor < 0 || previousCursor >= program.exercises.length) {
+        return state
+      }
+
+      const previousExercise = program.exercises[previousCursor]
+      if (!previousExercise) {
+        return state
+      }
+
+      return withIdleRuntimeForCurrentExercise(
+        {
+          ...state,
+          primaryCursor: previousCursor,
+          currentExerciseId: previousExercise.id,
+          currentExerciseElapsedSeconds: 0,
+          updatedAt: getTimestamp(state, action.now),
+        },
+        program,
+      )
     }
     case 'skip_exercise': {
       if (!isInProgress(state) || !state.currentExerciseId) {

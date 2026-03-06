@@ -178,29 +178,42 @@ describe('App shell', () => {
     expect(screen.getByRole('button', { name: /end exercise/i })).toBeInTheDocument()
   })
 
-  it('shows a quick skip exercise action before Options on exercise screen', () => {
+  it('shows quick skip backward/forward actions before Options on exercise screen', () => {
     render(<App />)
     enterNewSession()
 
     const actionBar = screen.getByRole('region', { name: /exercise actions/i })
     const actionButtons = within(actionBar).getAllByRole('button')
-    const quickSkipButton = within(actionBar).getByRole('button', { name: /skip exercise/i })
+    const quickSkipBackwardButton = within(actionBar).getByRole('button', {
+      name: /skip exercise backward/i,
+    })
+    const quickSkipForwardButton = within(actionBar).getByRole('button', {
+      name: /skip exercise forward/i,
+    })
     const optionsButton = within(actionBar).getByRole('button', { name: /options/i })
 
-    expect(actionButtons.indexOf(quickSkipButton)).toBeGreaterThanOrEqual(0)
+    expect(actionButtons.indexOf(quickSkipBackwardButton)).toBeGreaterThanOrEqual(0)
+    expect(actionButtons.indexOf(quickSkipForwardButton)).toBeGreaterThanOrEqual(0)
     expect(actionButtons.indexOf(optionsButton)).toBeGreaterThanOrEqual(0)
-    expect(actionButtons.indexOf(quickSkipButton)).toBeLessThan(
+    expect(actionButtons.indexOf(quickSkipBackwardButton)).toBeLessThan(
+      actionButtons.indexOf(optionsButton),
+    )
+    expect(actionButtons.indexOf(quickSkipForwardButton)).toBeLessThan(
       actionButtons.indexOf(optionsButton),
     )
   })
 
-  it('skips to the next exercise from the quick action on the exercise screen', () => {
+  it('skips to the next and previous exercises from quick actions on the exercise screen', () => {
     render(<App />)
     enterNewSession()
 
-    fireEvent.click(screen.getByRole('button', { name: /skip exercise/i }))
+    fireEvent.click(screen.getByRole('button', { name: /skip exercise forward/i }))
 
     expect(screen.getByRole('heading', { name: /straight leg raise/i })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /skip exercise backward/i }))
+
+    expect(screen.getByRole('heading', { name: /wall sit \(shallow\)/i })).toBeInTheDocument()
   })
 
   it('restarts the current set and current exercise from Options without affecting scope', () => {

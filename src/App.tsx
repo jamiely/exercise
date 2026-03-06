@@ -714,6 +714,7 @@ const LoadedProgramView = ({
       case 'decrement_rep':
       case 'complete_set':
       case 'complete_exercise':
+      case 'skip_exercise_backward':
       case 'skip_exercise':
       case 'end_session_early':
       case 'finish_session':
@@ -1101,13 +1102,24 @@ const LoadedProgramView = ({
         >
           {routineControl.label}
         </button>
-        <button
-          type="button"
-          className="secondary-button"
-          onClick={() => dispatchTimed('skip_exercise')}
-        >
-          Skip Exercise
-        </button>
+        <div className="exercise-skip-actions" role="group" aria-label="Skip exercise controls">
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={() => dispatchTimed('skip_exercise_backward')}
+            aria-label="Skip exercise backward"
+          >
+            &#171;
+          </button>
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={() => dispatchTimed('skip_exercise')}
+            aria-label="Skip exercise forward"
+          >
+            &#187;
+          </button>
+        </div>
         <button
           type="button"
           className="secondary-button"
